@@ -12,4 +12,4 @@ class Organization_details(BaseModel):
     org_name: str
     location:Location
     contact_info: int
-    bio: Optional(str)=""
+    bio: Optional[str]=""
