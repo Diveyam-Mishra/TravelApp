@@ -10,3 +10,4 @@ pyjwt
 passlib[bcrypt]
 python-jose[cryptography]
 pydantic-settings
+smtplib

@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session
-from Models.user_models import User, UserBase, UserCreate, UserResponse, NoSQLUser, SuccessResponse, UserLogin, DeleteUserAfterCheckingPass
+from Models.user_models import User
+from Schemas.UserSchemas import *
 from jose import JWTError
 from fastapi import HTTPException, Depends
 import jwt
@@ -7,18 +8,9 @@ from fastapi.security import OAuth2PasswordBearer
 from pydantic_settings import BaseSettings
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
+from config import settings
 
-class Settings(BaseSettings):
-    JWT_SECRET: str
-    ACCESS_TOKEN_EXPIRE_MINUTES: int
-    ALGORITHM: str
-    mongoURI: str
-    sqlURI: str
 
-    class Config:
-        env_file = ".env"
-
-settings = Settings()
 SQLALCHEMY_DATABASE_URL = settings.sqlURI  # Or your preferred database URL
 engine = create_engine(SQLALCHEMY_DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
