@@ -10,7 +10,8 @@ from Models.user_models import User, OTP
 from Schemas.UserSchemas import UserBase, UserCreate, UserLogin, UserResponse, DeleteUserAfterCheckingPass, SuccessResponse, NoSQLUser, OTPVerification
 from passlib.context import CryptContext
 import jwt
-
+from fastapi.middleware.cors import CORSMiddleware
+from Controllers.add_org import router as organization_router
 from Controllers.Auth import (create_user, get_user, get_current_user, get_user_by_email, get_user_by_username, settings, get_db, engine, JWT_SECRET)
 from Controllers.OtpGen import create_otp
 from datetime import datetime
@@ -20,6 +21,7 @@ from sqlalchemy import inspect
 # print(settings.sqlURI)
 
 app = FastAPI(title="Backend with MongoDB and SQL")
+
 
 origins = ['http://localhost:3000']
 
@@ -169,3 +171,4 @@ def delete_user(delete_data: DeleteUserAfterCheckingPass, current_user: User=Dep
     db.commit()
     
     return SuccessResponse(message="User deleted sucessfully", token="", success=True)
+app.include_router(organization_router)

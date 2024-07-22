@@ -1,5 +1,5 @@
 
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, func
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, func,Float
 from sqlalchemy.ext.declarative import declarative_base
 
 
@@ -25,4 +25,14 @@ class OTP(Base):
     otp = Column(String)
     expires_at = Column(DateTime)
 
+
+class Organization(Base):
+    __tablename__ = 'organizations'
+    id = Column(Integer, primary_key=True, index=True)
+    org_name = Column(String, nullable=False)
+    venue = Column(String, nullable=False)
+    latitude = Column(Float, nullable=False)
+    longitude = Column(Float, nullable=False)
+    contact_info = Column(String, nullable=False)
+    bio = Column(String, nullable=True)
 # Pydantic models
