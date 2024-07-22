@@ -14,7 +14,7 @@ import jwt
 from Controllers.Auth import (create_user, get_user, get_current_user, get_user_by_email, get_user_by_username, settings, get_db, engine, JWT_SECRET)
 from Controllers.OtpGen import create_otp
 from datetime import datetime
-from config import settings
+from config import settings, connectionString
 from sqlalchemy import inspect
 
 # print(settings.sqlURI)
@@ -55,6 +55,7 @@ def table_exists(engine, table_name):
 async def startup_event():
     # Check if the users table exists
     init_db()
+    print(settings.sender_email)
 
 
 @app.get("/")

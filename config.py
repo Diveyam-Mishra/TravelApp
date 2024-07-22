@@ -7,11 +7,13 @@ class Settings(BaseSettings):
     ALGORITHM: str
     mongoURI: str
     sqlURI: str
-    sender_password: str
+    endpoint: str
+    accesskey:str
     sender_email: str
 
     class Config:
         env_file = ".env"
 
 settings = Settings()
+connectionString = "endpoint="+settings.endpoint+";accesskey="+settings.accesskey
 
