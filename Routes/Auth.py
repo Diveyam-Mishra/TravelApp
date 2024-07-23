@@ -4,7 +4,7 @@ from typing import List
 from Models.user_models import  User
 from Models.org_models import Organization
 from Models.org_models import Organization_details, Location, GeoTag
-from Schemas.UserSchemas import SuccessResponse
+from Schemas.UserSchemas import SuccessResponse, EmailRequest
 import jwt
 from jose import JWTError
 from config import settings
@@ -45,8 +45,8 @@ def get_user_details(current_user: User=Depends(get_current_user)):
     return user_data
 
 @router.post("/auth/send-otp/", response_model=SuccessResponse)
-def register_user_endpoint(email: str, db: Session = Depends(get_db)):
-    return register_user(email, db)
+def register_user_endpoint(req: EmailRequest, db: Session = Depends(get_db)):
+    return register_user(req.email, db)
 
 @router.post("/auth/verify-otp/", response_model=SuccessResponse)
 def verify_otp_endpoint(user: OTPVerification, db: Session = Depends(get_db)):

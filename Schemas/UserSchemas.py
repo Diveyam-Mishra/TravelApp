@@ -66,3 +66,9 @@ class OTPVerification(BaseModel):
     otp: str
     username: str
     password: str
+    avatar: str
+    contact_no: str
+    works_at:str
+
+class EmailRequest(BaseModel):
+    email: str
