@@ -1,7 +1,6 @@
-from pydantic import BaseModel, EmailStr, Field
-from typing import Optional, List
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, func, Float
-from sqlalchemy.ext.declarative import declarative_base
+from pydantic import BaseModel
+from typing import Optional
+from sqlalchemy import Column, Integer, String, Float
 from Database.Connection import Base
 
 class Organization(Base):

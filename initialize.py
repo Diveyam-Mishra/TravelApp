@@ -1,24 +1,12 @@
 # main.py
-
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import motor.motor_asyncio
-from sqlalchemy import create_engine, Column, Integer, String, Boolean, DateTime, func
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import Session
-from Models.user_models import User, OTP
-from Schemas.UserSchemas import UserBase, UserCreate, UserLogin, UserResponse, DeleteUserAfterCheckingPass, SuccessResponse, NoSQLUser, OTPVerification
 from passlib.context import CryptContext
-import jwt
 from fastapi.middleware.cors import CORSMiddleware
 from Routes.OrganizationRoutes import router as organization_router
 from Routes.Auth import router as auth_router
-from Controllers.Auth import (create_user, get_user, get_current_user, get_user_by_email, get_user_by_username, settings, engine, JWT_SECRET)
-from Controllers.OtpGen import create_otp
-from datetime import datetime
-from config import settings, connectionString
-from sqlalchemy import inspect
-from Database.Connection import get_db
+from Controllers.Auth import (settings, engine)
 # print(settings.sqlURI)
 
 app = FastAPI(title="Backend with MongoDB and SQL")

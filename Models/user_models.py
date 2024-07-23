@@ -1,5 +1,5 @@
 
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, func,Float
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, func
 
 from Database.Connection import Base
 
