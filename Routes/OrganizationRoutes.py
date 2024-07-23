@@ -1,14 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from typing import List
-from Models.user_models import  User
 from Models.org_models import Organization
-from Models.org_models import Organization_details, Location, GeoTag
+from Models.org_models import Organization_details
 from Schemas.UserSchemas import SuccessResponse
-import jwt
-from jose import JWTError
-from config import settings
-from fastapi.security import OAuth2PasswordBearer
 from Schemas.OrganizationSchemas import OrganizationSchema
 from Controllers.Organizations import add_organization, get_organization, get_city_organizations
 from Database.Connection import get_db

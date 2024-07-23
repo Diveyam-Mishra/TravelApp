@@ -1,6 +1,3 @@
-import smtplib, ssl
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 import random
 import string
 from datetime import datetime, timedelta
@@ -8,7 +5,6 @@ from Models.user_models import OTP, User
 from config import settings, connectionString
 from azure.communication.email import EmailClient
 import random
-import asyncio
 from Models.user_models import OTP
 from Schemas.UserSchemas import OTPVerification, SuccessResponse
 import jwt

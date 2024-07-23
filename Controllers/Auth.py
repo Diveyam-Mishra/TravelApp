@@ -1,6 +1,5 @@
 from sqlalchemy.orm import Session
 from Models.user_models import User
-from Models.org_models import Organization
 from Schemas.UserSchemas import *
 from jose import JWTError
 from fastapi import HTTPException, Depends

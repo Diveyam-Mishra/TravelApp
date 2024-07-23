@@ -1,6 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import Depends, HTTPException
 from sqlalchemy.orm import Session
-from typing import List
 from Models.user_models import  User
 from Models.org_models import Organization
 from Models.org_models import Organization_details, Location, GeoTag
@@ -9,7 +8,6 @@ import jwt
 from jose import JWTError
 from config import settings
 from fastapi.security import OAuth2PasswordBearer
-from Schemas.OrganizationSchemas import OrganizationSchema
 from Database.Connection import get_db
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 JWT_SECRET = settings.JWT_SECRET
