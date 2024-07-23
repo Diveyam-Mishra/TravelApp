@@ -2,14 +2,14 @@ from pydantic import BaseModel, EmailStr, Field
 from typing import Optional, List
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, func, Float
 from sqlalchemy.ext.declarative import declarative_base
-
-Base = declarative_base()
+from Database.Connection import Base
 
 class Organization(Base):
     __tablename__ = 'organizations'
     id = Column(Integer, primary_key=True, index=True)
     org_name = Column(String, nullable=False)
     venue = Column(String, nullable=False)
+    city = Column(String, nullable=False)
     latitude = Column(Float, nullable=False)
     longitude = Column(Float, nullable=False)
     contact_info = Column(String, nullable=False)
@@ -21,6 +21,7 @@ class GeoTag(BaseModel):
 
 class Location(BaseModel):
     venue: str
+    city: str
     geo_tag: GeoTag
 
 class Organization_details(BaseModel):
