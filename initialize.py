@@ -13,6 +13,7 @@ import jwt
 from fastapi.middleware.cors import CORSMiddleware
 from Routes.OrganizationRoutes import router as organization_router
 from Routes.Auth import router as auth_router
+from Routes.forgot_password import router as forgotPassword
 from Controllers.Auth import (create_user, get_user, get_current_user, get_user_by_email, get_user_by_username, settings, engine, JWT_SECRET)
 from Controllers.OtpGen import create_otp
 from datetime import datetime
@@ -35,6 +36,7 @@ app.add_middleware(
 )
 app.include_router(auth_router)
 app.include_router(organization_router)
+app.include_router(forgotPassword)
 
 # MongoDB setup
 client = motor.motor_asyncio.AsyncIOMotorClient(settings.mongoURI)
