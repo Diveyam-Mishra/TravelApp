@@ -66,8 +66,4 @@ jobs:
         with:
           app-name: 'TrabiiBackendTest'
           slot-name: 'Production'
-<<<<<<< HEAD
-          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_10BA26471E3B49F2963C44A9F57E0A5C }}
-=======
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
->>>>>>> e3b4d0e7d9ae7981e5508d05ac5eb2ed046784f3
