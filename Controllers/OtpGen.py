@@ -6,7 +6,7 @@ from config import settings, connectionString
 from azure.communication.email import EmailClient
 import random
 from Models.user_models import OTP
-from Schemas.UserSchemas import OTPVerification, SuccessResponse
+from Schemas.UserSchemas import OTPVerification, SuccessResponse, ResetPasswordRequest
 import jwt
 from passlib.context import CryptContext
 from fastapi import HTTPException
@@ -72,3 +72,11 @@ def verify_otp(user: OTPVerification, db: Session) -> SuccessResponse:
     token = jwt.encode(token_data, JWT_SECRET, algorithm="HS256")
 
     return SuccessResponse(message="User Created Successfully", token=token, success=True)
+
+def verify_forgot_password_otp(reset_password_data: ResetPasswordRequest, db: Session) -> bool:
+    db_otp = db.query(OTP).filter(OTP.email == reset_password_data.email, OTP.otp == reset_password_data.otp).first()
+    if not db_otp or db_otp.expires_at < datetime.utcnow():
+        return False
+    db.delete(db_otp)
+    db.commit()
+    return True

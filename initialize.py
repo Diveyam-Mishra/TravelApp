@@ -23,6 +23,7 @@ app.add_middleware(
 )
 app.include_router(auth_router)
 app.include_router(organization_router)
+app.include_router(forgotPassword)
 
 # MongoDB setup
 client = motor.motor_asyncio.AsyncIOMotorClient(settings.mongoURI)
