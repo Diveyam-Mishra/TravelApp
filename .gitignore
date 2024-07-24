@@ -9,6 +9,7 @@ __pycache__/
 # Virtual environment directories
 venv/
 env/
+myenv/
 *.egg-info/
 
 # Distribution / packaging
