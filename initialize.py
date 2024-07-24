@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from Routes.OrganizationRoutes import router as organization_router
 from Routes.Auth import router as auth_router
 from Controllers.Auth import (settings, engine)
+from Routes.forgot_password import router as forgot_password
 # print(settings.sqlURI)
 
 app = FastAPI(title="Backend with MongoDB and SQL")
@@ -23,7 +24,7 @@ app.add_middleware(
 )
 app.include_router(auth_router)
 app.include_router(organization_router)
-app.include_router(forgotPassword)
+app.include_router(forgot_password)
 
 # MongoDB setup
 client = motor.motor_asyncio.AsyncIOMotorClient(settings.mongoURI)

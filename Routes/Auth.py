@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from Models.user_models import  User
-from Schemas.UserSchemas import SuccessResponse
+from Schemas.UserSchemas import SuccessResponse, EmailRequest
 from Schemas.UserSchemas import UserResponse, UserCreate, DeleteUserAfterCheckingPass, OTPVerification, UserLogin
 from Controllers.Auth import get_current_user
 from Database.Connection import get_db
