@@ -37,6 +37,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 JWT_SECRET = settings.JWT_SECRET
 ALGORITHM = settings.ALGORITHM
 
+
 def get_current_user(token: str=Depends(oauth2_scheme), db: Session=Depends(get_db)):
     try:
         payload = jwt.decode(token, JWT_SECRET, algorithms=[ALGORITHM])

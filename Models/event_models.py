@@ -1,49 +1,36 @@
-from pydantic import BaseModel, Field
-from typing import List, Dict, Any, Optional
-from datetime import datetime
+from typing import Optional
+from sqlalchemy import Column, Integer, String, Float, ARRAY, DateTime, Boolean
+from Database.Connection import Base
 
-class GeoTag(BaseModel):
-    latitude: float
-    longitude: float
 
-class Location(BaseModel):
-    venue: str
-    geo_tag: GeoTag
 
-class PriceFees(BaseModel):
-    standard: float
-    early_bird: float
-    group_rate: float
+class Event(Base):
+    __tablename__ = 'events'
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    description = Column(String, nullable=False)
+    type = Column(String, nullable=False)  # Storing as comma-separated string
+    start_date = Column(DateTime, nullable=False)
+    end_date = Column(DateTime, nullable=False)
+    duration = Column(String, nullable=False)
+    age_group = Column(String, nullable=False)
+    family_friendly = Column(Boolean, default=True)
+    price_standard = Column(Float, nullable=False)
+    price_early = Column(Float, nullable=False)
+    price_group = Column(Float, nullable=False)
+    max_capacity = Column(Integer, nullable=False)
+    host_id = Column(Integer, nullable=False)  # Linking host user to event
+    media_files = Column(String, nullable=True)  # Storing as comma-separated string
+    remaining_capacity = Column(Integer, nullable=False)
+    
+    def get_type_list(self):
+        return self.type.split(',')
 
-class DateTimeRange(BaseModel):
-    start: datetime
-    end: datetime
+    def set_type_list(self, type_list):
+        self.type = ','.join(type_list)
 
-class HostInformation(BaseModel):
-    name: str
-    contact_details: str
-    bio: str
+    def get_media_files_list(self):
+        return self.media_files.split(',') if self.media_files else []
 
-class EventDetails(BaseModel):
-    event_name: str
-    event_description: str
-    event_type: List[str]
-    date_and_time: DateTimeRange
-    duration: str
-    age_group: str
-    family_friendly: bool
-    price_fees: PriceFees
-    capacity: int
-    host_information: HostInformation
-    media_files: Optional[List[str]] = [] 
-
-class EventSchema(BaseModel):
-    id: Optional[str] = Field(None, alias='_id')
-    event_ID: str
-    created_at: datetime
-    updated_at: datetime
-    title: str
-    date: datetime
-    location: Location
-    popularity: int
-    event_details: EventDetails
+    def set_media_files_list(self, media_files_list):
+        self.media_files = ','.join(media_files_list)
