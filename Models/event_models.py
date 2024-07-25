@@ -22,6 +22,7 @@ class Event(Base):
     host_id = Column(Integer, nullable=False)  # Linking host user to event
     media_files = Column(String, nullable=True)  # Storing as comma-separated string
     remaining_capacity = Column(Integer, nullable=False)
+    creator_id = Column(Integer, nullable=False) #Linking creator user to event
     
     def get_type_list(self):
         return self.type.split(',')
