@@ -6,7 +6,11 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int
     ALGORITHM: str
     mongoURI: str
-    sqlURI: str
+    Driver: str
+    Server: str
+    Database: str
+    Uid: str
+    Pwd: str
     endpoint: str
     accesskey:str
     sender_email: str

@@ -6,9 +6,12 @@ from passlib.context import CryptContext
 from fastapi.middleware.cors import CORSMiddleware
 from Routes.OrganizationRoutes import router as organization_router
 from Routes.Auth import router as auth_router
-from Controllers.Auth import (settings, engine)
+# from Controllers.Auth import (settings, engine)
+from Database.Connection import engine
+from config import settings
 from Routes.forgot_password import router as forgot_password
 from Routes.EventRoutes import router as events
+from sqlalchemy import MetaData
 # print(settings.sqlURI)
 
 app = FastAPI(title="Backend with MongoDB and SQL")
@@ -44,6 +47,14 @@ async def startup_event():
     from Database.Connection import Base
     Base.metadata.create_all(bind=engine)
 
+
+    metadata = MetaData()
+    metadata.reflect(bind=engine)
+
+    # Print all table names
+    print("Tables in the database:")
+    for table_name in metadata.tables.keys():
+        print(table_name)
 
 @app.get("/")
 async def read_root():

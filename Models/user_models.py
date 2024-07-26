@@ -7,21 +7,19 @@ class User(Base):
     __tablename__ = 'users'
     id = Column(Integer, primary_key=True, index=True)
     is_admin = Column(Boolean, default=False)
-    works_at = Column(String, nullable=True)
-    email = Column(String, unique=True, index=True, nullable=False)
-    username = Column(String, index=True, nullable=False)
-    password = Column(String, nullable=False)
-    avatar = Column(String, nullable=True)
-    contact_no = Column(String, nullable=True)
+    works_at = Column(String(255), nullable=True)  # Added length constraint
+    email = Column(String(255), unique=True, index=True, nullable=False)  # Added length constraint
+    username = Column(String(255), index=True, nullable=False)  # Added length constraint
+    password = Column(String(255), nullable=False)  # Added length constraint
+    avatar = Column(String(255), nullable=True)  # Added length constraint
+    contact_no = Column(String(20), nullable=True)  # Considered a fixed length
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 class OTP(Base):
     __tablename__ = "otps"
     
     id = Column(Integer, primary_key=True, index=True)
-    email = Column(String, index=True)
-    otp = Column(String)
+    email = Column(String(255), index=True)  # Added length constraint
+    otp = Column(String(10))  # Optional: specify length for OTP
     expires_at = Column(DateTime)
-
-
 # Pydantic models

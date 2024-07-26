@@ -13,9 +13,6 @@ from Database.Connection import get_db
 from Controllers.OtpGen import create_otp
 
 
-SQLALCHEMY_DATABASE_URL = settings.sqlURI  # Or your preferred database URL
-engine = create_engine(SQLALCHEMY_DATABASE_URL)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
