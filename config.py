@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     endpoint: str
     accesskey:str
     sender_email: str
+    OPENAI_API_KEY:str
 
     class Config:
         env_file = ".env"
