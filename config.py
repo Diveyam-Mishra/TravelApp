@@ -14,6 +14,11 @@ class Settings(BaseSettings):
     endpoint: str
     accesskey:str
     sender_email: str
+    COSMOS_DB_ENDPOINT: str
+    COSMOS_DB_KEY : str
+    DATABASE_NAME : str
+    CONTAINER_NAME : str
+
 
     class Config:
         env_file = ".env"
