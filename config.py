@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     DATABASE_NAME : str
     CONTAINER_NAME : str
     OPENAI_API_KEY: str
-    OPENAI_API_KEY:str
+
 
     class Config:
         env_file = ".env"
