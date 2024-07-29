@@ -23,7 +23,7 @@ params = urllib.parse.quote_plus(
     f'Driver={Driver};'
     f'Server={Server};'
     f'Database={Database};'
-    f'Uid={Uid};'
+    f'Uid=Trabii_BE_GUY;'
     f'Pwd={Pwd};'
     'Encrypt=yes;'
     'TrustServerCertificate=no;'
@@ -33,7 +33,7 @@ params = urllib.parse.quote_plus(
 # Construct the connection string
 conn_str = f'mssql+pyodbc:///?odbc_connect={params}'
 
-engine = create_engine(conn_str, echo=True)
+engine = create_engine(conn_str, echo=True, pool_pre_ping=True)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
