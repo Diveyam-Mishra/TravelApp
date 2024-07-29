@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     COSMOS_DB_KEY : str
     DATABASE_NAME : str
     CONTAINER_NAME : str
+    OPENAI_API_KEY: str
     OPENAI_API_KEY:str
 
     class Config:

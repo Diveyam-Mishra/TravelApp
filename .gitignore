@@ -10,6 +10,7 @@ __pycache__/
 venv/
 env/
 myenv/
+test/
 *.egg-info/
 
 # Distribution / packaging
