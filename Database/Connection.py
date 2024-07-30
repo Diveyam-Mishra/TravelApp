@@ -11,6 +11,7 @@ Server = settings.Server
 Database = settings.Database
 Uid = settings.Uid
 SQLPwd = settings.SQLPwd
+Pwd = SQLPwd
 
 COSMOS_DB_ENDPOINT = settings.COSMOS_DB_ENDPOINT
 COSMOS_DB_KEY = settings.COSMOS_DB_KEY+"=="
