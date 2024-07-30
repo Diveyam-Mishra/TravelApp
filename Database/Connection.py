@@ -4,6 +4,7 @@ from sqlalchemy.orm import sessionmaker
 from config import settings
 import urllib
 from azure.cosmos import CosmosClient, exceptions
+from sqlalchemy.engine import URL
 
 Driver = settings.Driver
 Server = settings.Server
@@ -33,7 +34,10 @@ params = urllib.parse.quote_plus(
 # Construct the connection string
 conn_str = f'mssql+pyodbc:///?odbc_connect={params}'
 
-engine = create_engine(conn_str, echo=True, pool_pre_ping=True)
+connection_string = f"DRIVER={Driver};SERVER={Server};DATABASE={Database};UID=Trabii_BE_GUY;PWD={Pwd}"
+connection_url = URL.create("mssql+pyodbc", query={"odbc_connect": connection_string})
+
+engine = create_engine(connection_url)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
