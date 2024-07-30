@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     Server: str
     Database: str
     Uid: str
-    Pwd: str
+    SQLPwd: str
     endpoint: str
     accesskey:str
     sender_email: str
