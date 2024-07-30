@@ -34,7 +34,7 @@ params = urllib.parse.quote_plus(
 # Construct the connection string
 conn_str = f'mssql+pyodbc:///?odbc_connect={params}'
 
-connection_string = f"DRIVER={Driver};SERVER={Server};DATABASE={Database};UID=Trabii_BE_GUY;PWD={Pwd}"
+connection_string = f"DRIVER={Driver};SERVER={Server};DATABASE={Database};UID=Trabii_BE_GUY;PWD=Iibart210"
 connection_url = URL.create("mssql+pyodbc", query={"odbc_connect": connection_string})
 print(Driver, Server, Database, Uid, Pwd)
 engine = create_engine(connection_url)
