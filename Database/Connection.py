@@ -10,7 +10,7 @@ Driver = settings.Driver
 Server = settings.Server
 Database = settings.Database
 Uid = settings.Uid
-Pwd = settings.Pwd
+SQLPwd = settings.SQLPwd
 
 COSMOS_DB_ENDPOINT = settings.COSMOS_DB_ENDPOINT
 COSMOS_DB_KEY = settings.COSMOS_DB_KEY+"=="
@@ -24,7 +24,7 @@ params = urllib.parse.quote_plus(
     f'Driver={Driver};'
     f'Server={Server};'
     f'Database={Database};'
-    f'Uid=Trabii_BE_GUY;'
+    f'Uid={Uid};'
     f'Pwd={Pwd};'
     'Encrypt=yes;'
     'TrustServerCertificate=no;'
@@ -34,9 +34,9 @@ params = urllib.parse.quote_plus(
 # Construct the connection string
 conn_str = f'mssql+pyodbc:///?odbc_connect={params}'
 
-connection_string = f"DRIVER={Driver};SERVER={Server};DATABASE={Database};UID=Trabii_BE_GUY;PWD=Iibart210"
+connection_string = f"DRIVER={Driver};SERVER={Server};DATABASE={Database};UID={Uid};PWD=Iibart210"
 connection_url = URL.create("mssql+pyodbc", query={"odbc_connect": connection_string})
-print(Driver, Server, Database, Uid, Pwd)
+print(SQLPwd)
 engine = create_engine(connection_url)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
