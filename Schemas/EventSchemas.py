@@ -92,3 +92,13 @@ class EventDetailsupdate(BaseModel):
     capacity: int
     host_information: 'HostDetails'
     media_files: List[str]
+
+class EventFilter(BaseModel):
+    date_preference: Optional[str] = None
+    specific_date: Optional[datetime] = None
+    time_preference: Optional[List[str]] = None
+    location_preference: Optional[str] = None
+    duration_preference: Optional[str] = None
+    user_latitude: float
+    user_longitude: float
+    user_city: str

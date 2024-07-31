@@ -1,12 +1,17 @@
 from openai import OpenAI
 from config import settings
-from Constants.SampleEvents import events
+from Schemas.EventSchemas import EventFilter
+from Models.user_models import User
+from fastapi import Depends, HTTPException
+from Controllers.Auth import get_current_user
 api_key = settings.OPENAI_API_KEY
 
 client = OpenAI(api_key=api_key)
 
 
-def generate_questions(input):
+def generate_questions(input, current_user: User=Depends(get_current_user)):
+    if current_user is None:
+        raise HTTPException(status_code=400, detail="User Not Found")
     messages = [
         {"role":"assistant",
         "content":"""
@@ -45,19 +50,28 @@ def generate_questions(input):
     completion = client.chat.completions.create(model="gpt-3.5-turbo", messages=messages)
     reply = completion.choices[0].message.content
     return reply
-
-formatted_events = "\n".join([f"ID: {event['id']}, Name: {event['name']}, Description: {event['description']}" for event in events])
     
 
-def suggest_events(input):
+def suggest_events(input: str, events: list, current_user: User=Depends(get_current_user)):
+    if current_user is None:
+        raise HTTPException(status_code=400, detail="User Not Found")
+    # Format the events for the assistant
+    if not events:
+        formatted_events = "No events available."
+    else:
+        formatted_events = "\n".join([f"ID: {event['id']}, Name: {event['name']}, Description: {event['description']}" for event in events])
+    
+    # print(formatted_events)
+    # Create the messages for the assistant
+    print(input)
     messages = [
         {
             "role": "assistant",
             "content": """
-                You will be given certain characteristics of some user.
-                Based on those choices/preferences, you have to pick 5 of the events the user might like most from the list of events provided in the input.
-                Make sure to ONLY and ONLY return an array consisting of IDs of the events, no need to mention the name, nor the description.. only IDs of the events, like for example return only this: "[1, 5, 8, 12, 23]".
-                Act like some python script and only return the array of integer.
+                You will be given certain characteristics of some user, like the vibe preference, location preference etc.
+                Based on those choices/preferences, you have to pick at most 5 of the events the user might like most from the list of events provided in the input.
+                Make sure to ONLY and ONLY return an array consisting of IDs of the events.
+                Act like some python script and only return the array of integers like [a, b, c].
             """
         },
         {
@@ -69,7 +83,16 @@ def suggest_events(input):
             "content": f"{input}"
         }
     ]
-
-    completion = client.chat.completions.create(model="gpt-3.5-turbo", messages=messages)
+    
+    # Call the OpenAI API
+    completion = client.chat.completions.create(
+        model="gpt-4o",
+        messages=messages
+    )
+    
+    # Get the model's reply
     reply = completion.choices[0].message.content
+    
+    # Parse the reply to ensure it's a valid array of integers
     return reply
+    

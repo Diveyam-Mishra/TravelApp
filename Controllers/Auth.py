@@ -46,6 +46,9 @@ def get_current_user(token: str=Depends(oauth2_scheme), db: Session=Depends(get_
             raise HTTPException(status_code=404, detail="User not found")
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
+    except Exception as e:
+        # Handle other potential exceptions
+        raise HTTPException(status_code=401, detail=f"Token error: {str(e)}")
     return user
 
 

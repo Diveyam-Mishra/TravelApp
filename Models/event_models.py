@@ -1,6 +1,7 @@
 from typing import Optional
-from sqlalchemy import Column, Integer, String, Float, ARRAY, DateTime, Boolean
+from sqlalchemy import Column, Integer, String, Float, ARRAY, DateTime, Boolean, ForeignKey
 from Database.Connection import Base
+from sqlalchemy.orm import relationship
 
 
 
@@ -19,10 +20,12 @@ class Event(Base):
     price_early = Column(Float, nullable=False)
     price_group = Column(Float, nullable=False)
     max_capacity = Column(Integer, nullable=False)
-    host_id = Column(Integer, nullable=False)  # Linking host user to event
+    host_id = Column(Integer, ForeignKey('organizations.id'), nullable=False)  # Linking host user to event
     media_files = Column(String, nullable=True)  # Storing as comma-separated string
     remaining_capacity = Column(Integer, nullable=False)
-    creator_id = Column(Integer, nullable=False) #Linking creator user to event
+    creator_id = Column(Integer, nullable=False)  # Linking creator user to event
+
+    host = relationship("Organization")
     
     def get_type_list(self):
         return self.type.split(',')

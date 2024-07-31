@@ -11,7 +11,8 @@ Server = settings.Server
 Database = settings.Database
 Uid = settings.Uid
 SQLPwd = settings.SQLPwd
-Pwd = SQLPwd
+
+
 
 COSMOS_DB_ENDPOINT = settings.COSMOS_DB_ENDPOINT
 COSMOS_DB_KEY = settings.COSMOS_DB_KEY+"=="
@@ -26,7 +27,7 @@ params = urllib.parse.quote_plus(
     f'Server={Server};'
     f'Database={Database};'
     f'Uid={Uid};'
-    f'Pwd={Pwd};'
+    f'Pwd={SQLPwd};'
     'Encrypt=yes;'
     'TrustServerCertificate=no;'
     'Connection Timeout=30;'
@@ -37,7 +38,9 @@ conn_str = f'mssql+pyodbc:///?odbc_connect={params}'
 
 connection_string = f"DRIVER={Driver};SERVER={Server};DATABASE={Database};UID={Uid};PWD=Iibart210"
 connection_url = URL.create("mssql+pyodbc", query={"odbc_connect": connection_string})
-print(SQLPwd)
+
+# connection_url = "sqlite:///./test.db"
+
 engine = create_engine(connection_url)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
