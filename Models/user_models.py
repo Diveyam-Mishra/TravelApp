@@ -10,7 +10,7 @@ class User(Base):
     works_at = Column(String(255), nullable=True)  # Added length constraint
     email = Column(String(255), unique=True, index=True, nullable=False)  # Added length constraint
     username = Column(String(255), index=True, nullable=False)  # Added length constraint
-    password = Column(String(255), nullable=False)  # Added length constraint
+    # password = Column(String(255), nullable=False)  # Added length constraint
     avatar = Column(String(255), nullable=True)  # Added length constraint
     contact_no = Column(String(20), nullable=True)  # Considered a fixed length
     created_at = Column(DateTime(timezone=True), server_default=func.now())

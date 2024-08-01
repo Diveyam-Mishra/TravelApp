@@ -3,14 +3,16 @@ from typing import Optional, List
 from pydantic import BaseModel, EmailStr
 from datetime import datetime
 
+
 class UserBase(BaseModel):
     email: str
     username: str
-    password: str
+    # password: str
     is_admin: Optional[bool] = False
     works_at: Optional[str] = None
     avatar: Optional[str] = None
     contact_no: Optional[str] = None
+
 
 class UserResponse(BaseModel):
     email: EmailStr
@@ -25,20 +27,29 @@ class UserResponse(BaseModel):
     class Config:
         orm_mode = True
 
+
 class UserCreate(BaseModel):
     email: EmailStr
     username: str
-    password: str
+    # password: str
     is_admin: Optional[bool] = False
     works_at: Optional[str] = None
     avatar: Optional[str] = None
     contact_no: Optional[str] = None
     otp: Optional[str] = None
 
+
 class UserLogin(BaseModel):
     email: Optional[str] = None
     username: Optional[str] = None
-    password: str
+    # password: str
+
+
+class UserLoginVerify(BaseModel):
+    email: Optional[str] = None
+    username: Optional[str] = None
+    otp: Optional[str] = None
+
 
 class SuccessResponse(BaseModel):
     message: str
@@ -65,16 +76,20 @@ class OTPVerification(BaseModel):
     email: str
     otp: str
     username: str
-    password: str
+    # password: str
     avatar: str
     contact_no: str
     works_at:str
 
+
 class EmailRequest(BaseModel):
     email: str
+    username: str
+
 
 class ForgotPasswordRequest(BaseModel):
     email: str
+
 
 class ResetPasswordRequest(BaseModel):
     email: str
