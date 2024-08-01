@@ -1,5 +1,4 @@
-from typing import Optional
-from sqlalchemy import Column, Integer, String, Float, ARRAY, DateTime, Boolean, ForeignKey
+from sqlalchemy import Column, Integer, String, Float, DateTime, Boolean, ForeignKey
 from Database.Connection import Base
 from sqlalchemy.orm import relationship
 

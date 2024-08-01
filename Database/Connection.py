@@ -3,7 +3,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from config import settings
 import urllib
-from azure.cosmos import CosmosClient, exceptions
+from azure.cosmos import CosmosClient
 from sqlalchemy.engine import URL
 
 Driver = settings.Driver

@@ -83,8 +83,8 @@ class OTPVerification(BaseModel):
 
 
 class EmailRequest(BaseModel):
-    email: str
-    username: str
+    email: Optional[str]
+    username: Optional[str]
 
 
 class ForgotPasswordRequest(BaseModel):
@@ -95,3 +95,6 @@ class ResetPasswordRequest(BaseModel):
     email: str
     otp: str
     new_password: str
+
+class CheckUsername(BaseModel):
+    username:str

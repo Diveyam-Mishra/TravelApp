@@ -151,3 +151,8 @@ def login_verify(login_data: UserLoginVerify, db: Session) -> SuccessResponse:
     db.commit()
     
     return SuccessResponse(message="User logged in successfully", token=token, success=True)
+def check_unique_username(user:CheckUsername, db: Session) -> SuccessResponse:
+        query=db.query(User).filter(User.username==user.username).first()
+        if query:
+            raise HTTPException(status_code=400, detail="Username already created")
+        return SuccessResponse(message="Username Available",success=True)
