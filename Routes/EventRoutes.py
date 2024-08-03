@@ -10,7 +10,6 @@ from Models.user_models import User
 from Database.Connection import get_container
 router = APIRouter()
 from typing import List, Dict
-from fastapi.responses import JSONResponse
 
 
 @router.post("/event/create", response_model=SuccessResponse)
