@@ -12,6 +12,7 @@ from config import settings
 from Routes.forgot_password import router as forgot_password
 from Routes.EventRoutes import router as events
 from Routes.AiInteract import router as AiInteract
+from Routes.Files import router as FileRouter
 from sqlalchemy import MetaData
 # print(settings.sqlURI)
 
@@ -32,6 +33,7 @@ app.include_router(organization_router)
 app.include_router(forgot_password)
 app.include_router(events)
 app.include_router(AiInteract)
+app.include_router(FileRouter)
 
 # MongoDB setup
 client = motor.motor_asyncio.AsyncIOMotorClient(settings.mongoURI)
@@ -52,11 +54,6 @@ async def startup_event():
 
     metadata = MetaData()
     metadata.reflect(bind=engine)
-
-    # Print all table names
-    # print("Tables in the database:")
-    # for table_name in metadata.tables.keys():
-    #     print(table_name)
 
 @app.get("/")
 async def read_root():

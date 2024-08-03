@@ -13,7 +13,7 @@ class Event(Base):
     type = Column(String, nullable=False)  # Storing as comma-separated string
     start_date = Column(DateTime, nullable=False)
     end_date = Column(DateTime, nullable=False)
-    duration = Column(String, nullable=False)
+    duration = Column(Integer, nullable=False)
     age_group = Column(String, nullable=False)
     family_friendly = Column(Boolean, default=True)
     price_standard = Column(Float, nullable=False)
@@ -21,9 +21,10 @@ class Event(Base):
     price_group = Column(Float, nullable=False)
     max_capacity = Column(Integer, nullable=False)
     host_id = Column(Integer, ForeignKey('organizations.id'), nullable=False)  # Linking host user to event
-    media_files = Column(String, nullable=True)  # Storing as comma-separated string
+    
     remaining_capacity = Column(Integer, nullable=False)
     creator_id = Column(Integer, nullable=False)  # Linking creator user to event
+    editor_access = Column(String, nullable=True)  # Storing as comma-separated string of user IDs
 
     host = relationship("Organization")
     
@@ -33,8 +34,8 @@ class Event(Base):
     def set_type_list(self, type_list):
         self.type = ','.join(type_list)
 
-    def get_media_files_list(self):
-        return self.media_files.split(',') if self.media_files else []
+    def get_editor_access_list(self):
+        return [int(user_id) for user_id in self.editor_access.split(',')] if self.editor_access else []
 
-    def set_media_files_list(self, media_files_list):
-        self.media_files = ','.join(media_files_list)
+    def set_editor_access_list(self, editor_access_list):
+        self.editor_access = ','.join(map(str, editor_access_list))

@@ -64,11 +64,17 @@ def verify_otp(user: OTPVerification, db: Session) -> SuccessResponse:
     db.commit()
 
     # hashed_password = pwd_context.hash(user.password)
-    new_user = User(email=user.email, username=user.username, avatar=user.avatar, contact_no=user.contact_no, works_at=user.works_at)
+    new_user = User(email=user.email, username=user.username, contact_no=user.contact_no, works_at=user.works_at)
     db.add(new_user)
     db.commit()
     
-    token_data = {"user_id": new_user.id}
+    expiry_time = datetime.utcnow() + timedelta(days=30)
+
+    # Create token data with the expiration time
+    token_data = {
+        'user_id': new_user.id,  # Example user ID
+        'exp': expiry_time
+    }
     token = jwt.encode(token_data, JWT_SECRET, algorithm="HS256")
 
     return SuccessResponse(message="User Created Successfully", token=token, success=True)

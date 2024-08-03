@@ -50,22 +50,24 @@ from datetime import datetime
 #     event_details: EventDetails
 
 
-class EventDetails(BaseModel):
-    event_name: str
-    event_description: str
-    event_type: List[str]
-    date_and_time: str
-    duration: str
-    age_group: str
-    family_friendly: bool
-    price_fees: 'PriceDetails'
-    capacity: int
-    host_information: 'HostDetails'
-    media_files: List[str]
-
 class DateTimeDetails(BaseModel):
-    start: datetime
-    end: datetime
+    day: int
+    month: int
+    year: int
+    hour: int
+    minute: int
+    second: Optional[int] = None  # Optional field for seconds
+
+    def to_datetime(self) -> datetime:
+        """Convert the fields to a datetime object."""
+        return datetime(
+            year=self.year,
+            month=self.month,
+            day=self.day,
+            hour=self.hour,
+            minute=self.minute,
+            second=self.second or 0  # Default to 0 if not provided
+        )
 
 class PriceDetails(BaseModel):
     standard: float
@@ -75,23 +77,35 @@ class PriceDetails(BaseModel):
 class HostDetails(BaseModel):
     id: int
 
+class EventDetails(BaseModel):
+    event_name: str
+    event_description: str
+    event_type: List[str]
+    start_date_and_time: DateTimeDetails
+    end_date_and_time: DateTimeDetails
+    age_group: str
+    family_friendly: bool
+    price_fees: PriceDetails
+    capacity: int
+    host_information: HostDetails
+
 class SuccessResponse(BaseModel):
     message: str
     success: bool
 
+
 class EventDetailsupdate(BaseModel):
-    id: str
-    event_name: str
-    event_description: str
-    event_type: List[str]
-    date_and_time: str
-    duration: str
-    age_group: str
-    family_friendly: bool
-    price_fees: 'PriceDetails'
-    capacity: int
-    host_information: 'HostDetails'
-    media_files: List[str]
+    event_name: Optional[str] = None
+    event_description: Optional[str] = None
+    event_type: Optional[List[str]] = None
+    start_date_and_time: Optional[DateTimeDetails] = None
+    end_date_and_time: Optional[DateTimeDetails] = None
+    age_group: Optional[str] = None
+    family_friendly: Optional[bool] = None
+    price_fees: Optional[PriceDetails] = None
+    capacity: Optional[int] = None
+    host_information: Optional[HostDetails] = None
+
 
 class EventFilter(BaseModel):
     date_preference: Optional[str] = None

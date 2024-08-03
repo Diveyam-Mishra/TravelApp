@@ -1,9 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from Models.user_models import  User
-from Schemas.UserSchemas import SuccessResponse, EmailRequest, UserLoginVerify
+from Schemas.UserSchemas import SuccessResponse, EmailRequest, UserLoginVerify,UserUpdate, UserName
 from Schemas.UserSchemas import UserResponse, UserCreate, DeleteUserAfterCheckingPass, OTPVerification, UserLogin
-from Controllers.Auth import get_current_user, login_verify
+from Controllers.Auth import get_current_user, login_verify, update_user,\
+    check_unique_username
 from Database.Connection import get_db
 
 from Controllers.Auth import (create_user, delete_user, register_user, login_user)
@@ -23,7 +24,7 @@ def add_user(user: UserCreate, db: Session=Depends(get_db)):
 #     return delete_user(delete_data, current_user, db)
 
 
-@router.get("/auth/getuser")
+@router.get("/auth/get_user")
 def get_user_details(current_user: User=Depends(get_current_user)):
     # The user data is already fetched by get_current_user and assigned to current_user
     # Return user details without sensitive information
@@ -33,12 +34,20 @@ def get_user_details(current_user: User=Depends(get_current_user)):
         "username": current_user.username,
         "is_admin": current_user.is_admin,
         "works_at": current_user.works_at,
-        "avatar": current_user.avatar,
         "contact_no": current_user.contact_no,
         "created_at": current_user.created_at
     }
     return user_data
 
+@router.post("/auth/check-username", response_model=SuccessResponse)
+async def check_username(username: UserName, db: Session = Depends(get_db)):
+    return await check_unique_username(username.username, db)
+
+@router.post("/auth/{userId}/update", response_model=SuccessResponse)
+def update_user_details(userId:int, req:UserUpdate, db: Session=Depends(get_db), current_user: User=Depends(get_current_user)):
+    if current_user is None:
+        raise HTTPException(status_code=401, detail="User is not authenticated")
+    return update_user(req, db, userId, current_user)
 
 @router.post("/auth/send-otp/", response_model=SuccessResponse)
 def register_user_endpoint(req: EmailRequest, db: Session=Depends(get_db)):

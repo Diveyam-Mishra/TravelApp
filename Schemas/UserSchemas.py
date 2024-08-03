@@ -10,7 +10,6 @@ class UserBase(BaseModel):
     # password: str
     is_admin: Optional[bool] = False
     works_at: Optional[str] = None
-    avatar: Optional[str] = None
     contact_no: Optional[str] = None
 
 
@@ -19,7 +18,6 @@ class UserResponse(BaseModel):
     username: str
     is_admin: bool
     works_at: Optional[str]
-    avatar: Optional[str]
     contact_no: Optional[str]
     created_at: datetime
     id: int
@@ -34,22 +32,29 @@ class UserCreate(BaseModel):
     # password: str
     is_admin: Optional[bool] = False
     works_at: Optional[str] = None
-    avatar: Optional[str] = None
     contact_no: Optional[str] = None
     otp: Optional[str] = None
 
+class UserUpdate(BaseModel):
+    username: Optional[str] = None
+    works_at: Optional[str] = None
+    contact_no: Optional[str] = None
 
 class UserLogin(BaseModel):
     email: Optional[str] = None
     username: Optional[str] = None
     # password: str
 
+class UserName(BaseModel):
+    username: str
 
 class UserLoginVerify(BaseModel):
     email: Optional[str] = None
     username: Optional[str] = None
     otp: Optional[str] = None
 
+class UserId(BaseModel):
+    userid: int
 
 class SuccessResponse(BaseModel):
     message: str
@@ -77,7 +82,6 @@ class OTPVerification(BaseModel):
     otp: str
     username: str
     # password: str
-    avatar: str
     contact_no: str
     works_at:str
 

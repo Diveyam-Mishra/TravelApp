@@ -35,7 +35,9 @@ class Preferences(BaseModel):
 
 
 @router.post("/ai/get_questions")
-async def get_questions(params: Params):
+async def get_questions(params: Params, current_user: User=Depends(get_current_user)):
+    if current_user is None:
+        raise HTTPException(status_code=401, detail="Unauthorized")
     questions = generate_questions(f"username:{params.userName}, age:{params.age}")
     return {"Questions":questions}
 

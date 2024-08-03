@@ -18,10 +18,12 @@ COSMOS_DB_ENDPOINT = settings.COSMOS_DB_ENDPOINT
 COSMOS_DB_KEY = settings.COSMOS_DB_KEY+"=="
 DATABASE_NAME =settings.DATABASE_NAME 
 CONTAINER_NAME = settings.CONTAINER_NAME
+FILE_CONTAINER_NAME = settings.FILE_CONTAINER_NAME
 
 client = CosmosClient(COSMOS_DB_ENDPOINT, COSMOS_DB_KEY)
 database = client.get_database_client(DATABASE_NAME)
 container = database.get_container_client(CONTAINER_NAME)
+file_container = database.get_container_client(FILE_CONTAINER_NAME)
 params = urllib.parse.quote_plus(
     f'Driver={Driver};'
     f'Server={Server};'
@@ -57,3 +59,9 @@ def get_container():
         yield container
     finally:
         pass 
+
+def get_file_container():
+    try:
+        yield file_container
+    finally:
+        pass

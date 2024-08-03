@@ -8,7 +8,7 @@ from Controllers.Auth import get_current_user
 from Models.user_models import User
 from fastapi import HTTPException, Depends
 from Database.Connection import get_container
-import uuid
+from uuid import uuid4
 from datetime import datetime, timedelta
 from sqlalchemy import and_, or_
 from sqlalchemy.sql import extract
@@ -16,10 +16,7 @@ from Models.org_models import Organization
 from sqlalchemy import func
 
 
-async def create_event(event_details: EventDetails, container=Depends(get_container), current_user: User=Depends(get_current_user)) -> SuccessResponse:
-    if current_user is None:
-        raise HTTPException(status_code=400, detail="User Not Found")
-
+async def create_event(event_details: EventDetails, current_user: User, container=Depends(get_container)) -> SuccessResponse:
     # Prepare the query to check if the event already exists
     query = """
     SELECT * FROM eventcontainer e WHERE e.name = @name AND e.host_id = @host_id AND e.type = @type AND e.start_date = @start_date AND e.end_date = @end_date
@@ -29,8 +26,8 @@ async def create_event(event_details: EventDetails, container=Depends(get_contai
         {"name": "@name", "value": event_details.event_name},
         {"name": "@host_id", "value": event_details.host_information.id},
         {"name": "@type", "value": ','.join(event_details.event_type)},
-        {"name": "@start_date", "value": event_details.date_and_time},
-        {"name": "@end_date", "value": event_details.date_and_time}
+        {"name": "@start_date", "value": event_details.start_date_and_time.to_datetime().isoformat()},
+        {"name": "@end_date", "value": event_details.end_date_and_time.to_datetime().isoformat()}
     ]
     
     items = list(container.query_items(query=query, parameters=params, enable_cross_partition_query=True))
@@ -38,30 +35,37 @@ async def create_event(event_details: EventDetails, container=Depends(get_contai
     if items:
         raise HTTPException(status_code=400, detail="Event already created")
 
+    # Calculate the duration in minutes
+    start_datetime = event_details.start_date_and_time.to_datetime()
+    end_datetime = event_details.end_date_and_time.to_datetime()
+    duration_minutes = int((end_datetime - start_datetime).total_seconds() / 60)
+
     # Create a new event
     new_event = event_details.dict()
     new_event.update({
-        "id": str(uuid.uuid4()),
+        "id": str(uuid4()),  # Generate a new UUID for the event
         "type": ','.join(event_details.event_type),  # Convert list to comma-separated string
-        "start_date": event_details.date_and_time,
-        "end_date": event_details.date_and_time,
-        "media_files": ','.join(event_details.media_files),  # Convert list to comma-separated string
+        "start_date": start_datetime.isoformat(),  # Convert datetime to ISO format string
+        "end_date": end_datetime.isoformat(),  # Convert datetime to ISO format string
+        "duration": str(duration_minutes),  # Store duration as a string
         "remaining_capacity": event_details.capacity,
-        "creator_id": current_user.id  # Use the current user's ID
+        "creator_id": current_user.id,  # Use the current user's ID
+        "editor_access": ','.join([str(current_user.id)])  # Set the creator as the editor
     })
 
     container.create_item(new_event)
-    return SuccessResponse(message="Event Created Successfully", success=True)
+    return SuccessResponse(message=f"Event Created Successfully with id: {new_event['id']}", success=True)
 
-
-async def update_event(event_details: EventDetailsupdate, container=Depends(get_container), current_user: User=Depends(get_current_user)) -> SuccessResponse:
+async def update_event(eventId: str, event_details: EventDetailsupdate, container=Depends(get_container), current_user: User = Depends(get_current_user)) -> SuccessResponse:
     if current_user is None:
         raise HTTPException(status_code=400, detail="User Not Found")
+    
+    # Prepare the query to find the event
     query = """
     SELECT * FROM eventcontainer e WHERE e.id = @id
     """
     
-    params = [{"name": "@id", "value": event_details.id}]
+    params = [{"name": "@id", "value": eventId}]
     
     items = list(container.query_items(query=query, parameters=params, enable_cross_partition_query=True))
 
@@ -70,25 +74,81 @@ async def update_event(event_details: EventDetailsupdate, container=Depends(get_
 
     existing_event = items[0]
 
-    if existing_event["creator_id"] != current_user.id:
+    # Authorization check
+    editor_access = existing_event.get("editor_access", "").split(',')
+    if existing_event["creator_id"] != current_user.id and str(current_user.id) not in editor_access:
         raise HTTPException(status_code=401, detail="Not Authorized")
 
     update_data = event_details.dict(exclude_unset=True)
 
     # Convert lists to comma-separated strings
     if 'event_type' in update_data:
-        update_data['type'] = ','.join(update_data['event_type'])
-    if 'media_files' in update_data:
-        update_data['media_files'] = ','.join(update_data['media_files'])
+        update_data['type'] = ','.join(update_data.pop('event_type'))
 
+    # Convert datetime fields to ISO format strings
+    if 'start_date_and_time' in event_details:
+        update_data['start_date'] = event_details.start_date_and_time.to_datetime().isoformat()
+    if 'end_date_and_time' in event_details:
+        update_data['end_date'] = event_details.end_date_and_time.to_datetime().isoformat()
+
+    # Update existing event with new data
     for key, value in update_data.items():
         existing_event[key] = value
 
     container.replace_item(item=existing_event['id'], body=existing_event)
     return SuccessResponse(message="Event Updated Successfully", success=True)
 
+async def give_editor_access(
+    db: Session,
+    userId: int,
+    current_user: User,
+    eventId: str,
+    container  # No need for Depends here in function signature
+) -> SuccessResponse:
+    # Check if event exists in event container
+    query = """
+    SELECT * FROM eventcontainer e WHERE e.id = @id
+    """
+    
+    params = [{"name": "@id", "value": eventId}]
+    
+    items = list(container.query_items(query=query, parameters=params, enable_cross_partition_query=True))
 
-def get_filtered_events(db: Session, filters: EventFilter, limit: int = 30, current_user: User=Depends(get_current_user)):
+    if not items:
+        raise HTTPException(status_code=404, detail="Event not found")
+    
+    existing_event = items[0]  # Assuming items is a list and taking the first element
+
+    # Check if user exists
+    db_user = db.query(User).filter(User.id == userId).first()
+    if not db_user:
+        raise HTTPException(status_code=400, detail="User not found")
+
+    # Authorization check
+    if current_user.id != existing_event.get('creator_id'):
+        raise HTTPException(status_code=401, detail="Not Authorized")
+
+    # Check if user already has editor access
+    editor_access_list = existing_event.get('editor_access', "").split(',')
+    if str(userId) in map(str, editor_access_list):
+        raise HTTPException(status_code=400, detail="User already has editor access")
+
+    # Add the new user ID to the editor access list
+    editor_access_list.append(str(userId))
+
+    # Update the event's editor access field
+    existing_event['editor_access'] = ','.join(editor_access_list)
+
+    # Replace the item in the container with the updated data
+    container.replace_item(item=existing_event['id'], body=existing_event)
+
+    # Commit the transaction to the database
+    db.commit()
+
+    return SuccessResponse(message=f"Editor Access Granted to user ID: {userId}", success=True)
+    
+
+def get_filtered_events(db: Session, filters: EventFilter, limit: int=30, current_user: User=Depends(get_current_user)):
     if current_user is None:
         raise HTTPException(status_code=400, detail="User Not Found")
     # Start building the query

@@ -4,6 +4,7 @@ from Schemas.UserSchemas import *
 from jose import JWTError
 from fastapi import HTTPException, Depends
 import jwt
+from jwt.exceptions import ExpiredSignatureError
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
@@ -11,7 +12,7 @@ from config import settings
 from passlib.context import CryptContext
 from Database.Connection import get_db
 from Controllers.OtpGen import create_otp, verify_otp
-
+from datetime import timedelta
 
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -35,22 +36,66 @@ JWT_SECRET = settings.JWT_SECRET
 ALGORITHM = settings.ALGORITHM
 
 
-def get_current_user(token: str=Depends(oauth2_scheme), db: Session=Depends(get_db)):
+def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     try:
+        # Decode the token and verify its signature and expiration
         payload = jwt.decode(token, JWT_SECRET, algorithms=[ALGORITHM])
         user_id = payload.get("user_id")
         if user_id is None:
             raise HTTPException(status_code=401, detail="Invalid token")
+        
+        # Query the user from the database
         user = db.query(User).filter(User.id == user_id).first()
         if user is None:
             raise HTTPException(status_code=404, detail="User not found")
+    
+    except ExpiredSignatureError:
+        # Handle token expiration
+        raise HTTPException(status_code=401, detail="Token has expired")
     except JWTError:
+        # Handle other JWT errors
         raise HTTPException(status_code=401, detail="Invalid token")
     except Exception as e:
         # Handle other potential exceptions
         raise HTTPException(status_code=401, detail=f"Token error: {str(e)}")
+    
     return user
 
+
+def update_user(req: UserUpdate, db: Session, userId:int, current_user:User):
+    user = db.query(User).filter(User.id == userId).first()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if current_user.id is not userId:
+        raise HTTPException(status_code=403, detail="You are not authorized to update this user")
+
+    # Update the user's details with the data from req
+    if req.username is not None:
+        user.username = req.username
+    if req.works_at is not None:
+        user.works_at = req.works_at
+    if req.contact_no is not None:
+        user.contact_no = req.contact_no
+
+    # Commit the changes to the database
+    db.commit()
+
+    # Optionally, you might want to refresh the instance to reflect changes
+    db.refresh(user)
+
+    return {"message": "User updated successfully", "success": True}
+
+
+async def check_unique_username(username: str, db: Session) -> SuccessResponse:
+    # Query to check if the username already exists
+    query = db.query(User).filter(User.username == username).first()
+    
+    if query:
+        raise HTTPException(status_code=400, detail="Username already taken")
+    
+    return SuccessResponse(message="Username Available", success=True)
 
 def create_user(db: Session, user: UserCreate) -> UserResponse:
     # hashed_password = pwd_context.hash(user.password)
@@ -58,7 +103,6 @@ def create_user(db: Session, user: UserCreate) -> UserResponse:
         email=user.email,
         username=user.username,
         # password=hashed_password,
-        avatar=user.avatar,
         contact_no=user.contact_no,
         works_at=user.works_at
     )
@@ -145,7 +189,16 @@ def login_verify(login_data: UserLoginVerify, db: Session) -> SuccessResponse:
     if not db_otp or db_otp.expires_at < datetime.utcnow():
         raise HTTPException(status_code=400, detail="Invalid or expired OTP")
 
-    token_data = {"user_id": db_user.id}
+    # token_data = {"user_id": db_user.id}
+    expiry_time = datetime.utcnow() + timedelta(days=30)
+
+    # Create token data with the expiration time
+    token_data = {
+        'user_id': db_user.id,  # Example user ID
+        'exp': expiry_time
+    }
+
+
     token = jwt.encode(token_data, JWT_SECRET, algorithm="HS256")
     db.delete(db_otp)
     db.commit()
