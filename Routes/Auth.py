@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from Models.user_models import  User
 from Schemas.UserSchemas import SuccessResponse, EmailRequest, UserLoginVerify,UserUpdate, UserName
@@ -7,7 +7,7 @@ from Controllers.Auth import get_current_user, login_verify, update_user,\
     check_unique_username
 from Database.Connection import get_db
 
-from Controllers.Auth import (create_user, register_user, login_user,check_unique_username)
+from Controllers.Auth import (create_user, register_user, login_user)
 from Controllers.OtpGen import (verify_otp)
 
 router = APIRouter()
@@ -67,7 +67,3 @@ def login_user_otp(login_data: UserLogin, db: Session=Depends(get_db)):
 @router.post("/auth/verify-login-otp/", response_model=SuccessResponse)
 def login_verify_otp(login_data: UserLoginVerify, db: Session=Depends(get_db)):
     return login_verify(login_data, db)
-
-@router.post("/auth/check-username", response_model=SuccessResponse)
-def check_username(user: CheckUsername, db: Session=Depends(get_db)):
-    return check_unique_username(user,db)
