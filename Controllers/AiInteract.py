@@ -1,6 +1,5 @@
 from openai import OpenAI
 from config import settings
-from Schemas.EventSchemas import EventFilter
 from Models.user_models import User
 from fastapi import Depends, HTTPException
 from Controllers.Auth import get_current_user

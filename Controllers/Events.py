@@ -52,6 +52,13 @@ async def create_event(event_details: EventDetails, current_user: User, containe
         "creator_id": current_user.id,  # Use the current user's ID
         "editor_access": ','.join([str(current_user.id)])  # Set the creator as the editor
     })
+    new_event["location"] = {
+        "venue": event_details.location.venue,
+        "geo_tag": {
+            "latitude": event_details.location.geo_tag.latitude,
+            "longitude": event_details.location.geo_tag.longitude
+        }
+    }
 
     container.create_item(new_event)
     return SuccessResponse(message=f"Event Created Successfully with id: {new_event['id']}", success=True)

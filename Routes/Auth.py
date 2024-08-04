@@ -7,7 +7,7 @@ from Controllers.Auth import get_current_user, login_verify, update_user,\
     check_unique_username
 from Database.Connection import get_db
 
-from Controllers.Auth import (create_user, register_user, login_user)
+from Controllers.Auth import (create_user, register_user, login_user,delete_user)
 from Controllers.OtpGen import (verify_otp)
 
 router = APIRouter()
@@ -19,9 +19,9 @@ def add_user(user: UserCreate, db: Session=Depends(get_db)):
     return db_user
 
 
-# @router.post("/auth/delete_user/", response_model=SuccessResponse)
-# def delete_user_endpoint(delete_data: DeleteUserAfterCheckingPass, current_user: User=Depends(get_current_user), db: Session=Depends(get_db)):
-#     return delete_user(delete_data, current_user, db)
+@router.post("/auth/delete_user/", response_model=SuccessResponse)
+def delete_user_endpoint(delete_data: DeleteUserAfterCheckingPass, current_user: User=Depends(get_current_user), db: Session=Depends(get_db)):
+    return delete_user(delete_data, current_user, db)
 
 
 @router.get("/auth/get_user")

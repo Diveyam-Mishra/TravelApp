@@ -5,7 +5,6 @@ from sqlalchemy.orm import Session
 from Models.user_models import User
 from fastapi.responses import Response
 from typing import List
-import pybase64
 from Controllers.Files import avatar_upload, get_avatar, upload_event_files,\
     fetch_event_files
 from Controllers.Auth import get_current_user

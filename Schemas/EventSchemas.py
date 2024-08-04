@@ -2,13 +2,13 @@ from pydantic import BaseModel, Field
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 
-# class GeoTag(BaseModel):
-#     latitude: float
-#     longitude: float
+class GeoTag(BaseModel):
+    latitude: float
+    longitude: float
 
-# class Location(BaseModel):
-#     venue: str
-#     geo_tag: GeoTag
+class Location(BaseModel):
+    venue: str
+    geo_tag: GeoTag
 
 # class PriceFees(BaseModel):
 #     standard: float
@@ -88,6 +88,7 @@ class EventDetails(BaseModel):
     price_fees: PriceDetails
     capacity: int
     host_information: HostDetails
+    location:Location
 
 class SuccessResponse(BaseModel):
     message: str
@@ -105,7 +106,7 @@ class EventDetailsupdate(BaseModel):
     price_fees: Optional[PriceDetails] = None
     capacity: Optional[int] = None
     host_information: Optional[HostDetails] = None
-
+    location:Optional[Location]=None
 
 class EventFilter(BaseModel):
     date_preference: Optional[str] = None

@@ -1,10 +1,8 @@
-from fastapi import UploadFile, File, Depends, Form, HTTPException
-from typing import Optional
+from fastapi import UploadFile, HTTPException
 from sqlalchemy.orm import Session
 from Database.Connection import get_db
 from Models.user_models import User
-from Models.event_models import Event
-from Models.Files import Avatar, EventFiles
+from Models.Files import Avatar
 import pybase64
 from uuid import uuid4
 from Controllers.Auth import get_current_user

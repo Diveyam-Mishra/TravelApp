@@ -6,12 +6,10 @@ from fastapi import HTTPException, Depends
 import jwt
 from jwt.exceptions import ExpiredSignatureError
 from fastapi.security import OAuth2PasswordBearer
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy import create_engine
 from config import settings
 from passlib.context import CryptContext
 from Database.Connection import get_db
-from Controllers.OtpGen import create_otp, verify_otp
+from Controllers.OtpGen import create_otp
 from datetime import timedelta
 
 
