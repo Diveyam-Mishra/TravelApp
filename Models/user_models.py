@@ -22,3 +22,11 @@ class OTP(Base):
     otp = Column(String(10))  # Optional: specify length for OTP
     expires_at = Column(DateTime)
 # Pydantic models
+
+class deletedUser(Base):
+    __tablename__='deletedUser'
+    id = Column(Integer, primary_key=True, index=True)
+    works_at = Column(String(255), nullable=True)  
+    email = Column(String(255), index=True, nullable=False)  
+    username = Column(String(255), index=True, nullable=False)
+    contact_no = Column(String(20), nullable=True)

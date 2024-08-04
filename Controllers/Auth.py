@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from Models.user_models import User, OTP
+from Models.user_models import User, OTP,deletedUser
 from Schemas.UserSchemas import *
 from jose import JWTError
 from fastapi import HTTPException, Depends
@@ -11,7 +11,7 @@ from passlib.context import CryptContext
 from Database.Connection import get_db
 from Controllers.OtpGen import create_otp
 from datetime import timedelta
-
+import uuid
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -111,12 +111,20 @@ def create_user(db: Session, user: UserCreate) -> UserResponse:
 
 
 def delete_user(delete_data: DeleteUserAfterCheckingPass, current_user: User, db: Session) -> SuccessResponse:
-    if not pwd_context.verify(delete_data.password, current_user.password):
-        raise HTTPException(status_code=400, detail="Incorrect password")
-    
-    db.delete(current_user)
-    db.commit()
-    
+    deleted_user = deletedUser(
+        id=uuid.uuid4(),
+        works_at=current_user.works_at,
+        email=current_user.email,
+        username=current_user.username,
+        contact_no=current_user.contact_no
+    )
+    try:
+        db.add(deleted_user)
+        db.delete(current_user)
+        db.commit()
+    except Exception as e:
+        db.rollback()  # Rollback the transaction if an error occurs
+        raise HTTPException(status_code=500, detail="An error occurred while deleting the user")
     return SuccessResponse(message="User deleted successfully", success=True)
 
 def register_user(db: Session, email: str = None, username: str = None) -> SuccessResponse:
