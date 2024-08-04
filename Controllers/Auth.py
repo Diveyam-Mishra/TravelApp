@@ -111,22 +111,12 @@ def create_user(db: Session, user: UserCreate) -> UserResponse:
 
 
 def delete_user(delete_data: DeleteUserAfterCheckingPass, current_user: User, db: Session) -> SuccessResponse:
-    deleted_user = deletedUser(
-        id=uuid.uuid4(),
-        works_at=current_user.works_at,
-        email=current_user.email,
-        username=current_user.username,
-        contact_no=current_user.contact_no
-    )
-    try:
-        db.add(deleted_user)
+    if delete_data.password=="delete":
         db.delete(current_user)
         db.commit()
-    except Exception as e:
-        db.rollback()  # Rollback the transaction if an error occurs
-        raise HTTPException(status_code=500, detail="An error occurred while deleting the user")
-    return SuccessResponse(message="User deleted successfully", success=True)
-
+        return SuccessResponse(message="User deleted successfully", success=True)
+    else:
+        return SuccessResponse(message="wrong",success=True)
 def register_user(db: Session, email: str = None, username: str = None) -> SuccessResponse:
     if (not email) and (not username):
         raise HTTPException(status_code=400, detail="Both Email and Username are required")
