@@ -43,14 +43,15 @@ async def create_event(event_details: EventDetails, current_user: User, containe
     # Create a new event
     new_event = event_details.dict()
     new_event.update({
-        "id": str(uuid4()),  # Generate a new UUID for the event
+        "id": str(uuid4()),  # Generate a new UUID for the id field
+        "event_id": str(uuid4()),  # Generate a new UUID for the event_id field
         "type": ','.join(event_details.event_type),  # Convert list to comma-separated string
         "start_date": start_datetime.isoformat(),  # Convert datetime to ISO format string
         "end_date": end_datetime.isoformat(),  # Convert datetime to ISO format string
         "duration": str(duration_minutes),  # Store duration as a string
         "remaining_capacity": event_details.capacity,
         "creator_id": current_user.id,  # Use the current user's ID
-        "editor_access": ','.join([str(current_user.id)])  # Set the creator as the editor
+        "editor_access": [str(current_user.id)]  # Set the creator as the editor
     })
     new_event["location"] = {
         "venue": event_details.location.venue,
@@ -61,18 +62,18 @@ async def create_event(event_details: EventDetails, current_user: User, containe
     }
 
     container.create_item(new_event)
-    return SuccessResponse(message=f"Event Created Successfully with id: {new_event['id']}", success=True)
+    return SuccessResponse(message=f"Event Created Successfully with event_id: {new_event['event_id']}", success=True)
 
-async def update_event(eventId: str, event_details: EventDetailsupdate, container=Depends(get_container), current_user: User = Depends(get_current_user)) -> SuccessResponse:
+async def update_event(event_id: str, event_details: EventDetailsupdate, container=Depends(get_container), current_user: User = Depends(get_current_user)) -> SuccessResponse:
     if current_user is None:
         raise HTTPException(status_code=400, detail="User Not Found")
     
     # Prepare the query to find the event
     query = """
-    SELECT * FROM eventcontainer e WHERE e.id = @id
+    SELECT * FROM eventcontainer e WHERE e.event_id = @event_id
     """
     
-    params = [{"name": "@id", "value": eventId}]
+    params = [{"name": "@event_id", "value": event_id}]
     
     items = list(container.query_items(query=query, parameters=params, enable_cross_partition_query=True))
 
@@ -82,7 +83,7 @@ async def update_event(eventId: str, event_details: EventDetailsupdate, containe
     existing_event = items[0]
 
     # Authorization check
-    editor_access = existing_event.get("editor_access", "").split(',')
+    editor_access = existing_event.get("editor_access", [])
     if existing_event["creator_id"] != current_user.id and str(current_user.id) not in editor_access:
         raise HTTPException(status_code=401, detail="Not Authorized")
 
@@ -108,16 +109,16 @@ async def update_event(eventId: str, event_details: EventDetailsupdate, containe
 async def give_editor_access(
     db: Session,
     userId: int,
-    current_user: User,
-    eventId: str,
-    container  # No need for Depends here in function signature
+    event_id: str,
+    current_user: User = Depends(get_current_user),
+    container=Depends(get_container)
 ) -> SuccessResponse:
     # Check if event exists in event container
     query = """
-    SELECT * FROM eventcontainer e WHERE e.id = @id
+    SELECT * FROM eventcontainer e WHERE e.event_id = @event_id
     """
     
-    params = [{"name": "@id", "value": eventId}]
+    params = [{"name": "@event_id", "value": event_id}]
     
     items = list(container.query_items(query=query, parameters=params, enable_cross_partition_query=True))
 
@@ -136,7 +137,7 @@ async def give_editor_access(
         raise HTTPException(status_code=401, detail="Not Authorized")
 
     # Check if user already has editor access
-    editor_access_list = existing_event.get('editor_access', "").split(',')
+    editor_access_list = existing_event.get('editor_access', [])
     if str(userId) in map(str, editor_access_list):
         raise HTTPException(status_code=400, detail="User already has editor access")
 
@@ -144,7 +145,7 @@ async def give_editor_access(
     editor_access_list.append(str(userId))
 
     # Update the event's editor access field
-    existing_event['editor_access'] = ','.join(editor_access_list)
+    existing_event['editor_access'] = editor_access_list
 
     # Replace the item in the container with the updated data
     container.replace_item(item=existing_event['id'], body=existing_event)
@@ -155,22 +156,27 @@ async def give_editor_access(
     return SuccessResponse(message=f"Editor Access Granted to user ID: {userId}", success=True)
     
 
-def get_filtered_events(db: Session, filters: EventFilter, limit: int=30, current_user: User=Depends(get_current_user)):
+def get_filtered_events(
+    db: Session, 
+    filters: EventFilter, 
+    limit: int = 30, 
+    current_user: User = Depends(get_current_user)
+):
     if current_user is None:
         raise HTTPException(status_code=400, detail="User Not Found")
+    
     # Start building the query
     query = db.query(Event.id, Event.name, Event.description).join(Organization, Event.host_id == Organization.id)
     
     # Apply date filters
     if filters.date_preference:
+        today = datetime.today().date()
         if filters.date_preference == "Today":
-            today = datetime.today().date()
             query = query.filter(Event.start_date >= today, Event.start_date < today + timedelta(days=1))
         elif filters.date_preference == "Tomorrow":
-            tomorrow = datetime.today().date() + timedelta(days=1)
+            tomorrow = today + timedelta(days=1)
             query = query.filter(Event.start_date >= tomorrow, Event.start_date < tomorrow + timedelta(days=1))
         elif filters.date_preference == "This week":
-            today = datetime.today().date()
             end_of_week = today + timedelta(days=(6 - today.weekday()))
             query = query.filter(Event.start_date >= today, Event.start_date <= end_of_week)
         elif filters.date_preference == "Specific Date" and filters.specific_date:
@@ -190,7 +196,7 @@ def get_filtered_events(db: Session, filters: EventFilter, limit: int=30, curren
                 time_filters.append(or_(extract('hour', Event.start_date) >= 21, extract('hour', Event.start_date) < 6))
         query = query.filter(or_(*time_filters))
     
-    # # Apply location filters
+    # Apply location filters
     if filters.location_preference:
         if filters.location_preference == "Near me":
             user_lat, user_lon = filters.user_latitude, filters.user_longitude
@@ -218,7 +224,7 @@ def get_filtered_events(db: Session, filters: EventFilter, limit: int=30, curren
         elif filters.location_preference == "Open to traveling":
             pass  # No additional filter needed
 
-    # # Apply duration filter
+    # Apply duration filter
     if filters.duration_preference:
         query = query.filter(Event.duration == filters.duration_preference)
     
