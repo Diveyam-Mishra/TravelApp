@@ -124,7 +124,7 @@ async def upload_event_files(
     existing_event = event_items[0]
 
     userId = current_user.id
-    editor_access_list = existing_event.get("editor_access", "").split(',')
+    editor_access_list = existing_event.get("editor_access", "")
     if str(userId) not in editor_access_list:
         raise HTTPException(status_code=403, detail="User does not have editor access")
 
