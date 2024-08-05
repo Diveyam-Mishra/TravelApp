@@ -201,7 +201,9 @@ def login_verify(login_data: UserLoginVerify, db: Session) -> SuccessResponse:
     
     return SuccessResponse(message="User logged in successfully", token=token, success=True)
 
-def look_up_username(username:str,db: Session):
+def look_up_username(username:str,db: Session, current_user: User = Depends(get_current_user)):
+    if current_user is None:
+        raise HTTPException(status_code=400, detail="User Not Found")
     db_user = db.query(User).filter(User.username == username.username).first()
     if not db_user:
             raise HTTPException(status_code=400, detail="User not found")

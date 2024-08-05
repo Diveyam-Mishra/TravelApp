@@ -68,5 +68,5 @@ def login_user_otp(login_data: UserLogin, db: Session=Depends(get_db)):
 def login_verify_otp(login_data: UserLoginVerify, db: Session=Depends(get_db)):
     return login_verify(login_data, db)
 @router.post("/auth/get_user_info/")
-def get_username_info(username: UserName,db: Session=Depends(get_db)):
-    return look_up_username(username,db)
+def get_username_info(username: UserName,db: Session=Depends(get_db), current_user: User = Depends(get_current_user)):
+    return look_up_username(username,db,current_user)
