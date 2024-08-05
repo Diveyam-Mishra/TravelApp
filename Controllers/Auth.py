@@ -200,3 +200,9 @@ def login_verify(login_data: UserLoginVerify, db: Session) -> SuccessResponse:
     db.commit()
     
     return SuccessResponse(message="User logged in successfully", token=token, success=True)
+
+def look_up_username(username:str,db: Session):
+    db_user = db.query(User).filter(User.username == username.username).first()
+    if not db_user:
+            raise HTTPException(status_code=400, detail="User not found")
+    return db_user

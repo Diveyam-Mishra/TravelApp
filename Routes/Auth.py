@@ -7,7 +7,7 @@ from Controllers.Auth import get_current_user, login_verify, update_user,\
     check_unique_username
 from Database.Connection import get_db
 
-from Controllers.Auth import (create_user, register_user, login_user,delete_user)
+from Controllers.Auth import (create_user, register_user, login_user,delete_user,look_up_username)
 from Controllers.OtpGen import (verify_otp)
 
 router = APIRouter()
@@ -67,3 +67,6 @@ def login_user_otp(login_data: UserLogin, db: Session=Depends(get_db)):
 @router.post("/auth/verify-login-otp/", response_model=SuccessResponse)
 def login_verify_otp(login_data: UserLoginVerify, db: Session=Depends(get_db)):
     return login_verify(login_data, db)
+@router.post("/auth/get_user_info/")
+def get_username_info(username: UserName,db: Session=Depends(get_db)):
+    return look_up_username(username,db)
