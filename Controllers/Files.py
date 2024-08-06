@@ -7,7 +7,7 @@ import pybase64
 from uuid import uuid4
 from Controllers.Auth import get_current_user
 from typing import Dict, List
-
+from Schemas.UserSchemas import *
 MAX_FILE_SIZE_MB = 5  # Maximum file size in MB
 MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024  # Convert MB to bytes
 
@@ -16,54 +16,68 @@ VALID_IMAGE_EXTENSIONS = {"jpg", "jpeg", "png", "gif"}  # Add any other valid im
 
 
 async def avatar_upload(
-    file: UploadFile,
+    username: str,
+    req: UserUpdate,
     db: Session,
-    current_user: User
+    current_user: User,
+    file: UploadFile
 ):
     # Check if file is provided
-    if not file:
-        raise HTTPException(status_code=400, detail="No file uploaded")
+    if file:
+        # Check file size
+        file_data = await file.read()
+        if len(file_data) > MAX_FILE_SIZE_BYTES:
+            raise HTTPException(status_code=400, detail="File size exceeds 5MB limit")
 
-    # Check file size
-    file_data = await file.read()
-    if len(file_data) > MAX_FILE_SIZE_BYTES:
-        raise HTTPException(status_code=400, detail="File size exceeds 5MB limit")
+        # Rewind file data for future operations
+        file.file.seek(0)
 
-    # Rewind file data for future operations
-    file.file.seek(0)
+        # Check if the file is an image
+        file_type = file.content_type
+        if file_type not in VALID_IMAGE_MIME_TYPES:
+            raise HTTPException(status_code=400, detail="Invalid file type. Only image files are allowed")
 
-    # Check if the file is an image
-    file_type = file.content_type
-    if file_type not in VALID_IMAGE_MIME_TYPES:
-        raise HTTPException(status_code=400, detail="Invalid file type. Only image files are allowed")
+        # Check file extension
+        ext = file.filename.split('.')[-1].lower()
+        if ext not in VALID_IMAGE_EXTENSIONS:
+            raise HTTPException(status_code=400, detail="Invalid file extension. Only image files are allowed")
 
-    # Check file extension
-    ext = file.filename.split('.')[-1].lower()
-    if ext not in VALID_IMAGE_EXTENSIONS:
-        raise HTTPException(status_code=400, detail="Invalid file extension. Only image files are allowed")
+        # Process file details
+        file_name = f"{current_user.id}_avatar.{ext}"
 
-    # Process file details
-    file_name = f"{current_user.id}_avatar.{ext}"
+        # Check for existing avatar
+        existing_avatar = db.query(Avatar).filter(Avatar.userID == current_user.id).first()
 
-    # Check for existing avatar
-    existing_avatar = db.query(Avatar).filter(Avatar.userID == current_user.id).first()
+        if not existing_avatar:
+            # Create new avatar record if none exists
+            avatar = Avatar(
+                filename=file_name,
+                filedata=file_data,
+                filetype=file_type,
+                userID=current_user.id
+            )
+            db.add(avatar)
+        else:
+            # Update existing avatar record
+            existing_avatar.filename = file_name
+            existing_avatar.filedata = file_data
+            existing_avatar.filetype = file_type
 
-    if not existing_avatar:
-        # Create new avatar record if none exists
-        avatar = Avatar(
-            filename=file_name,
-            filedata=file_data,
-            filetype=file_type,
-            userID=current_user.id
-        )
-        db.add(avatar)
-    else:
-        # Update existing avatar record
-        existing_avatar.filename = file_name
-        existing_avatar.filedata = file_data
-        existing_avatar.filetype = file_type
+    user = db.query(User).filter(User.username==username).first()
+    if user:
+    # Update the user's details with the data from req
+        if req.username is not None:
+            user.username = req.username
+        if req.works_at is not None:
+            user.works_at = req.works_at
+        if req.contact_no is not None:
+            user.contact_no = req.contact_no
+        # Commit the changes to the database
+        db.commit()
 
-    db.commit()
+        # Optionally, you might want to refresh the instance to reflect changes
+        db.refresh(user)
+        db.commit()
     return {"message": "Avatar Updated", "success": True}
 
 

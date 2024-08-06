@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, File, UploadFile, HTTPException, Form
 from Schemas.Files import FileUploadResponse
+from Schemas.UserSchemas import UserUpdate
 from Database.Connection import get_db, get_container, get_file_container
 from sqlalchemy.orm import Session
 from Models.user_models import User
@@ -8,20 +9,28 @@ from typing import List
 from Controllers.Files import avatar_upload, get_avatar, upload_event_files,\
     fetch_event_files
 from Controllers.Auth import get_current_user
+from typing import Optional, List
 router = APIRouter()
 
 
-@router.post("/avatar/upload", response_model=FileUploadResponse)
+@router.post("/auth/update", response_model=FileUploadResponse)
 async def upload_avatar(
-    file: UploadFile=File(...),
-    db: Session=Depends(get_db),
-    current_user: User=Depends(get_current_user)
+    username: str = Form(...),
+    updated_username:Optional[str]=Form(None),
+    works_at: Optional[str] = Form(None),
+    contact_no: Optional[str] = Form(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    file: UploadFile = File(...)
 ):
     if current_user is None:
         raise HTTPException(status_code=401, detail="Unauthorized")
     
-    # Call the function to handle the file upload
-    return await avatar_upload(file, db, current_user)
+    # Create UserUpdate instance from form data
+    req = UserUpdate(username=updated_username, works_at=works_at, contact_no=contact_no)
+    
+    # Call the function to handle the file upload and user update
+    return await avatar_upload(username, req, db, current_user, file)
 
 
 @router.get("/avatar/fetch/{userID}")

@@ -43,7 +43,7 @@ def get_user_details(current_user: User=Depends(get_current_user)):
 async def check_username(username: UserName, db: Session = Depends(get_db)):
     return await check_unique_username(username.username, db)
 
-@router.post("/auth/{userId}/update", response_model=SuccessResponse)
+@router.post("/auth/{userId}/update_non_avatar", response_model=SuccessResponse)
 def update_user_details(userId:int, req:UserUpdate, db: Session=Depends(get_db), current_user: User=Depends(get_current_user)):
     if current_user is None:
         raise HTTPException(status_code=401, detail="User is not authenticated")
