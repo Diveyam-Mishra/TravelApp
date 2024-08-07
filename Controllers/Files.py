@@ -3,11 +3,12 @@ from sqlalchemy.orm import Session
 from Database.Connection import get_db
 from Models.user_models import User
 from Models.Files import Avatar
-import pybase64
+import pybase64 # type: ignore
 from uuid import uuid4
 from Controllers.Auth import get_current_user
 from typing import Dict, List
 from Schemas.UserSchemas import *
+from Schemas.EventSchemas import EventDetailsupdate
 MAX_FILE_SIZE_MB = 5  # Maximum file size in MB
 MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024  # Convert MB to bytes
 
@@ -120,13 +121,11 @@ async def get_avatar(
 async def upload_event_files(
     eventId: str,
     files: List[UploadFile],
+    update_info:EventDetailsupdate,
     current_user: User,
     event_container,
     file_container
 ):
-    if len(files) > 5:
-        raise HTTPException(status_code=400, detail="Maximum 5 files can be uploaded at once")
-    
     # Query to find the event
     query_event = "SELECT * FROM eventcontainer e WHERE e.id = @id"
     params_event = [{"name": "@id", "value": eventId}]
@@ -141,59 +140,73 @@ async def upload_event_files(
     editor_access_list = existing_event.get("editor_access", "")
     if str(userId) not in editor_access_list:
         raise HTTPException(status_code=403, detail="User does not have editor access")
+    if files:
+        if len(files) > 5:
+            raise HTTPException(status_code=400, detail="Maximum 5 files can be uploaded at once")
+        file_columns = [
+            ('fileName1', 'fileData1', 'fileType1'),
+            ('fileName2', 'fileData2', 'fileType2'),
+            ('fileName3', 'fileData3', 'fileType3'),
+            ('fileName4', 'fileData4', 'fileType4'),
+            ('fileName5', 'fileData5', 'fileType5')
+        ]
 
-    file_columns = [
-        ('fileName1', 'fileData1', 'fileType1'),
-        ('fileName2', 'fileData2', 'fileType2'),
-        ('fileName3', 'fileData3', 'fileType3'),
-        ('fileName4', 'fileData4', 'fileType4'),
-        ('fileName5', 'fileData5', 'fileType5')
-    ]
+        # Query to find existing record of event files
+        query_files = "SELECT * FROM eventfilescontainer ef WHERE ef.eventId = @eventId"
+        params_files = [{"name": "@eventId", "value": eventId}]
+        file_items = list(file_container.query_items(query=query_files, parameters=params_files, enable_cross_partition_query=True))
 
-    # Query to find existing record of event files
-    query_files = "SELECT * FROM eventfilescontainer ef WHERE ef.eventId = @eventId"
-    params_files = [{"name": "@eventId", "value": eventId}]
-    file_items = list(file_container.query_items(query=query_files, parameters=params_files, enable_cross_partition_query=True))
+        if file_items:
+            existing_record = file_items[0]
+            for i, file in enumerate(files):
+                if i < len(file_columns):
+                    file_column = file_columns[i]
+                    fileName = f"{eventId}_{file.filename}"
+                    fileType = file.content_type
+                    
+                    # Encode file data as base64 string
+                    file_data_base64 = pybase64.b64encode(await file.read()).decode('utf-8')
 
-    if file_items:
-        existing_record = file_items[0]
-        for i, file in enumerate(files):
-            if i < len(file_columns):
-                file_column = file_columns[i]
-                fileName = f"{eventId}_{file.filename}"
-                fileType = file.content_type
-                
-                # Encode file data as base64 string
-                file_data_base64 = pybase64.b64encode(await file.read()).decode('utf-8')
+                    existing_record[file_column[0]] = fileName
+                    existing_record[file_column[1]] = file_data_base64
+                    existing_record[file_column[2]] = fileType
 
-                existing_record[file_column[0]] = fileName
-                existing_record[file_column[1]] = file_data_base64
-                existing_record[file_column[2]] = fileType
+            file_container.replace_item(item=existing_record['id'], body=existing_record)
+        else:
+            new_record = {
+                "id": str(uuid4()),  # Generate a new UUID for the record
+                "eventId": eventId,
+            }
 
-        file_container.replace_item(item=existing_record['id'], body=existing_record)
-        return {"message": "Files Updated", "success": True}
-    else:
-        new_record = {
-            "id": str(uuid4()),  # Generate a new UUID for the record
-            "eventId": eventId,
-        }
-
-        for i, file in enumerate(files):
-            if i < len(file_columns):
-                file_column = file_columns[i]
-                fileName = f"{eventId}_{file.filename}"
-                fileType = file.content_type
-                
-                # Encode file data as base64 string
-                file_data_base64 = pybase64.b64encode(await file.read()).decode('utf-8')
-
-                new_record[file_column[0]] = fileName
-                new_record[file_column[1]] = file_data_base64
-                new_record[file_column[2]] = fileType
-
-        file_container.create_item(new_record)
-        return {"message": "Files Uploaded", "success": True}
-
+            for i, file in enumerate(files):
+                if i < len(file_columns):
+                    file_column = file_columns[i]
+                    fileName = f"{eventId}_{file.filename}"
+                    fileType = file.content_type
+                    # Encode file data as base64 string
+                    file_data_base64 = pybase64.b64encode(await file.read()).decode('utf-8')
+                    new_record[file_column[0]] = fileName
+                    new_record[file_column[1]] = file_data_base64
+                    new_record[file_column[2]] = fileType
+            file_container.create_item(new_record)
+    if update_info:
+        print (update_info)
+        update_data = update_info.dict(exclude_unset=True)
+        # Convert lists to comma-separated strings
+        if 'event_type' in update_data and update_data['event_type'] is not None:
+            update_data['type'] = ','.join(update_data.pop('event_type'))
+        
+        # Convert datetime fields to ISO format strings
+        if 'start_date_and_time' in update_info and update_info.start_date_and_time is not None:
+            update_data['start_date'] = update_info.start_date_and_time.to_datetime().isoformat()
+        if 'end_date_and_time' in update_info and update_info.end_date_and_time is not None:
+            update_data['end_date'] = update_info.end_date_and_time.to_datetime().isoformat()
+            # Update existing event with new data
+        for key, value in update_data.items():
+            if value is not None:
+                existing_event[key] = value
+        event_container.replace_item(item=existing_event['id'], body=existing_event)
+    return {"message": "Files Updated", "success": True}
 
 async def fetch_event_files(
     eventId: str,
