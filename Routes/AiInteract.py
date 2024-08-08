@@ -34,7 +34,7 @@ class Preferences(BaseModel):
     user_city: Optional[str] = None
 
 
-@router.post("/ai/get_questions")
+@router.post("/ai/get_questions/")
 async def get_questions(params: Params, current_user: User=Depends(get_current_user)):
     if current_user is None:
         raise HTTPException(status_code=401, detail="Unauthorized")
@@ -42,7 +42,7 @@ async def get_questions(params: Params, current_user: User=Depends(get_current_u
     return {"Questions":questions}
 
 
-@router.post("/ai/get_events")
+@router.post("/ai/get_events/")
 async def get_events(Preferences: Preferences, db: Session=Depends(get_db), current_user: User=Depends(get_current_user)):
     if current_user is None:
             raise HTTPException(status_code=400, detail="User Not Found")

@@ -22,6 +22,6 @@ def get_organization_details(org_id: int, db: Session=Depends(get_db)):
     return get_organization(org_id, db)
 
 
-@router.get("/orgs/get_city_org/{city}", response_model=List[OrganizationSchema])
+@router.get("/orgs/get_city_org/{city}/", response_model=List[OrganizationSchema])
 def get_all_city_org(city: str, organizations: List[Organization]=Depends(get_city_organizations)):
     return organizations  

@@ -24,7 +24,7 @@ def delete_user_endpoint(delete_data: DeleteUserAfterCheckingPass, current_user:
     return delete_user(delete_data, current_user, db)
 
 
-@router.get("/auth/get_user")
+@router.get("/auth/get_user/")
 def get_user_details(current_user: User=Depends(get_current_user)):
     # The user data is already fetched by get_current_user and assigned to current_user
     # Return user details without sensitive information
@@ -39,11 +39,11 @@ def get_user_details(current_user: User=Depends(get_current_user)):
     }
     return user_data
 
-@router.post("/auth/check-username", response_model=SuccessResponse)
+@router.post("/auth/check-username/", response_model=SuccessResponse)
 async def check_username(username: UserName, db: Session = Depends(get_db)):
     return await check_unique_username(username.username, db)
 
-@router.post("/auth/{userId}/update_non_avatar", response_model=SuccessResponse)
+@router.post("/auth/{userId}/update_non_avatar/", response_model=SuccessResponse)
 def update_user_details(userId:int, req:UserUpdate, db: Session=Depends(get_db), current_user: User=Depends(get_current_user)):
     if current_user is None:
         raise HTTPException(status_code=401, detail="User is not authenticated")

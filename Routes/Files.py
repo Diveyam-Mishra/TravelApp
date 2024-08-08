@@ -14,7 +14,7 @@ from typing import Optional, List
 router = APIRouter()
 
 
-@router.post("/auth/update", response_model=FileUploadResponse)
+@router.post("/auth/update/", response_model=FileUploadResponse)
 async def upload_avatar(
     username: str = Form(...),
     updated_username:Optional[str]=Form(None),
@@ -34,7 +34,7 @@ async def upload_avatar(
     return await avatar_upload(username, req, db, current_user, file)
 
 
-@router.get("/avatar/fetch/{userID}")
+@router.get("/avatar/fetch/{userID}/")
 async def fetch_avatar(
     userID: int,
     db: Session=Depends(get_db),
@@ -45,7 +45,7 @@ async def fetch_avatar(
     return await get_avatar(userID, db)
 
 
-@router.post("/event/{eventId}/files/upload",
+@router.post("/event/{eventId}/files/upload/",
 response_model=FileUploadResponse)
 async def upload_files(
     eventId: str,
@@ -83,7 +83,7 @@ async def upload_files(
     
     return await upload_event_files(eventId, files,update_info, current_user, container, fileContainer)
 
-@router.get("/event/{eventId}/files")
+@router.get("/event/{eventId}/files/")
 async def get_event_files(
     eventId: str,
     container=Depends(get_file_container),

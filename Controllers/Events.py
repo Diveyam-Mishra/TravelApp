@@ -62,7 +62,7 @@ async def create_event(event_details: EventDetails, current_user: User, containe
     }
 
     container.create_item(new_event)
-    return SuccessResponse(message=f"Event Created Successfully with event_id: {new_event['event_id']}", success=True)
+    return SuccessResponse(message=f"Event Created Successfully with event_id: {new_event['id']}", success=True)
 
 async def update_event(event_id: str, event_details: EventDetailsupdate, container=Depends(get_container), current_user: User = Depends(get_current_user)) -> SuccessResponse:
     if current_user is None:
@@ -70,10 +70,10 @@ async def update_event(event_id: str, event_details: EventDetailsupdate, contain
     
     # Prepare the query to find the event
     query = """
-    SELECT * FROM eventcontainer e WHERE e.event_id = @event_id
+    SELECT * FROM eventcontainer e WHERE e.id = @id
     """
     
-    params = [{"name": "@event_id", "value": event_id}]
+    params = [{"name": "@id", "value": event_id}]
     
     items = list(container.query_items(query=query, parameters=params, enable_cross_partition_query=True))
 
@@ -115,10 +115,10 @@ async def give_editor_access(
 ) -> SuccessResponse:
     # Check if event exists in event container
     query = """
-    SELECT * FROM eventcontainer e WHERE e.event_id = @event_id
+    SELECT * FROM eventcontainer e WHERE e.id = @id
     """
     
-    params = [{"name": "@event_id", "value": event_id}]
+    params = [{"name": "@id", "value": event_id}]
     
     items = list(container.query_items(query=query, parameters=params, enable_cross_partition_query=True))
 
