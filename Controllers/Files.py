@@ -8,7 +8,7 @@ from uuid import uuid4
 from Controllers.Auth import get_current_user
 from typing import Dict, List
 from Schemas.UserSchemas import *
-from Schemas.EventSchemas import EventDetailsupdate
+from Schemas.EventSchemas import EventDetailsupdate, EventDetails
 MAX_FILE_SIZE_MB = 5  # Maximum file size in MB
 MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024  # Convert MB to bytes
 
@@ -81,6 +81,96 @@ async def avatar_upload(
         db.commit()
     return {"message": "Avatar Updated", "success": True}
 
+
+async def create_event_and_upload_files(
+    event_data: EventDetails,
+    files: List[UploadFile],
+    current_user: User,
+    event_container,
+    file_container
+) -> SuccessResponse:
+    # Prepare the query to check if the event already exists
+    query = """
+    SELECT * FROM eventcontainer e WHERE e.name = @name AND e.host_id = @host_id AND e.type = @type AND e.start_date = @start_date AND e.end_date = @end_date
+    """
+    
+    params = [
+        {"name": "@name", "value": event_data.event_name},
+        {"name": "@host_id", "value": event_data.host_information.id},
+        {"name": "@type", "value": ','.join(event_data.event_type)},
+        {"name": "@start_date", "value": event_data.start_date_and_time.to_datetime().isoformat()},
+        {"name": "@end_date", "value": event_data.end_date_and_time.to_datetime().isoformat()}
+    ]
+    
+    items = list(event_container.query_items(query=query, parameters=params, enable_cross_partition_query=True))
+
+    if items:
+        raise HTTPException(status_code=400, detail="Event already created")
+
+    # Calculate the duration in minutes
+    start_datetime = event_data.start_date_and_time.to_datetime()
+    end_datetime = event_data.end_date_and_time.to_datetime()
+    duration_minutes = int((end_datetime - start_datetime).total_seconds() / 60)
+
+    # Create a new event
+    new_event = event_data.dict()
+    new_event.update({
+        "id": str(uuid4()),  # Generate a new UUID for the id field
+        "event_id": str(uuid4()),  # Generate a new UUID for the event_id field
+        "type": ','.join(event_data.event_type),  # Convert list to comma-separated string
+        "start_date": start_datetime.isoformat(),  # Convert datetime to ISO format string
+        "end_date": end_datetime.isoformat(),  # Convert datetime to ISO format string
+        "duration": str(duration_minutes),  # Store duration as a string
+        "remaining_capacity": event_data.capacity,
+        "creator_id": current_user.id,  # Use the current user's ID
+        "editor_access": [str(current_user.id)]  # Set the creator as the editor
+    })
+    new_event["location"] = {
+        "venue": event_data.location.venue,
+        "geo_tag": {
+            "latitude": event_data.location.geo_tag.latitude,
+            "longitude": event_data.location.geo_tag.longitude
+        }
+    }
+
+    # Insert the new event into the event container
+    event_container.create_item(new_event)
+
+    # Handle file uploads
+    if files:
+        if len(files) > 5:
+            raise HTTPException(status_code=400, detail="Maximum 5 files can be uploaded at once")
+
+        file_columns = [
+            ('fileName1', 'fileData1', 'fileType1'),
+            ('fileName2', 'fileData2', 'fileType2'),
+            ('fileName3', 'fileData3', 'fileType3'),
+            ('fileName4', 'fileData4', 'fileType4'),
+            ('fileName5', 'fileData5', 'fileType5')
+        ]
+
+        new_record = {
+            "id": str(uuid4()),  # Generate a new UUID for the record
+            "eventId": new_event['event_id'],
+        }
+
+        for i, file in enumerate(files):
+            if i < len(file_columns):
+                file_column = file_columns[i]
+                fileName = f"{new_event['event_id']}_{file.filename}"
+                fileType = file.content_type
+
+                # Encode file data as base64 string
+                file_data_base64 = pybase64.b64encode(await file.read()).decode('utf-8')
+
+                new_record[file_column[0]] = fileName
+                new_record[file_column[1]] = file_data_base64
+                new_record[file_column[2]] = fileType
+
+        # Insert the new record into the file container
+        file_container.create_item(new_record)
+
+    return SuccessResponse(message=f"Event Created Successfully with event_id: {new_event['event_id']}", success=True)
 
 async def get_avatar(
     userID: int,

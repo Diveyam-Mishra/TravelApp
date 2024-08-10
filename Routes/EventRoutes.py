@@ -1,7 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException,File, UploadFile, HTTPException, Form
 from Schemas.UserSchemas import SuccessResponse, UserId
-from Schemas.EventSchemas import EventDetails, EventDetailsupdate, EventFilter
-from Database.Connection import get_db
+from Schemas.EventSchemas import *
+from Database.Connection import get_db, get_container, get_file_container
 from Controllers.Events import create_event, update_event, get_filtered_events, \
     give_editor_access
 from sqlalchemy.orm import Session
@@ -10,13 +10,53 @@ from Models.user_models import User
 from Database.Connection import get_container
 router = APIRouter()
 from typing import List, Dict
-
+from Controllers.Files import create_event_and_upload_files
+import json
 
 @router.post("/event/create/", response_model=SuccessResponse)
-async def add_event(event_data: EventDetails, container=Depends(get_container), current_user: User = Depends(get_current_user)):
+async def create_event(
+    event_name: str = Form(...),
+    event_description: str = Form(...),
+    event_type: List[str] = Form(...),
+    start_date_and_time: str = Form(...),
+    end_date_and_time: str = Form(...),
+    age_group: str = Form(...),
+    family_friendly: bool = Form(...),
+    price_fees: str = Form(...),
+    capacity: int = Form(...),
+    host_information: str = Form(...),
+    location: str = Form(...),
+    files: List[UploadFile] = File(...),
+    container=Depends(get_container),
+    fileContainer=Depends(get_file_container),
+    current_user: User = Depends(get_current_user)
+):
     if current_user is None:
         raise HTTPException(status_code=401, detail="Unauthorized")
-    return await create_event(event_data, current_user, container)
+    
+    # Parse the JSON strings into Python objects
+    start_date_and_time = DateTimeDetails(**json.loads(start_date_and_time))
+    end_date_and_time = DateTimeDetails(**json.loads(end_date_and_time))
+    price_fees = PriceDetails(**json.loads(price_fees))
+    host_information = HostDetails(**json.loads(host_information))
+    location = Location(**json.loads(location))
+    
+    event_data = EventDetails(
+        event_name=event_name,
+        event_description=event_description,
+        event_type=event_type,
+        start_date_and_time=start_date_and_time,
+        end_date_and_time=end_date_and_time,
+        age_group=age_group,
+        family_friendly=family_friendly,
+        price_fees=price_fees,
+        capacity=capacity,
+        host_information=host_information,
+        location=location
+    )
+
+    return await create_event_and_upload_files(event_data, files, current_user, container, fileContainer)
+
 
 @router.post("/event/{eventId}/edit/", response_model=SuccessResponse)
 async def edit_event(eventId: str, event_data: EventDetailsupdate, container=Depends(get_container), current_user: User = Depends(get_current_user)):
