@@ -14,7 +14,7 @@ from Routes.EventRoutes import router as events
 from Routes.AiInteract import router as AiInteract
 from Routes.Files import router as FileRouter
 from Routes.Fiters import router as FilterRouter
-from Test.Test_api import router as test
+# from Test.Test_api import router as test
 from sqlalchemy import MetaData
 # print(settings.sqlURI)
 
@@ -39,7 +39,7 @@ app.include_router(FileRouter)
 app.include_router(FilterRouter)
 
 
-app.include_router(test)
+# app.include_router(test)
 
 
 # MongoDB setup

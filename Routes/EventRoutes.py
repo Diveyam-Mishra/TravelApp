@@ -3,7 +3,7 @@ from Schemas.UserSchemas import SuccessResponse, UserId
 from Schemas.EventSchemas import *
 from Database.Connection import get_db, get_container, get_file_container
 from Controllers.Events import create_event, update_event, get_filtered_events, \
-    give_editor_access
+    give_editor_access, get_event_by_id
 from sqlalchemy.orm import Session
 from Controllers.Auth import get_current_user
 from Models.user_models import User
@@ -63,13 +63,20 @@ async def edit_event(eventId: str, event_data: EventDetailsupdate, container=Dep
     return await update_event(eventId, event_data, container, current_user)
 
 
-@router.post("/events/filtered/", response_model=List[Dict[str, str]])
-def filter_events(filters: EventFilter, db: Session=Depends(get_db)):
-    events = get_filtered_events(db, filters)
-    result = [{"id": event.id, "name": event.name, "description": event.description} for event in events]
-    # print(result)
-    return result
+# @router.post("/events/filtered/", response_model=List[Dict[str, str]])
+# def filter_events(filters: EventFilter, db: Session=Depends(get_db)):
+#     events = get_filtered_events(db, filters)
+#     result = [{"id": event.id, "name": event.name, "description": event.description} for event in events]
+#     # print(result)
+#     return result
 
+@router.get("/events/details/{eventId}", response_model=SearchEvent)
+async def get_event(eventId: str, event_container=Depends(get_container), file_container=Depends(get_file_container)):
+    event = await get_event_by_id(eventId, event_container, file_container)
+    if event:
+        return event
+    else:
+        raise HTTPException(status_code=404, detail="Event not found")
 
 @router.post("/events/{eventId}/give-edit-access/", response_model=SuccessResponse)
 async def add_editor(
