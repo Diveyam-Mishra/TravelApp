@@ -145,7 +145,15 @@ class SearchEvent(BaseModel):
     class Config:
         extra = 'allow'
 
+class ImageDetails(BaseModel):
+    file_name: str
+    file_data: str  # This will be base64 encoded data
+    file_type: str
+
 class SearchEventResult(BaseModel):
     id:str
     name:str
     description:str
+    type: List[str]
+    thumbnail: Optional[ImageDetails] = None
+    distance: str

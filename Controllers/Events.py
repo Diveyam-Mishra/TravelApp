@@ -154,7 +154,45 @@ async def give_editor_access(
     db.commit()
 
     return SuccessResponse(message=f"Editor Access Granted to user ID: {userId}", success=True)
+
+async def get_event_by_id(eventId: str, event_container, file_container):
+    # Query to find the event by its event_id
+    event_query = "SELECT * FROM c WHERE c.event_id = @eventId"
+    params = [{"name": "@eventId", "value": eventId}]
     
+    # Query the event container for the event with the specified eventId
+    events = list(event_container.query_items(
+        query=event_query,
+        parameters=params,
+        enable_cross_partition_query=True
+    ))
+    
+    if not events:
+        raise HTTPException(status_code=404, detail="Event not found")
+    
+    event = events[0]  # Since event_id is unique, we get the first item
+
+    # Query to find images associated with the event
+    image_query = "SELECT * FROM c WHERE c.eventId = @eventId"
+    
+    image_files = list(file_container.query_items(
+        query=image_query,
+        parameters=params,
+        enable_cross_partition_query=True
+    ))
+
+    # Include the images in the event data
+    if image_files:
+        event['images'] = [
+            {
+                "fileName": image.get("fileName1"),
+                "fileType": image.get("fileType1"),
+                "fileData": image.get("fileData1"),
+            }
+            for image in image_files
+        ]
+
+    return event
 
 def get_filtered_events(
     db: Session, 

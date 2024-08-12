@@ -5,20 +5,41 @@ from Schemas.UserSchemas import *
 from Schemas.EventSchemas import *
 from datetime import datetime, timedelta
 import random
+from Database.Connection import get_container
 
-async def get_category_events(
-    filters: List[str], 
-    event_container
-):
-    query = "SELECT * FROM c WHERE c.event_type IN ({})".format(
-    ",".join(["'{}'".format(event) for event in filters])
-)
-    events = list(event_container.query_items(
-        query=query,
-        enable_cross_partition_query=True
-    ))
-    print(events)
-    return events
+async def get_category_events(filters: List[str], event_container, file_container):
+    # Fetch all events
+    query = "SELECT * FROM c"
+    
+    events = []
+    for event in event_container.query_items(
+            query=query,
+            enable_cross_partition_query=True
+        ):
+        # Count the number of matched types
+        match_count = sum(1 for event_type in filters if event_type in event['event_type'])
+        
+        if match_count > 0:
+            # Fetch the first image associated with the event
+            image_query = f"SELECT TOP 1 * FROM c WHERE c.eventId = '{event['event_id']}'"
+            image_results = list(file_container.query_items(query=image_query, enable_cross_partition_query=True))
+            
+            if image_results:
+                # Add the first image's details to the event
+                image = image_results[0]
+                event['thumbnail'] = {
+                    "file_name": image.get('fileName1'),
+                    "file_data": image.get('fileData1'),  # This will be base64 encoded data
+                    "file_type": image.get('fileType1')
+                }
+            
+            event['match_count'] = match_count
+            events.append(event)
+    
+    # Sort events based on the number of matching types
+    sorted_events = sorted(events, key=lambda e: e['match_count'], reverse=True)
+    
+    return sorted_events
 #filters Coming as Objects
 
 
@@ -48,17 +69,20 @@ async def get_sponsered_events(
     ))
 
     return events
+
+
 async def search_events_by_name(
     partial_name: str, 
-    event_container, 
+    event_container,
+    file_container 
 ):
     query = """
-    SELECT * FROM eventcontainer e 
-    WHERE STARTSWITH(e.event_name, @partial_name)
+    SELECT * FROM c 
+    WHERE CONTAINS(LOWER(c.event_name), LOWER(@partial_name))
     """
 
     params = [
-        {"name": "@partial_name", "value": partial_name}
+        {"name": "@partial_name", "value": partial_name.lower()}  # Convert the search term to lowercase
     ]
 
     events = list(event_container.query_items(
@@ -66,6 +90,27 @@ async def search_events_by_name(
         parameters=params,
         enable_cross_partition_query=True
     ))
+
+    # Fetch and attach the thumbnail (first image file) for each event
+    for event in events:
+        event_id = event['event_id']
+        file_query = f"SELECT * FROM c WHERE c.eventId = '{event_id}'"
+        file_items = list(file_container.query_items(
+            query=file_query,
+            enable_cross_partition_query=True
+        ))
+
+        if file_items:
+            # Assume the first file in the list is the thumbnail
+            thumbnail_file = file_items[0]
+            event['thumbnail'] = {
+                "file_name": thumbnail_file['fileName1'],
+                "file_data": thumbnail_file['fileData1'],
+                "file_type": thumbnail_file['fileType1']
+            }
+        else:
+            event['thumbnail'] = None
+
     return events
 
 async def search_events_by_creator(

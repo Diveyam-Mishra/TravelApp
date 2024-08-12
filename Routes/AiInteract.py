@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from typing import List
 from Controllers.AiInteract import generate_questions, suggest_events
-from Routes.EventRoutes import filter_events
+# from Routes.EventRoutes import filter_events
 from Models.user_models import User
 from Controllers.Auth import get_current_user
 router = APIRouter()
@@ -58,9 +58,9 @@ async def get_events(Preferences: Preferences, db: Session=Depends(get_db), curr
     )
     input_str = (f"Vibe preference: {Preferences.VibePreference}, Location Preference: {Preferences.LocationPreference}, Engagement Level: {Preferences.EngagementLevel}, Interest Areas: {Preferences.InterestAreas}, Budget: {Preferences.Budget}")
 
-    list_of_filtered_events = filter_events(filters, db)
-    # print(list_of_filtered_events)
+#     list_of_filtered_events = filter_events(filters, db)
+#     # print(list_of_filtered_events)
 
-    events = suggest_events(input_str, list_of_filtered_events)
+#     events = suggest_events(input_str, list_of_filtered_events)
 
-    return {"eventsSuggested":events}
+#     return {"eventsSuggested":events}
