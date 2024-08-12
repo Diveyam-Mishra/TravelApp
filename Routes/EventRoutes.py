@@ -5,6 +5,7 @@ from Database.Connection import get_db, get_container, get_file_container
 from Controllers.Events import create_event, update_event, get_filtered_events, \
     give_editor_access, get_event_by_id
 from sqlalchemy.orm import Session
+from config import JWTBearer
 from Controllers.Auth import get_current_user
 from Models.user_models import User
 from Database.Connection import get_container
@@ -13,7 +14,7 @@ from typing import List, Dict
 from Controllers.Files import create_event_and_upload_files
 import json
 
-@router.post("/event/create/", response_model=SuccessResponse)
+@router.post("/event/create/",dependencies=[Depends(JWTBearer())], response_model=SuccessResponse)
 async def create_event(
     event_name: str = Form(...),
     event_description: str = Form(...),
@@ -58,7 +59,7 @@ async def create_event(
     return await create_event_and_upload_files(event_data, files, current_user, container, fileContainer)
 
 
-@router.post("/event/{eventId}/edit/", response_model=SuccessResponse)
+@router.post("/event/{eventId}/edit/",dependencies=[Depends(JWTBearer())], response_model=SuccessResponse)
 async def edit_event(eventId: str, event_data: EventDetailsupdate, container=Depends(get_container), current_user: User = Depends(get_current_user)):
     return await update_event(eventId, event_data, container, current_user)
 
@@ -78,7 +79,7 @@ async def get_event(eventId: str, event_container=Depends(get_container), file_c
     else:
         raise HTTPException(status_code=404, detail="Event not found")
 
-@router.post("/events/{eventId}/give-edit-access/", response_model=SuccessResponse)
+@router.post("/events/{eventId}/give-edit-access/", dependencies=[Depends(JWTBearer())],response_model=SuccessResponse)
 async def add_editor(
     eventId: str,  # Add eventId as a path parameter
     userId: UserId,  # Ensure userId is of type int
