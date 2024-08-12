@@ -114,6 +114,38 @@ class EventFilter(BaseModel):
     time_preference: Optional[List[str]] = None
     location_preference: Optional[str] = None
     duration_preference: Optional[str] = None
+    event_type_preference:Optional[str]=None
     user_latitude: float
     user_longitude: float
     user_city: str
+
+
+class SearchEvent(BaseModel):
+    event_name: str
+    event_description: str
+    event_type: List[str]
+    start_date_and_time: DateTimeDetails
+    end_date_and_time: DateTimeDetails
+    age_group: str
+    family_friendly: bool
+    price_fees: PriceDetails
+    capacity: int
+    host_information: Dict[str, int]
+    location: Location
+    id: str
+    event_id: str
+    type: str
+    start_date: str
+    end_date: str
+    duration: str
+    remaining_capacity: int
+    creator_id: int
+    editor_access: List[str]
+    
+    class Config:
+        extra = 'allow'
+
+class SearchEventResult(BaseModel):
+    id:str
+    name:str
+    description:str
