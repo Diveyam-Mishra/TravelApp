@@ -11,10 +11,11 @@ from Controllers.Files import avatar_upload, get_avatar, upload_event_files,\
     fetch_event_files
 from Controllers.Auth import get_current_user
 from typing import Optional, List
+from config import JWTBearer
 router = APIRouter()
 
 
-@router.post("/auth/update/", response_model=FileUploadResponse)
+@router.post("/auth/update/", dependencies=[Depends(JWTBearer())],response_model=FileUploadResponse)
 async def upload_avatar(
     username: str = Form(...),
     updated_username:Optional[str]=Form(None),
@@ -34,7 +35,7 @@ async def upload_avatar(
     return await avatar_upload(username, req, db, current_user, file)
 
 
-@router.get("/avatar/fetch/{userID}/")
+@router.get("/avatar/fetch/{userID}/",dependencies=[Depends(JWTBearer())])
 async def fetch_avatar(
     userID: int,
     db: Session=Depends(get_db),
@@ -45,7 +46,7 @@ async def fetch_avatar(
     return await get_avatar(userID, db)
 
 
-@router.post("/event/{eventId}/files/upload/",
+@router.post("/event/{eventId}/files/upload/",dependencies=[Depends(JWTBearer())],
 response_model=FileUploadResponse)
 async def upload_files(
     eventId: str,
@@ -83,7 +84,7 @@ async def upload_files(
     
     return await upload_event_files(eventId, files,update_info, current_user, container, fileContainer)
 
-@router.get("/event/{eventId}/files/")
+@router.get("/event/{eventId}/files/",dependencies=[Depends(JWTBearer())])
 async def get_event_files(
     eventId: str,
     container=Depends(get_file_container),

@@ -9,9 +9,10 @@ from Controllers.Organizations import add_organization, get_organization, get_ci
 from Database.Connection import get_db
 from Models.user_models import User
 from Controllers.Auth import get_current_user
+from config import JWTBearer
 router = APIRouter()
 
-@router.post("/orgs/create_org/", response_model=SuccessResponse)
+@router.post("/orgs/create_org/",dependencies=[Depends(JWTBearer())], response_model=SuccessResponse)
 def create_new_org(org_details: Organization_details, db: Session = Depends(get_db),current_user: User=Depends(get_current_user)):
     if current_user is None:
             raise HTTPException(status_code=400, detail="User Not Found")
