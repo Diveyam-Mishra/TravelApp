@@ -1,5 +1,8 @@
 from pydantic_settings import BaseSettings
-
+from fastapi.security import HTTPBearer
+class JWTBearer(HTTPBearer):
+    def _init_(self, auto_error: bool = True):
+        super(JWTBearer, self)._init_(auto_error=auto_error)
 
 class Settings(BaseSettings):
     JWT_SECRET: str

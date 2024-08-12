@@ -4,6 +4,7 @@ from typing import List
 from Schemas.EventSchemas import*
 from Controllers.Filters import *
 from typing import Optional, List
+from config import JWTBearer
 router = APIRouter()
 
 
