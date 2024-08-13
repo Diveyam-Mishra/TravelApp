@@ -1,13 +1,22 @@
-from fastapi import Depends
-from Models.user_models import User
-from Controllers.Auth import get_current_user
 from Schemas.UserSchemas import *
 from Schemas.EventSchemas import *
-from datetime import datetime, timedelta
 import random
-from Database.Connection import get_container
+import math
 
-async def get_category_events(filters: List[str], event_container, file_container):
+def event_distance(lat1, lon1, lat2, lon2):
+    lat1, lon1, lat2, lon2 = map(math.radians, [lat1, lon1, lat2, lon2])
+    dlat = lat2 - lat1
+    dlon = lon2 - lon1
+
+    # Corrected formula for 'a'
+    a = math.sin(dlat / 2)**2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2)**2
+
+    c = 2 * math.asin(math.sqrt(a))
+    r = 6371  
+    distance = c * r
+    return distance
+
+async def get_category_events(filters: List[str], coord:List[float],event_container, file_container):
     # Fetch all events
     query = "SELECT * FROM c"
     
@@ -32,12 +41,13 @@ async def get_category_events(filters: List[str], event_container, file_containe
                     "file_data": image.get('fileData1'),  # This will be base64 encoded data
                     "file_type": image.get('fileType1')
                 }
-            
             event['match_count'] = match_count
+            event['distance']=event_distance(event['location']['geo_tag']['latitude'],event['location']['geo_tag']['longitude'],coord[0],coord[1])
             events.append(event)
-    
+
     # Sort events based on the number of matching types
     sorted_events = sorted(events, key=lambda e: e['match_count'], reverse=True)
+    
     
     return sorted_events
 #filters Coming as Objects
@@ -51,10 +61,6 @@ async def get_sponsered_events(
     random_offset = random.randint(0, 100)
     query = """
     SELECT * FROM adcontainer e 
-    WHERE ST_DISTANCE({
-        'type': 'Point', 
-        'coordinates': [@user_lon, @user_lat]
-    }, e.location) <= 10000
     OFFSET @random_offset LIMIT @limit
     """
 
@@ -72,7 +78,8 @@ async def get_sponsered_events(
 
 
 async def search_events_by_name(
-    partial_name: str, 
+    partialname: PartialName,
+    coord:List[float], 
     event_container,
     file_container 
 ):
@@ -82,7 +89,7 @@ async def search_events_by_name(
     """
 
     params = [
-        {"name": "@partial_name", "value": partial_name.lower()}  # Convert the search term to lowercase
+        {"name": "@partial_name", "value": partialname.partial_name.lower()}  # Convert the search term to lowercase
     ]
 
     events = list(event_container.query_items(
@@ -93,6 +100,7 @@ async def search_events_by_name(
 
     # Fetch and attach the thumbnail (first image file) for each event
     for event in events:
+        event['distance']=event_distance(event['location']['geo_tag']['latitude'],event['location']['geo_tag']['longitude'],coord[0],coord[1])
         event_id = event['event_id']
         file_query = f"SELECT * FROM c WHERE c.eventId = '{event_id}'"
         file_items = list(file_container.query_items(
@@ -114,7 +122,8 @@ async def search_events_by_name(
     return events
 
 async def search_events_by_creator(
-    creator_id: int,
+    creator_id: CreatorId,
+    coord:List[float],
     event_container
 ):
     query = """
@@ -123,7 +132,7 @@ async def search_events_by_creator(
     """
 
     params = [
-        {"name": "@creator_id", "value": creator_id}
+        {"name": "@creator_id", "value": creator_id.creator}
     ]
 
     events = list(event_container.query_items(
@@ -131,4 +140,6 @@ async def search_events_by_creator(
         parameters=params,
         enable_cross_partition_query=True
     ))
+    for event in events:
+        event['distance']=event_distance(event['location']['geo_tag']['latitude'],event['location']['geo_tag']['longitude'],coord[0],coord[1])
     return events

@@ -64,11 +64,11 @@ async def edit_event(eventId: str, event_data: EventDetailsupdate, container=Dep
     return await update_event(eventId, event_data, container, current_user)
 
 
-# @router.post("/events/filtered/", response_model=List[Dict[str, str]])
-# def filter_events(filters: EventFilter, db: Session=Depends(get_db)):
-#     events = get_filtered_events(db, filters)
-#     result = [{"id": event.id, "name": event.name, "description": event.description} for event in events]
-#     # print(result)
+# @router.post("/events/filtered/", dependencies=[Depends(JWTBearer())])
+# async def filter_events(filters: EventFilter, event_container=Depends(get_container), current_user: User = Depends(get_current_user)):
+#     events = await get_filtered_events(event_container, filters, current_user=current_user)
+#     print (events)
+#     result = [{"id": event["id"], "name": event["event_name"], "description": event["event_description"]} for event in events]
 #     return result
 
 @router.get("/events/details/{eventId}", response_model=SearchEvent)

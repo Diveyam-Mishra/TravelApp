@@ -157,3 +157,8 @@ class SearchEventResult(BaseModel):
     type: List[str]
     thumbnail: Optional[ImageDetails] = None
     distance: str
+
+class PartialName(BaseModel):
+    partial_name:str
+class CreatorId(BaseModel):
+    creator:int
