@@ -30,7 +30,7 @@ async def create_event(event_details: EventDetails, current_user: User, containe
         {"name": "@end_date", "value": event_details.end_date_and_time.to_datetime().isoformat()}
     ]
     
-    items = list(container.query_items(query=query, parameters=params, enable_cross_partition_query=True))
+    items = list(container.query_items(query=query, params=params, enable_cross_partition_query=True))
 
     if items:
         raise HTTPException(status_code=400, detail="Event already created")
@@ -75,7 +75,7 @@ async def update_event(event_id: str, event_details: EventDetailsupdate, contain
     
     params = [{"name": "@id", "value": event_id}]
     
-    items = list(container.query_items(query=query, parameters=params, enable_cross_partition_query=True))
+    items = list(container.query_items(query=query, params=params, enable_cross_partition_query=True))
 
     if not items:
         raise HTTPException(status_code=400, detail="Event not found")
@@ -120,7 +120,7 @@ async def give_editor_access(
     
     params = [{"name": "@id", "value": event_id}]
     
-    items = list(container.query_items(query=query, parameters=params, enable_cross_partition_query=True))
+    items = list(container.query_items(query=query, params=params, enable_cross_partition_query=True))
 
     if not items:
         raise HTTPException(status_code=404, detail="Event not found")
@@ -163,7 +163,7 @@ async def get_event_by_id(eventId: str, event_container, file_container):
     # Query the event container for the event with the specified eventId
     events = list(event_container.query_items(
         query=event_query,
-        parameters=params,
+        params=params,
         enable_cross_partition_query=True
     ))
     
@@ -177,7 +177,7 @@ async def get_event_by_id(eventId: str, event_container, file_container):
     
     image_files = list(file_container.query_items(
         query=image_query,
-        parameters=params,
+        params=params,
         enable_cross_partition_query=True
     ))
 
@@ -194,77 +194,154 @@ async def get_event_by_id(eventId: str, event_container, file_container):
 
     return event
 
-def get_filtered_events(
-    db: Session, 
+# def get_filtered_events(
+#     db: Session, 
+#     filters: EventFilter, 
+#     limit: int = 30, 
+#     current_user: User = Depends(get_current_user)
+# ):
+#     if current_user is None:
+#         raise HTTPException(status_code=400, detail="User Not Found")
+    
+#     # Start building the query
+#     query = db.query(Event.id, Event.name, Event.description).join(Organization, Event.host_id == Organization.id)
+    
+#     # Apply date filters
+#     if filters.date_preference:
+#         today = datetime.today().date()
+#         if filters.date_preference == "Today":
+#             query = query.filter(Event.start_date >= today, Event.start_date < today + timedelta(days=1))
+#         elif filters.date_preference == "Tomorrow":
+#             tomorrow = today + timedelta(days=1)
+#             query = query.filter(Event.start_date >= tomorrow, Event.start_date < tomorrow + timedelta(days=1))
+#         elif filters.date_preference == "This week":
+#             end_of_week = today + timedelta(days=(6 - today.weekday()))
+#             query = query.filter(Event.start_date >= today, Event.start_date <= end_of_week)
+#         elif filters.date_preference == "Specific Date" and filters.specific_date:
+#             query = query.filter(Event.start_date == filters.specific_date)
+    
+#     # Apply time filters
+#     if filters.time_preference:
+#         time_filters = []
+#         for time_pref in filters.time_preference:
+#             if time_pref == "Morning":
+#                 time_filters.append(and_(extract('hour', Event.start_date) >= 6, extract('hour', Event.start_date) < 12))
+#             elif time_pref == "Afternoon":
+#                 time_filters.append(and_(extract('hour', Event.start_date) >= 12, extract('hour', Event.start_date) < 17))
+#             elif time_pref == "Evening":
+#                 time_filters.append(and_(extract('hour', Event.start_date) >= 17, extract('hour', Event.start_date) < 21))
+#             elif time_pref == "Night":
+#                 time_filters.append(or_(extract('hour', Event.start_date) >= 21, extract('hour', Event.start_date) < 6))
+#         query = query.filter(or_(*time_filters))
+    
+#     # Apply location filters
+#     if filters.location_preference:
+#         if filters.location_preference == "Near me":
+#             user_lat, user_lon = filters.user_latitude, filters.user_longitude
+#             distance_filter = and_(
+#                 func.acos(
+#                     func.sin(func.radians(user_lat)) * func.sin(func.radians(Organization.latitude)) + 
+#                     func.cos(func.radians(user_lat)) * func.cos(func.radians(Organization.latitude)) * 
+#                     func.cos(func.radians(Organization.longitude) - func.radians(user_lon))
+#                 ) * 6371 <= 50
+#             )
+#             query = query.filter(distance_filter)
+#         elif filters.location_preference == "In the city":
+#             user_city = filters.user_city  
+#             query = query.filter(Organization.city == user_city)
+#         elif filters.location_preference == "Nearby town":
+#             user_lat, user_lon = filters.user_latitude, filters.user_longitude
+#             distance_filter = and_(
+#                 func.acos(
+#                     func.sin(func.radians(user_lat)) * func.sin(func.radians(Organization.latitude)) + 
+#                     func.cos(func.radians(user_lat)) * func.cos(func.radians(Organization.latitude)) * 
+#                     func.cos(func.radians(Organization.longitude) - func.radians(user_lon))
+#                 ) * 6371 <= 200
+#             )
+#             query = query.filter(distance_filter)
+#         elif filters.location_preference == "Open to traveling":
+#             pass  # No additional filter needed
+
+#     # Apply duration filter
+#     if filters.duration_preference:
+#         query = query.filter(Event.duration == filters.duration_preference)
+    
+#     # Limit and fetch results
+#     return query.limit(limit).all()
+
+async def get_filtered_events(
+    event_container, 
     filters: EventFilter, 
-    limit: int = 30, 
     current_user: User = Depends(get_current_user)
 ):
     if current_user is None:
         raise HTTPException(status_code=400, detail="User Not Found")
     
-    # Start building the query
-    query = db.query(Event.id, Event.name, Event.description).join(Organization, Event.host_id == Organization.id)
+    query = "SELECT c.id, c.name, c.description FROM c WHERE 1=1"
+    params = []
     
-    # Apply date filters
+    # Date Filters
     if filters.date_preference:
-        today = datetime.today().date()
+        today = datetime.utcnow().date()
         if filters.date_preference == "Today":
-            query = query.filter(Event.start_date >= today, Event.start_date < today + timedelta(days=1))
+            start_date = today.isoformat()
+            end_date = (today + timedelta(days=1)).isoformat()
+            query += " AND c.start_date >= @start_date AND c.start_date < @end_date"
+            params.extend([
+                {'name': '@start_date', 'value': start_date},
+                {'name': '@end_date', 'value': end_date}
+            ])
         elif filters.date_preference == "Tomorrow":
-            tomorrow = today + timedelta(days=1)
-            query = query.filter(Event.start_date >= tomorrow, Event.start_date < tomorrow + timedelta(days=1))
+            tomorrow = (today + timedelta(days=1)).isoformat()
+            day_after_tomorrow = (today + timedelta(days=2)).isoformat()
+            query += " AND c.start_date >= @start_date AND c.start_date < @end_date"
+            params.extend([
+                {'name': '@start_date', 'value': tomorrow},
+                {'name': '@end_date', 'value': day_after_tomorrow}
+            ])
         elif filters.date_preference == "This week":
-            end_of_week = today + timedelta(days=(6 - today.weekday()))
-            query = query.filter(Event.start_date >= today, Event.start_date <= end_of_week)
+            end_of_week = (today + timedelta(days=(6 - today.weekday()))).isoformat()
+            query += " AND c.start_date >= @start_date AND c.start_date <= @end_date"
+            params.extend([
+                {'name': '@start_date', 'value': today.isoformat()},
+                {'name': '@end_date', 'value': end_of_week}
+            ])
         elif filters.date_preference == "Specific Date" and filters.specific_date:
-            query = query.filter(Event.start_date == filters.specific_date)
+            query += " AND c.start_date = @specific_date"
+            params.append({'name': '@specific_date', 'value': filters.specific_date})
     
-    # Apply time filters
-    if filters.time_preference:
-        time_filters = []
-        for time_pref in filters.time_preference:
-            if time_pref == "Morning":
-                time_filters.append(and_(extract('hour', Event.start_date) >= 6, extract('hour', Event.start_date) < 12))
-            elif time_pref == "Afternoon":
-                time_filters.append(and_(extract('hour', Event.start_date) >= 12, extract('hour', Event.start_date) < 17))
-            elif time_pref == "Evening":
-                time_filters.append(and_(extract('hour', Event.start_date) >= 17, extract('hour', Event.start_date) < 21))
-            elif time_pref == "Night":
-                time_filters.append(or_(extract('hour', Event.start_date) >= 21, extract('hour', Event.start_date) < 6))
-        query = query.filter(or_(*time_filters))
+    # Time Filters (Cosmos DB doesn't support `HOUR`, so consider storing or querying time differently)
+    # Consider storing the time of day in the document as a separate field if needed
     
-    # Apply location filters
+    # Location Filters
     if filters.location_preference:
+        user_lat, user_lon = filters.user_latitude, filters.user_longitude
+        
         if filters.location_preference == "Near me":
-            user_lat, user_lon = filters.user_latitude, filters.user_longitude
-            distance_filter = and_(
-                func.acos(
-                    func.sin(func.radians(user_lat)) * func.sin(func.radians(Organization.latitude)) + 
-                    func.cos(func.radians(user_lat)) * func.cos(func.radians(Organization.latitude)) * 
-                    func.cos(func.radians(Organization.longitude) - func.radians(user_lon))
-                ) * 6371 <= 50
-            )
-            query = query.filter(distance_filter)
+            query += " AND ST_DISTANCE(c.location, {'type': 'Point', 'coordinates': [@lon, @lat]}) <= 50000"
+            params.extend([
+                {'name': '@lat', 'value': user_lat},
+                {'name': '@lon', 'value': user_lon}
+            ])
         elif filters.location_preference == "In the city":
-            user_city = filters.user_city  
-            query = query.filter(Organization.city == user_city)
+            query += " AND c.city = @city"
+            params.append({'name': '@city', 'value': filters.user_city})
         elif filters.location_preference == "Nearby town":
-            user_lat, user_lon = filters.user_latitude, filters.user_longitude
-            distance_filter = and_(
-                func.acos(
-                    func.sin(func.radians(user_lat)) * func.sin(func.radians(Organization.latitude)) + 
-                    func.cos(func.radians(user_lat)) * func.cos(func.radians(Organization.latitude)) * 
-                    func.cos(func.radians(Organization.longitude) - func.radians(user_lon))
-                ) * 6371 <= 200
-            )
-            query = query.filter(distance_filter)
-        elif filters.location_preference == "Open to traveling":
-            pass  # No additional filter needed
+            query += " AND ST_DISTANCE(c.location, {'type': 'Point', 'coordinates': [@lon, @lat]}) <= 200000"
+            params.extend([
+                {'name': '@lat', 'value': user_lat},
+                {'name': '@lon', 'value': user_lon}
+            ])
 
-    # Apply duration filter
+    # Duration Filters
     if filters.duration_preference:
-        query = query.filter(Event.duration == filters.duration_preference)
-    
-    # Limit and fetch results
-    return query.limit(limit).all()
+        query += " AND c.duration = @duration"
+        params.append({'name': '@duration', 'value': filters.duration_preference})
+
+    # Execute the query
+    result = event_container.query_items(
+        query=query,
+        parameters=params,
+        enable_cross_partition_query=True
+    )
+    return result
