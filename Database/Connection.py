@@ -12,20 +12,19 @@ Database = settings.Database
 Uid = settings.Uid
 SQLPwd = settings.SQLPwd
 
-
-
 COSMOS_DB_ENDPOINT = settings.COSMOS_DB_ENDPOINT
-COSMOS_DB_KEY = settings.COSMOS_DB_KEY+"=="
-DATABASE_NAME =settings.DATABASE_NAME 
+COSMOS_DB_KEY = settings.COSMOS_DB_KEY + "=="
+DATABASE_NAME = settings.DATABASE_NAME 
 CONTAINER_NAME = settings.CONTAINER_NAME
 FILE_CONTAINER_NAME = settings.FILE_CONTAINER_NAME
 ADVERTISEMENT_CONTAINER_NAME=settings.ADVERTISEMENT_CONTAINER_NAME
-
+BOOKING_CONTAINER_NAME = settings.BOOKING_CONTAINER_NAME
 client = CosmosClient(COSMOS_DB_ENDPOINT, COSMOS_DB_KEY)
 database = client.get_database_client(DATABASE_NAME)
 container = database.get_container_client(CONTAINER_NAME)
 file_container = database.get_container_client(FILE_CONTAINER_NAME)
 advertisement_container=database.get_container_client(ADVERTISEMENT_CONTAINER_NAME)
+booking_container = database.get_container_client(BOOKING_CONTAINER_NAME)
 params = urllib.parse.quote_plus(
     f'Driver={Driver};'
     f'Server={Server};'
@@ -49,6 +48,7 @@ engine = create_engine(connection_url)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
+
 def get_db():
     db = SessionLocal()
     try:
@@ -56,11 +56,13 @@ def get_db():
     finally:
         db.close()
 
+
 def get_container():
     try:
         yield container
     finally:
         pass 
+
 
 def get_file_container():
     try:
@@ -71,5 +73,10 @@ def get_file_container():
 def get_advertisement_container():
     try:
         yield advertisement_container
+    finally:
+        pass
+def get_booking_container():
+    try:
+        yield booking_container
     finally:
         pass
