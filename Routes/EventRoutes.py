@@ -64,12 +64,14 @@ async def edit_event(eventId: str, event_data: EventDetailsupdate, container=Dep
     return await update_event(eventId, event_data, container, current_user)
 
 
-# @router.post("/events/filtered/", dependencies=[Depends(JWTBearer())])
-# async def filter_events(filters: EventFilter, event_container=Depends(get_container), current_user: User = Depends(get_current_user)):
-#     events = await get_filtered_events(event_container, filters, current_user=current_user)
-#     print (events)
-#     result = [{"id": event["id"], "name": event["event_name"], "description": event["event_description"]} for event in events]
-#     return result
+@router.post("/events/filtered/", dependencies=[Depends(JWTBearer())])
+async def filter_events(filters: EventFilter, event_container=Depends(get_container), current_user: User = Depends(get_current_user)):
+    if(current_user is None):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    events = await get_filtered_events(event_container, filters, current_user=current_user)
+    # print (events)
+    result = [{"id": event["id"], "name": event["event_name"], "description": event["event_description"]} for event in events]
+    return result
 
 @router.get("/events/details/{eventId}", response_model=SearchEvent)
 async def get_event(eventId: str, event_container=Depends(get_container), file_container=Depends(get_file_container)):

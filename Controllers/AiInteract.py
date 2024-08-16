@@ -4,7 +4,7 @@ from Models.user_models import User
 from fastapi import Depends, HTTPException
 from Controllers.Auth import get_current_user
 api_key = settings.OPENAI_API_KEY
-
+import ast
 client = OpenAI(api_key=api_key)
 
 
@@ -54,23 +54,21 @@ def generate_questions(input, current_user: User=Depends(get_current_user)):
 def suggest_events(input: str, events: list, current_user: User=Depends(get_current_user)):
     if current_user is None:
         raise HTTPException(status_code=400, detail="User Not Found")
+    
     # Format the events for the assistant
     if not events:
         formatted_events = "No events available."
     else:
-        formatted_events = "\n".join([f"ID: {event['id']}, Name: {event['name']}, Description: {event['description']}" for event in events])
-    
-    # print(formatted_events)
-    # Create the messages for the assistant
-    print(input)
+        formatted_events = events
+
     messages = [
         {
             "role": "assistant",
             "content": """
-                You will be given certain characteristics of some user, like the vibe preference, location preference etc.
-                Based on those choices/preferences, you have to pick at most 5 of the events the user might like most from the list of events provided in the input.
-                Make sure to ONLY and ONLY return an array consisting of IDs of the events.
-                Act like some python script and only return the array of integers like [a, b, c].
+                You will be given certain characteristics of some user, like the vibe preference, location preference, engagement level, interest areas, and budget.
+                Based on those choices/preferences, pick at most 5 events from the list of events provided in the input that most closely (not necessarily accurate) match these characteristics.
+                ONLY return an array consisting of the event IDs, like [a, b, c].
+                Act like a python script to return only the list of string with the ids of events.
             """
         },
         {
@@ -85,13 +83,20 @@ def suggest_events(input: str, events: list, current_user: User=Depends(get_curr
     
     # Call the OpenAI API
     completion = client.chat.completions.create(
-        model="gpt-4o",
+        model="gpt-3.5-turbo",
         messages=messages
     )
     
     # Get the model's reply
     reply = completion.choices[0].message.content
-    
-    # Parse the reply to ensure it's a valid array of integers
-    return reply
+    # print(reply)
+    # Parse the reply to ensure it's a valid array of strings
+    try:
+        events_list = ast.literal_eval(reply)
+        if not isinstance(events_list, list):
+            raise ValueError("Reply is not a list.")
+    except (SyntaxError, ValueError):
+        raise HTTPException(status_code=500, detail="Failed to parse the event IDs")
+
+    return events_list
     

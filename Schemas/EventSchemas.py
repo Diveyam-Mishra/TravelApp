@@ -2,9 +2,11 @@ from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 
+
 class GeoTag(BaseModel):
     latitude: float
     longitude: float
+
 
 class Location(BaseModel):
     venue: str
@@ -69,13 +71,16 @@ class DateTimeDetails(BaseModel):
             second=self.second or 0  # Default to 0 if not provided
         )
 
+
 class PriceDetails(BaseModel):
     standard: float
     early_bird: float
     group_rate: float
 
+
 class HostDetails(BaseModel):
     id: int
+
 
 class EventDetails(BaseModel):
     event_name: str
@@ -89,6 +94,7 @@ class EventDetails(BaseModel):
     capacity: int
     host_information: HostDetails
     location:Location
+
 
 class SuccessResponse(BaseModel):
     message: str
@@ -106,7 +112,8 @@ class EventDetailsupdate(BaseModel):
     price_fees: Optional[PriceDetails] = None
     capacity: Optional[int] = None
     host_information: Optional[HostDetails] = None
-    location:Optional[Location]=None
+    location:Optional[Location] = None
+
 
 class EventFilter(BaseModel):
     date_preference: Optional[str] = None
@@ -114,10 +121,10 @@ class EventFilter(BaseModel):
     time_preference: Optional[List[str]] = None
     location_preference: Optional[str] = None
     duration_preference: Optional[str] = None
-    event_type_preference:Optional[str]=None
+    event_type_preference:Optional[List[str]] = None
     user_latitude: float
     user_longitude: float
-    user_city: str
+    user_city: Optional[str] = None
 
 
 class SearchEvent(BaseModel):
@@ -145,10 +152,12 @@ class SearchEvent(BaseModel):
     class Config:
         extra = 'allow'
 
+
 class ImageDetails(BaseModel):
     file_name: str
     file_data: str  # This will be base64 encoded data
     file_type: str
+
 
 class SearchEventResult(BaseModel):
     id:str
@@ -158,7 +167,10 @@ class SearchEventResult(BaseModel):
     thumbnail: Optional[ImageDetails] = None
     distance: str
 
+
 class PartialName(BaseModel):
     partial_name:str
+
+
 class CreatorId(BaseModel):
     creator:int

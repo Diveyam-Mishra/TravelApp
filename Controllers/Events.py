@@ -14,6 +14,7 @@ from sqlalchemy import and_, or_
 from sqlalchemy.sql import extract
 from Models.org_models import Organization
 from sqlalchemy import func
+from Helpers.Haversine import haversine
 
 
 async def create_event(event_details: EventDetails, current_user: User, container=Depends(get_container)) -> SuccessResponse:
@@ -155,15 +156,15 @@ async def give_editor_access(
 
     return SuccessResponse(message=f"Editor Access Granted to user ID: {userId}", success=True)
 
-async def get_event_by_id(eventId: str, event_container, file_container):
+async def get_event_by_id(event_id: str, event_container, file_container):
     # Query to find the event by its event_id
-    event_query = "SELECT * FROM c WHERE c.event_id = @eventId"
-    params = [{"name": "@eventId", "value": eventId}]
+    event_query = "SELECT * FROM c WHERE c.event_id = @event_id"
+    params = [{"name": "@event_id", "value": event_id}]
     
-    # Query the event container for the event with the specified eventId
+    # Query the event container for the event with the specified event_id
     events = list(event_container.query_items(
         query=event_query,
-        params=params,
+        parameters=params,
         enable_cross_partition_query=True
     ))
     
@@ -173,11 +174,11 @@ async def get_event_by_id(eventId: str, event_container, file_container):
     event = events[0]  # Since event_id is unique, we get the first item
 
     # Query to find images associated with the event
-    image_query = "SELECT * FROM c WHERE c.eventId = @eventId"
+    image_query = "SELECT * FROM c WHERE c.eventId = @event_id"
     
     image_files = list(file_container.query_items(
         query=image_query,
-        params=params,
+        parameters=params,
         enable_cross_partition_query=True
     ))
 
@@ -277,71 +278,105 @@ async def get_filtered_events(
     if current_user is None:
         raise HTTPException(status_code=400, detail="User Not Found")
     
-    query = "SELECT c.id, c.name, c.description FROM c WHERE 1=1"
+    # Initialize the query with a base filter for valid events
+    query = "SELECT * FROM event_container e WHERE 1=1"
     params = []
-    
-    # Date Filters
+
     if filters.date_preference:
-        today = datetime.utcnow().date()
+        today = datetime.today().date()
         if filters.date_preference == "Today":
-            start_date = today.isoformat()
-            end_date = (today + timedelta(days=1)).isoformat()
-            query += " AND c.start_date >= @start_date AND c.start_date < @end_date"
-            params.extend([
-                {'name': '@start_date', 'value': start_date},
-                {'name': '@end_date', 'value': end_date}
-            ])
+            query += (
+                " AND e.start_date_and_time.day = @day"
+                " AND e.start_date_and_time.month = @month"
+                " AND e.start_date_and_time.year = @year"
+            )
+            params.append({"name": "@day", "value": today.day})
+            params.append({"name": "@month", "value": today.month})
+            params.append({"name": "@year", "value": today.year})
         elif filters.date_preference == "Tomorrow":
-            tomorrow = (today + timedelta(days=1)).isoformat()
-            day_after_tomorrow = (today + timedelta(days=2)).isoformat()
-            query += " AND c.start_date >= @start_date AND c.start_date < @end_date"
-            params.extend([
-                {'name': '@start_date', 'value': tomorrow},
-                {'name': '@end_date', 'value': day_after_tomorrow}
-            ])
+            tomorrow = today + timedelta(days=1)
+            query += (
+                " AND e.start_date_and_time.day = @day"
+                " AND e.start_date_and_time.month = @month"
+                " AND e.start_date_and_time.year = @year"
+            )
+            params.append({"name": "@day", "value": tomorrow.day})
+            params.append({"name": "@month", "value": tomorrow.month})
+            params.append({"name": "@year", "value": tomorrow.year})
         elif filters.date_preference == "This week":
-            end_of_week = (today + timedelta(days=(6 - today.weekday()))).isoformat()
-            query += " AND c.start_date >= @start_date AND c.start_date <= @end_date"
-            params.extend([
-                {'name': '@start_date', 'value': today.isoformat()},
-                {'name': '@end_date', 'value': end_of_week}
-            ])
+            start_of_week = today
+            end_of_week = today + timedelta(days=(6 - today.weekday()))
+            query += (
+                " AND e.start_date_and_time.year = @year"
+                " AND ("
+                " (e.start_date_and_time.month = @start_month AND e.start_date_and_time.day >= @start_day)"
+                " OR (e.start_date_and_time.month = @end_month AND e.start_date_and_time.day <= @end_day)"
+                " )"
+            )
+            params.append({"name": "@year", "value": today.year})
+            params.append({"name": "@start_day", "value": start_of_week.day})
+            params.append({"name": "@start_month", "value": start_of_week.month})
+            params.append({"name": "@end_day", "value": end_of_week.day})
+            params.append({"name": "@end_month", "value": end_of_week.month})
         elif filters.date_preference == "Specific Date" and filters.specific_date:
-            query += " AND c.start_date = @specific_date"
-            params.append({'name': '@specific_date', 'value': filters.specific_date})
-    
-    # Time Filters (Cosmos DB doesn't support `HOUR`, so consider storing or querying time differently)
-    # Consider storing the time of day in the document as a separate field if needed
-    
-    # Location Filters
-    if filters.location_preference:
-        user_lat, user_lon = filters.user_latitude, filters.user_longitude
-        
-        if filters.location_preference == "Near me":
-            query += " AND ST_DISTANCE(c.location, {'type': 'Point', 'coordinates': [@lon, @lat]}) <= 50000"
-            params.extend([
-                {'name': '@lat', 'value': user_lat},
-                {'name': '@lon', 'value': user_lon}
-            ])
-        elif filters.location_preference == "In the city":
-            query += " AND c.city = @city"
-            params.append({'name': '@city', 'value': filters.user_city})
-        elif filters.location_preference == "Nearby town":
-            query += " AND ST_DISTANCE(c.location, {'type': 'Point', 'coordinates': [@lon, @lat]}) <= 200000"
-            params.extend([
-                {'name': '@lat', 'value': user_lat},
-                {'name': '@lon', 'value': user_lon}
-            ])
+            query += (
+                " AND e.start_date_and_time.day = @day"
+                " AND e.start_date_and_time.month = @month"
+                " AND e.start_date_and_time.year = @year"
+            )
+            params.append({"name": "@day", "value": filters.specific_date.day})
+            params.append({"name": "@month", "value": filters.specific_date.month})
+            params.append({"name": "@year", "value": filters.specific_date.year})
 
-    # Duration Filters
-    if filters.duration_preference:
-        query += " AND c.duration = @duration"
-        params.append({'name': '@duration', 'value': filters.duration_preference})
+    # Apply event type filter
+    if filters.event_type_preference:
+        # Build the event type filter dynamically
+        type_filters = []
+        for i, event_type in enumerate(filters.event_type_preference):
+            type_filters.append(f"ARRAY_CONTAINS(e.event_type, @event_type{i})")
+            params.append({"name": f"@event_type{i}", "value": event_type})
 
-    # Execute the query
-    result = event_container.query_items(
-        query=query,
-        parameters=params,
-        enable_cross_partition_query=True
-    )
-    return result
+        # Join all filters with OR
+        query += " AND (" + " OR ".join(type_filters) + ")"
+
+    # Apply time filters
+    if filters.time_preference:
+        time_conditions = []
+        for time_pref in filters.time_preference:
+            if time_pref == "Morning":
+                time_conditions.append("(e.start_date_and_time.hour >= 6 AND e.start_date_and_time.hour < 12)")
+            elif time_pref == "Afternoon":
+                time_conditions.append("(e.start_date_and_time.hour >= 12 AND e.start_date_and_time.hour < 17)")
+            elif time_pref == "Evening":
+                time_conditions.append("(e.start_date_and_time.hour >= 17 AND e.start_date_and_time.hour < 21)")
+            elif time_pref == "Night":
+                time_conditions.append("(e.start_date_and_time.hour >= 21 OR e.start_date_and_time.hour < 6)")
+        if time_conditions:
+            query += " AND (" + " OR ".join(time_conditions) + ")"
+
+    # Apply location filters
+    items = event_container.query_items(query=query, parameters=params, enable_cross_partition_query=True)
+
+    filtered_events = []
+    for item in items:
+        # Apply location filter using Haversine formula
+        if filters.location_preference:
+            event_lat = item['location']['geo_tag']['latitude']
+            event_lon = item['location']['geo_tag']['longitude']
+            user_lat = filters.user_latitude
+            user_lon = filters.user_longitude
+
+            distance = haversine(user_lat, user_lon, event_lat, event_lon)
+
+            if filters.location_preference == "Near Me" and distance <= 50:
+                filtered_events.append(item)
+            elif filters.location_preference == "Nearby town" and distance <= 200:
+                filtered_events.append(item)
+            elif filters.location_preference == "In the city" and item['location']['city'] == filters.user_city:
+                filtered_events.append(item)
+        else:
+            filtered_events.append(item)
+
+
+    return filtered_events
+    
