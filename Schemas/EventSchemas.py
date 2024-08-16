@@ -142,7 +142,6 @@ class SearchEvent(BaseModel):
     location: Location
     id: str
     event_id: str
-    type: str
     start_date: str
     end_date: str
     duration: str
