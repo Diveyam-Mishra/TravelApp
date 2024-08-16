@@ -29,11 +29,22 @@
             color: #110101;
         }
 
+        .logo {
+            text-align: center;
+            margin-bottom: 20px;
+            margin-top: 10px;
+        }
+
+        .logo img {
+            width: 120px;
+        }
+
         h1 {
             font-family: 'Montserrat', sans-serif;
             font-size: 28px;
-            color: #ffcc00;
+            color: #fee134;
             margin-bottom: 10px;
+            text-align: center;
         }
 
         p {
@@ -54,7 +65,7 @@
         .ticket-details h2 {
             font-family: 'Montserrat', sans-serif;
             font-size: 22px;
-            color: #ffcc00;
+            color: #fee134;
             margin-bottom: 10px;
             border-bottom: 2px solid #ffcc00;
             padding-bottom: 8px;
@@ -73,7 +84,7 @@
 
         .ticket-details table td:first-child {
             font-weight: bold;
-            color: #ffcc00;
+            color: #fee134;
             width: 30%;
             border-right: 1px solid #383737;
         }
@@ -94,7 +105,7 @@
         .qr-code img {
             width: 180px;
             height: 180px;
-            border: 4px solid #ffcc00;
+            border: 4px solid #fee134;
             border-radius: 10px;
         }
 
@@ -122,12 +133,13 @@
             font-family: 'Poppins', sans-serif;
             padding: 10px 20px;
             background-color: #f1eddf;
-            color: #000;
+            color: #fee134;
             text-decoration: none;
             border-radius: 5px;
             font-weight: bold;
             text-align: center;
             display: inline-block;
+            position: relative;
         }
 
         .footer-button:hover {
@@ -156,20 +168,36 @@
             font-weight: bold;
         }
 
-        .logo {
-            margin-bottom: 10px;
-            margin-top: 10px;
+        .contact-info {
+            margin-top: 20px;
+            color: #b8b6af;
+            font-size: 14px;
+            text-align: center;
         }
 
-        .logo img {
-            width: 100px;
-            margin-top: 5px;
+        .contact-info a {
+            display: flex;
+            align-items: center;
+            color: #b8b6af;
+            text-decoration: none;
+            font-size: 14px;
+            margin: 10px 0; /* Added spacing between elements */
+        }
+
+        .contact-info img {
+            width: 24px;
+            height: 24px;
+            margin-right: 8px;
         }
     </style>
 </head>
 
 <body>
     <div class="container">
+        <div class="logo">
+            <img src="{{media_folder}}/logo_trabii.jpeg" alt="Trabii Logo">
+        </div>
+
         <h1>Thank You for Booking with TraBii!</h1>
         <p>Dear {{UserName}},</p>
         <p>Your booking was successful! We are excited to have you join us. Below are the details of your ticket:</p>
@@ -218,7 +246,6 @@
             <div class="logo">
                 <img src="{{media_folder}}/logo_trabii.jpeg" alt="Trabii Logo">
             </div>
-
             <div class="follow-us">
                 <p>Follow Us</p>
                 <div class="button-container">
@@ -232,10 +259,22 @@
                     <a href="[Suggestion Form URL]" class="footer-button">Suggestion Form</a>
                 </div>
             </div>
-
             <p>If you have any questions, feel free to <a href="mailto:support@trabii.com">contact us</a>.</p>
             <p>Looking forward to seeing you at the event!</p>
-            <p><strong>TraBii Team</strong></p>
+
+            <a href="tel:+91-99718 55077">
+                <img src="{{media_folder}}/phone_icon.png" alt="Phone">
+                +91 99718 55077
+            </a>
+            <a href="mailto:support@trabii.com">
+                <img src="{{media_folder}}/email_icon.png" alt="Email">
+                support@trabii.com
+            </a>
+            <a href="https://www.trabii.com">
+                <img src="{{media_folder}}/website_icon.png" alt="Website">
+                www.trabii.com
+            </a>   
+            </div>
         </div>
     </div>
 </body>
