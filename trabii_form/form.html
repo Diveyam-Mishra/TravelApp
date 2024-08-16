@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trabii Ticket Confirmation</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700&family=Roboto:wght@400&family=Poppins:wght@600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #212020;
+            color: #070707;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            background-image: url('');
+            background-size: cover;
+            background-position: top;
+            background-repeat: repeat;
+            background-color: rgba(0, 0, 0, 0.9);
+            color: #110101;
+        }
+
+        h1 {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 28px;
+            color: #ffcc00;
+            margin-bottom: 10px;
+        }
+
+        p {
+            font-family: 'Roboto', sans-serif;
+            font-size: 16px;
+            line-height: 1.6;
+            color: #e0e0e0;
+        }
+
+        .ticket-details {
+            margin-top: 30px;
+            padding: 20px;
+            background-color: rgba(0, 0, 0, 0.9);
+            border-radius: 8px;
+            border: 2px solid #1d1c1c;
+        }
+
+        .ticket-details h2 {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 22px;
+            color: #ffcc00;
+            margin-bottom: 10px;
+            border-bottom: 2px solid #ffcc00;
+            padding-bottom: 8px;
+        }
+
+        .ticket-details table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .ticket-details table td {
+            padding: 8px;
+            color: #e0e0e0;
+            border-right: 1px solid #333;
+        }
+
+        .ticket-details table td:first-child {
+            font-weight: bold;
+            color: #ffcc00;
+            width: 30%;
+            border-right: 1px solid #383737;
+        }
+
+        .ticket-details table td:last-child {
+            border-right: none;
+        }
+
+        .ticket-details table tr:not(:last-child) td {
+            border-bottom: 1px solid #333333;
+        }
+
+        .qr-code {
+            text-align: center;
+            margin-top: 30px;
+        }
+
+        .qr-code img {
+            width: 180px;
+            height: 180px;
+            border: 4px solid #ffcc00;
+            border-radius: 10px;
+        }
+
+        .footer {
+            margin-top: 40px;
+            text-align: center;
+            font-size: 14px;
+            color: #999;
+        }
+
+        .footer a {
+            color: #4c2828;
+            text-decoration: none;
+            margin: 0 10px;
+        }
+
+        .button-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 20px;
+        }
+
+        .footer-button {
+            font-family: 'Poppins', sans-serif;
+            padding: 10px 20px;
+            background-color: #f1eddf;
+            color: #000;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+            text-align: center;
+            display: inline-block;
+        }
+
+        .footer-button:hover {
+            background-color: #0a0a09;
+        }
+
+        .social-icons {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .social-icons img {
+            width: 32px;
+            height: 32px;
+            margin: 0 5px;
+        }
+
+        .follow-us {
+            margin-top: 10px;
+        }
+
+        .follow-us p {
+            margin-bottom: 10px;
+            color: #b8b6af;
+            font-weight: bold;
+        }
+
+        .logo {
+            margin-bottom: 10px;
+            margin-top: 10px;
+        }
+
+        .logo img {
+            width: 100px;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Thank You for Booking with TraBii!</h1>
+        <p>Dear [User's Name],</p>
+        <p>Your booking was successful! We are excited to have you join us. Below are the details of your ticket:</p>
+
+        <div class="ticket-details">
+            <h2>Event: [Event Name]</h2>
+            <table>
+                <tr>
+                    <td>Date:</td>
+                    <td>[Event Date]</td>
+                </tr>
+                <tr>
+                    <td>Time:</td>
+                    <td>[Event Time]</td>
+                </tr>
+                <tr>
+                    <td>Venue:</td>
+                    <td>[Event Venue]</td>
+                </tr>
+
+                <tr>
+                    <td>Ticket ID:</td>
+                    <td>[Ticket ID]</td>
+                </tr>
+                <tr>
+                    <td>Organizer name/company:</td>
+                    <td>[Organisation]</td>
+                </tr>
+                <tr>
+                    <td>Amount Paid:</td>
+                    <td>[Paid Amount]</td>
+                </tr>
+                <tr>
+                    <td>Payment Id:</td>
+                    <td>[Payment Id]</td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="qr-code">
+            <p>Show this QR code at the venue:</p>
+            <img src="" alt="QR Code">
+        </div>
+
+        <div class="footer">
+            <div class="logo">
+                <img src="logo_trabii.jpeg" alt="Trabii Logo">
+            </div>
+
+            <div class="follow-us">
+                <p>Follow Us</p>
+                <div class="button-container">
+                    <a href="mailto:support@trabii.com" class="footer-button">Contact Us</a>
+                    <div class="social-icons">
+                        <a href="[Facebook URL]"><img src="Facebook_Logo.png" alt="Facebook"></a>
+                        <a href="[Twitter URL]"><img src="twit.avif" alt="Twitter"></a>
+                        <a href="[Instagram URL]"><img src="Instagram_logo.png" alt="Instagram"></a>
+                        <a href="[LinkedIn URL]"><img src="LinkedIn_logo_initials.png" alt="LinkedIn"></a>
+                    </div>
+                    <a href="[Suggestion Form URL]" class="footer-button">Suggestion Form</a>
+                </div>
+            </div>
+
+            <p>If you have any questions, feel free to <a href="mailto:support@trabii.com">contact us</a>.</p>
+            <p>Looking forward to seeing you at the event!</p>
+            <p><strong>TraBii Team</strong></p>
+        </div>
+    </div>
+</body>
+
+</html>
