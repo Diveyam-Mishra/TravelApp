@@ -2,6 +2,7 @@ from pydantic import BaseModel
 from typing import List
 from datetime import datetime
 
+
 class PaymentInformation(BaseModel):
     user_id: str
     payment_id: str
@@ -16,6 +17,7 @@ class PaymentInformation(BaseModel):
             "payment_date": self.payment_date.isoformat()  # Convert datetime to ISO 8601 string
         }
 
+
 class AttendedInformation(BaseModel):
     user_id: str
     attended_at: datetime  
@@ -25,6 +27,7 @@ class AttendedInformation(BaseModel):
             "user_id": self.user_id,
             "attended_at": self.attended_at.isoformat()  # Convert datetime to ISO 8601 string
         }
+
 
 class PaymentLists(BaseModel):
     id:str
@@ -42,8 +45,11 @@ class PaymentLists(BaseModel):
 
 
 class ticketData(BaseModel):
-    username: str
+    email: str
+    UserName: str
     event_name: str
+    eventId:str
+    userId:str
     event_date: str
     event_venue: str
     ticketId: str

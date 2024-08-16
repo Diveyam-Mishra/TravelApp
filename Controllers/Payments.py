@@ -1,7 +1,7 @@
 from Controllers.Events import get_event_by_id
 from fastapi import HTTPException
 from Schemas.PaymentSchemas import PaymentInformation, PaymentLists, \
-    AttendedInformation
+    AttendedInformation, ticketData
 from Schemas.EventSchemas import SuccessResponse
 from uuid import uuid4
 from datetime import datetime
@@ -10,9 +10,14 @@ from email.message import EmailMessage
 from pathlib import Path
 from azure.communication.email import EmailClient
 import pdfkit
+from tempfile import NamedTemporaryFile
 import jinja2
-from config import settings
-
+from config import settings, connectionString
+import os
+from Helpers.QRCode import generate_qr_code
+from typing import Dict
+from azure.core.exceptions import HttpResponseError
+import base64
 
 async def getUserBookingStatus(eventId: str, userId: str, bookingContainer, eventContainer):
     event_query = "SELECT * FROM c WHERE c.event_id = @eventId"
@@ -60,8 +65,8 @@ async def getUserBookingStatus(eventId: str, userId: str, bookingContainer, even
         raise HTTPException(status_code=500, detail=f"Error parsing booked users: {str(e)}")
 
     # Debug: Print out booked_users for inspection
-    print(f"Booked Users: {booked_users}")
-    print(f"User ID to Check: {userId}")
+    # print(f"Booked Users: {booked_users}")
+    # print(f"User ID to Check: {userId}")
 
     # Check if the userId exists in the booked_users list
     user_booked = any(user.user_id == str(userId) for user in booked_users)
@@ -220,46 +225,113 @@ async def getAttendedUsers(eventId: str, bookingContainer, current_user, db):
     return {"usernames": [username for (username,) in usernames]}
 
 
-TEMPLATE_DIR = Path(__file__).parent
+TEMPLATE_DIR = Path(__file__).parent / "../Templates/Ticket"
+options = {
+    "enable-local-file-access": True,
+}
 
+async def create_ticket_pdf(ticket_data: ticketData, output_path: str):
+    ticket_data_dict = ticket_data.dict()
+   
+    # Ensure ticket_data is an instance of ticketData and convert it to a dictionary
+    if not isinstance(ticket_data, ticketData):
+        raise TypeError("ticket_data must be an instance of ticketData")
+    
+    # Convert ticket_data to a dictionary
 
-def create_ticket_pdf(ticket_data, output_path):
-    # Load and render the HTML template with dynamic data
+    # Prepare QR code data
+    qr_data = {
+        "qr": "eventBooking",
+        "event_id": ticket_data_dict['eventId'],  # Use relevant data for event_id
+        "user_id": ticket_data_dict['userId']  # Use relevant data for user_id if available
+    }
+    
+    # Generate the QR code
+    qr_code_path = str(Path(TEMPLATE_DIR) / "qr_code.png")
+    generate_qr_code(qr_data, qr_code_path)
+
+    # Set up the Jinja2 environment with the TEMPLATE_DIR
     template_loader = jinja2.FileSystemLoader(searchpath=str(TEMPLATE_DIR))
     template_env = jinja2.Environment(loader=template_loader)
-    template = template_env.get_template("ticket_template.html")
-    html_content = template.render(ticket_data)
-
-    # Convert HTML to PDF
-    pdfkit.from_string(html_content, output_path)
+    
+    # Load and render the HTML template with the context
+    template = template_env.get_template("form.html")  # Ensure this template file exists
+    context = {
+        'media_folder': str(TEMPLATE_DIR),
+        'qr_code_path': qr_code_path,
+        **ticket_data_dict
+    }
+    html_content = template.render(context)
+    
+    # Save the rendered HTML content to a temporary file
+    temp_html_path = str(Path(TEMPLATE_DIR) / "temp_ticket.html")
+    with open(temp_html_path, 'w') as f:
+        f.write(html_content)
+    
+    # Convert the saved HTML file to a PDF
+    pdfkit.from_file(temp_html_path, output_path, options=options)
+    
+    # Optionally, remove the temporary files after creating the PDF
+    os.remove(temp_html_path)
+    os.remove(qr_code_path)
 
 sender_email = settings.sender_email
+email_client = EmailClient.from_connection_string(connectionString)
 
-async def send_ticket_email(ticket_data, pdf_path, recipient_email):
-    # Create email message
-    subject = f"Your Ticket for {ticket_data['event']}"
-    
-    message = {
-        "senderAddress": sender_email,
-        "recipients": {
-            "to": [{"address": recipient_email}],
-        },
-        "content": {
-            "subject": subject,
-            "plainText": "Please find your ticket attached.",
+async def send_ticket(email: str, ticket_data: Dict[str, str]) -> SuccessResponse:
+    if not email:
+        raise HTTPException(status_code=400, detail="Email is required")
+
+    # Generate the PDF
+    with NamedTemporaryFile(delete=False, suffix=".pdf") as temp_file:
+        pdf_path = temp_file.name
+        await create_ticket_pdf(ticket_data, pdf_path)
+
+    # Send the email with the PDF attachment
+    send_email_with_attachment(email, pdf_path)
+
+    # Clean up: Remove the temporary file
+    os.remove(pdf_path)
+
+    return SuccessResponse(message="Ticket sent to your email", success=True)
+
+def send_email_with_attachment(email: str, attachment_path: str):
+    subject = "Your Ticket Confirmation"
+
+    # Read and encode the PDF attachment in Base64
+    with open(attachment_path, "rb") as file:
+        file_content = file.read()
+        base64_content = base64.b64encode(file_content).decode('utf-8')
+
+    # Set the file name as 'ticket.pdf'
+    file_name = "ticket.pdf"
+
+    # Define the email message
+    try:
+        message = {
+            "senderAddress": sender_email,
+            "recipients": {
+                "to": [{"address": email}],
+            },
+            "content": {
+                "subject": subject,
+                "plainText": "Please find your ticket attached.",
+            },
             "attachments": [
                 {
-                    "filename": "ticket.pdf",
-                    "contentType": "application/pdf",
-                    "content": open(pdf_path, "rb").read().decode("latin1")  # Read the PDF file
+                    "name": file_name,
+                    "attachmentType": "pdf",  # Use "pdf" instead of "application/pdf"
+                    "contentType": "application/pdf",  # Correct contentType
+                    "contentInBase64": base64_content
                 }
             ]
         }
-    }
 
-    # Send email
-    email_client = EmailClient()  # Initialize your email client
-    poller = email_client.begin_send(message)
-    result = poller.result()
-
-    return result
+        # Send the email
+        poller = email_client.begin_send(message)
+        result = poller.result()
+        return result
+    
+    except HttpResponseError as e:
+        # Handle the error by logging or raising an HTTP exception
+        raise HTTPException(status_code=500, detail=f"Failed to send email: {e.message}")

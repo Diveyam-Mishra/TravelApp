@@ -22,7 +22,6 @@
             padding: 20px;
             border-radius: 10px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-            background-image: url('');
             background-size: cover;
             background-position: top;
             background-repeat: repeat;
@@ -172,15 +171,15 @@
 <body>
     <div class="container">
         <h1>Thank You for Booking with TraBii!</h1>
-        <p>Dear [User's Name],</p>
+        <p>Dear {{UserName}},</p>
         <p>Your booking was successful! We are excited to have you join us. Below are the details of your ticket:</p>
 
         <div class="ticket-details">
-            <h2>Event: [Event Name]</h2>
+            <h2>Event: {{event_name}}</h2>
             <table>
                 <tr>
                     <td>Date:</td>
-                    <td>[Event Date]</td>
+                    <td>{{event_date}}</td>
                 </tr>
                 <tr>
                     <td>Time:</td>
@@ -188,36 +187,36 @@
                 </tr>
                 <tr>
                     <td>Venue:</td>
-                    <td>[Event Venue]</td>
+                    <td>{{event_venue}}</td>
                 </tr>
-
                 <tr>
                     <td>Ticket ID:</td>
-                    <td>[Ticket ID]</td>
+                    <td>{{ticketId}}</td>
                 </tr>
                 <tr>
                     <td>Organizer name/company:</td>
-                    <td>[Organisation]</td>
+                    <td>{{organizer}}</td>
                 </tr>
                 <tr>
                     <td>Amount Paid:</td>
-                    <td>[Paid Amount]</td>
+                    <td>{{paid_amount}}</td>
                 </tr>
                 <tr>
                     <td>Payment Id:</td>
-                    <td>[Payment Id]</td>
+                    <td>{{payment_id}}</td>
                 </tr>
             </table>
         </div>
 
         <div class="qr-code">
             <p>Show this QR code at the venue:</p>
-            <img src="" alt="QR Code">
+            <!-- Replace the src with a dynamic QR code image URL if needed -->
+            <img src="{{qr_code_path}}" alt="QR Code">
         </div>
 
         <div class="footer">
             <div class="logo">
-                <img src="logo_trabii.jpeg" alt="Trabii Logo">
+                <img src="{{media_folder}}/logo_trabii.jpeg" alt="Trabii Logo">
             </div>
 
             <div class="follow-us">
@@ -225,10 +224,10 @@
                 <div class="button-container">
                     <a href="mailto:support@trabii.com" class="footer-button">Contact Us</a>
                     <div class="social-icons">
-                        <a href="[Facebook URL]"><img src="Facebook_Logo.png" alt="Facebook"></a>
-                        <a href="[Twitter URL]"><img src="twit.avif" alt="Twitter"></a>
-                        <a href="[Instagram URL]"><img src="Instagram_logo.png" alt="Instagram"></a>
-                        <a href="[LinkedIn URL]"><img src="LinkedIn_logo_initials.png" alt="LinkedIn"></a>
+                        <a href="[Facebook URL]"><img src="{{media_folder}}/Facebook_Logo.png" alt="Facebook"></a>
+                        <a href="[Twitter URL]"><img src="{{media_folder}}/twit.jpg" alt="Twitter"></a>
+                        <a href="[Instagram URL]"><img src="{{media_folder}}/Instagram_logo.png" alt="Instagram"></a>
+                        <a href="[LinkedIn URL]"><img src="{{media_folder}}/LinkedIn_logo_initials.png" alt="LinkedIn"></a>
                     </div>
                     <a href="[Suggestion Form URL]" class="footer-button">Suggestion Form</a>
                 </div>
