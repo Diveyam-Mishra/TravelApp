@@ -17,12 +17,13 @@ COSMOS_DB_KEY = settings.COSMOS_DB_KEY + "=="
 DATABASE_NAME = settings.DATABASE_NAME 
 CONTAINER_NAME = settings.CONTAINER_NAME
 FILE_CONTAINER_NAME = settings.FILE_CONTAINER_NAME
+ADVERTISEMENT_CONTAINER_NAME=settings.ADVERTISEMENT_CONTAINER_NAME
 BOOKING_CONTAINER_NAME = settings.BOOKING_CONTAINER_NAME
-
 client = CosmosClient(COSMOS_DB_ENDPOINT, COSMOS_DB_KEY)
 database = client.get_database_client(DATABASE_NAME)
 container = database.get_container_client(CONTAINER_NAME)
 file_container = database.get_container_client(FILE_CONTAINER_NAME)
+advertisement_container=database.get_container_client(ADVERTISEMENT_CONTAINER_NAME)
 booking_container = database.get_container_client(BOOKING_CONTAINER_NAME)
 params = urllib.parse.quote_plus(
     f'Driver={Driver};'
@@ -41,7 +42,7 @@ conn_str = f'mssql+pyodbc:///?odbc_connect={params}'
 connection_string = f"DRIVER={Driver};SERVER={Server};DATABASE={Database};UID={Uid};PWD=Iibart210"
 connection_url = URL.create("mssql+pyodbc", query={"odbc_connect": connection_string})
 
-# connection_url = "sqlite:///./test.db"
+#connection_url = "sqlite:///./test.db"
 
 engine = create_engine(connection_url)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -69,7 +70,11 @@ def get_file_container():
     finally:
         pass
 
-
+def get_advertisement_container():
+    try:
+        yield advertisement_container
+    finally:
+        pass
 def get_booking_container():
     try:
         yield booking_container

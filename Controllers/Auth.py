@@ -112,6 +112,11 @@ def create_user(db: Session, user: UserCreate) -> UserResponse:
 
 def delete_user(delete_data: DeleteUserAfterCheckingPass, current_user: User, db: Session) -> SuccessResponse:
     if delete_data.password=="delete":
+        deleted_user=deletedUser(email=current_user.email,
+                                 username=current_user.username,
+                                 works_at=current_user.works_at,
+                                 contact_no=current_user.contact_no)
+        db.add(deleted_user)
         db.delete(current_user)
         db.commit()
         return SuccessResponse(message="User deleted successfully", success=True)

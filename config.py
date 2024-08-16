@@ -22,6 +22,7 @@ class Settings(BaseSettings):
     DATABASE_NAME : str
     CONTAINER_NAME : str
     FILE_CONTAINER_NAME: str
+    ADVERTISEMENT_CONTAINER_NAME:str
     BOOKING_CONTAINER_NAME: str
     OPENAI_API_KEY: str
 

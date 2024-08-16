@@ -1,19 +1,12 @@
 from sqlalchemy.orm import Session
-from Schemas.EventSchemas import EventDetails, EventDetailsupdate, EventFilter
+from Schemas.EventSchemas import *
 from Schemas.UserSchemas import SuccessResponse
-from Controllers.Auth import pwd_context, JWT_SECRET
-import jwt
-from Models.event_models import Event
 from Controllers.Auth import get_current_user
 from Models.user_models import User
 from fastapi import HTTPException, Depends
 from Database.Connection import get_container
 from uuid import uuid4
 from datetime import datetime, timedelta
-from sqlalchemy import and_, or_
-from sqlalchemy.sql import extract
-from Models.org_models import Organization
-from sqlalchemy import func
 from Helpers.Haversine import haversine
 
 
@@ -380,3 +373,23 @@ async def get_filtered_events(
 
     return filtered_events
     
+
+async def advertise_event(event_id: takeString, advertised_events_container, container=Depends(get_container)) -> SuccessResponse:
+    print("ok")
+    query = """
+    SELECT * FROM eventcontainer e WHERE e.event_id = @event_id
+    """
+    params = [
+        {"name": "@event_id", "value": event_id.eventId}
+    ]
+    
+    items = list(container.query_items(query=query, parameters=params, enable_cross_partition_query=True))
+    print("fine")
+    if not items:
+        raise HTTPException(status_code=404, detail="Event not found")
+    
+    event_to_advertise = items[0] 
+    advertised_event = event_to_advertise.copy()
+    advertised_events_container.create_item(advertised_event)
+    print("not ok")
+    return SuccessResponse(message=f"Event with event_id: {event_id} successfully advertised", success=True)

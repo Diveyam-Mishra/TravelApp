@@ -11,6 +11,7 @@ class GeoTag(BaseModel):
 class Location(BaseModel):
     venue: str
     geo_tag: GeoTag
+    city:str
 
 # class PriceFees(BaseModel):
 #     standard: float
@@ -174,3 +175,8 @@ class PartialName(BaseModel):
 
 class CreatorId(BaseModel):
     creator:int
+
+
+    
+class takeString(BaseModel):
+    eventId:str

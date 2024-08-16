@@ -130,7 +130,8 @@ async def create_event_and_upload_files(
         "geo_tag": {
             "latitude": event_data.location.geo_tag.latitude,
             "longitude": event_data.location.geo_tag.longitude
-        }
+        },
+        "city":event_data.location.city
     }
 
     # Insert the new event into the event container
