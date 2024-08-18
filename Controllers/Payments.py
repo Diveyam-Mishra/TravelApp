@@ -9,7 +9,7 @@ from Models.user_models import User
 from email.message import EmailMessage
 from pathlib import Path
 from azure.communication.email import EmailClient
-import pdfkit
+import pdfkit # type: ignore
 from tempfile import NamedTemporaryFile
 import jinja2
 from config import settings, connectionString
@@ -111,7 +111,22 @@ async def bookEventForUser(eventId: str, userId: str, bookingContainer, eventCon
     
     # Replace the existing item in the database with the updated one
     bookingContainer.replace_item(item=booking_lists['id'], body=booking_lists)
+    query = """
+    SELECT * FROM eventcontainer e WHERE e.event_id = @id
+    """
+    params = [{"name": "@id", "value": eventId}]
+    items = list( eventContainer.query_items(query=query, params=params, enable_cross_partition_query=True))
+    
+    existing_event=items[0]
+    
+    remaining_capacity = existing_event.get("remaining_capacity", 0)
+    
+    if remaining_capacity <= 0:
+        raise HTTPException(status_code=400, detail="No remaining capacity")
 
+    existing_event["remaining_capacity"] = remaining_capacity - 1
+
+    eventContainer.replace_item(item=existing_event['id'], body=existing_event)
     return SuccessResponse(message="User successfully booked the event", success=True)
 
 

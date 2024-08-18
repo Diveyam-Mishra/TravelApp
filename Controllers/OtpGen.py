@@ -11,7 +11,7 @@ import jwt
 from passlib.context import CryptContext
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
-
+from uuid import uuid4
 JWT_SECRET = settings.JWT_SECRET
 email_client = EmailClient.from_connection_string(connectionString)
 
@@ -64,7 +64,7 @@ def verify_otp(user: OTPVerification, db: Session) -> SuccessResponse:
     db.commit()
 
     # hashed_password = pwd_context.hash(user.password)
-    new_user = User(email=user.email, username=user.username, contact_no=user.contact_no, works_at=user.works_at)
+    new_user = User(id=str(uuid4),email=user.email, username=user.username, contact_no=user.contact_no, works_at=user.works_at,dob=user.dob, gender=user.gender)
     db.add(new_user)
     db.commit()
     

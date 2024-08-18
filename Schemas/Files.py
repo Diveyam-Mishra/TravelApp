@@ -2,7 +2,7 @@
 from pydantic import BaseModel
 
 class FileUploadRequest(BaseModel):
-    userID: int
+    userID: str
     email: str
 
 class FileUploadResponse(BaseModel):

@@ -44,7 +44,7 @@ async def check_username(username: UserName, db: Session = Depends(get_db)):
     return await check_unique_username(username.username, db)
 
 @router.post("/auth/{userId}/update_non_avatar/",dependencies=[Depends(JWTBearer())], response_model=SuccessResponse)
-def update_user_details(userId:int, req:UserUpdate, db: Session=Depends(get_db), current_user: User=Depends(get_current_user)):
+def update_user_details(userId:str, req:UserUpdate, db: Session=Depends(get_db), current_user: User=Depends(get_current_user)):
     if current_user is None:
         raise HTTPException(status_code=401, detail="User is not authenticated")
     return update_user(req, db, userId, current_user)

@@ -16,7 +16,7 @@ router = APIRouter()
 
 
 @router.get("/bookingStatus/{eventId}+{userID}/", dependencies=[Depends(JWTBearer())], response_model=SuccessResponse)
-async def checkUserBookingStatus(eventId: str, userID: int, bookingContainer=Depends(get_booking_container),
+async def checkUserBookingStatus(eventId: str, userID: str, bookingContainer=Depends(get_booking_container),
 eventContainer=Depends(get_container), current_user:User=Depends(get_current_user)):
     if current_user is None:
         raise HTTPException(status_code=401, detail="Unauthorized")

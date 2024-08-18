@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Optional
 from datetime import datetime
 
 
@@ -80,7 +80,7 @@ class PriceDetails(BaseModel):
 
 
 class HostDetails(BaseModel):
-    id: int
+    id: str
 
 
 class EventDetails(BaseModel):
@@ -146,7 +146,7 @@ class SearchEvent(BaseModel):
     end_date: str
     duration: str
     remaining_capacity: int
-    creator_id: int
+    creator_id: str
     editor_access: List[str]
     
     class Config:
@@ -173,7 +173,7 @@ class PartialName(BaseModel):
 
 
 class CreatorId(BaseModel):
-    creator:int
+    creator:str
 
 
     
