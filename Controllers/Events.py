@@ -78,7 +78,7 @@ async def update_event(event_id: str, event_details: EventDetailsupdate, contain
 
     # Authorization check
     editor_access = existing_event.get("editor_access", [])
-    if existing_event["creator_id"] != current_user.id and str(current_user.id) not in editor_access:
+    if existing_event["creator_id"] != current_user.id and current_user.id not in editor_access:
         raise HTTPException(status_code=401, detail="Not Authorized")
 
     update_data = event_details.dict(exclude_unset=True)
@@ -102,7 +102,7 @@ async def update_event(event_id: str, event_details: EventDetailsupdate, contain
 
 async def give_editor_access(
     db: Session,
-    userId: int,
+    userId: str,
     event_id: str,
     current_user: User = Depends(get_current_user),
     container=Depends(get_container)

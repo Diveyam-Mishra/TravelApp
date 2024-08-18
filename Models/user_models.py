@@ -1,11 +1,12 @@
 
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, func
-
+from sqlalchemy import Column, Integer, String, Boolean, DateTime,Date, func
+from sqlalchemy.dialects.mssql import UNIQUEIDENTIFIER
 from Database.Connection import Base
+import uuid
 
 class User(Base):
     __tablename__ = 'users'
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(String(255), primary_key=True, index=True)
     is_admin = Column(Boolean, default=False)
     works_at = Column(String(255), nullable=True)  # Added length constraint
     email = Column(String(255), unique=True, index=True, nullable=False)  # Added length constraint
@@ -13,6 +14,8 @@ class User(Base):
     # password = Column(String(255), nullable=False)  # Added length constraint
     contact_no = Column(String(20), nullable=True)  # Considered a fixed length
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    dob = Column(Date, nullable=True)
+    gender=Column(String(20),nullable=True)
 
 class OTP(Base):
     __tablename__ = "otps"

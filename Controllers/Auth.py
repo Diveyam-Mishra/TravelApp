@@ -60,7 +60,7 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     return user
 
 
-def update_user(req: UserUpdate, db: Session, userId:int, current_user:User):
+def update_user(req: UserUpdate, db: Session, userId:str, current_user:User):
     user = db.query(User).filter(User.id == userId).first()
 
     if not user:
@@ -122,6 +122,7 @@ def delete_user(delete_data: DeleteUserAfterCheckingPass, current_user: User, db
         return SuccessResponse(message="User deleted successfully", success=True)
     else:
         return SuccessResponse(message="wrong",success=True)
+    
 def register_user(db: Session, email: str = None, username: str = None) -> SuccessResponse:
     if (not email) and (not username):
         raise HTTPException(status_code=400, detail="Both Email and Username are required")

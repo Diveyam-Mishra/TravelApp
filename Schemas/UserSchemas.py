@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 from typing import Optional, List
 from pydantic import BaseModel, EmailStr
-from datetime import datetime
+from datetime import datetime , date
 
 
 class UserBase(BaseModel):
@@ -20,7 +20,7 @@ class UserResponse(BaseModel):
     works_at: Optional[str]
     contact_no: Optional[str]
     created_at: datetime
-    id: int
+    id: str
 
     class Config:
         orm_mode = True
@@ -54,7 +54,7 @@ class UserLoginVerify(BaseModel):
     otp: Optional[str] = None
 
 class UserId(BaseModel):
-    userid: int
+    userid: str
 
 class SuccessResponse(BaseModel):
     message: str
@@ -70,11 +70,11 @@ class DeleteUserAfterCheckingPass(BaseModel):
 
 
 class NoSQLUser(BaseModel):
-    id: int
+    id: str
     personality_tags: Optional[str] = None
     cost: Optional[float] = None
     range: Optional[str] = None
-    friends: List[int] = []
+    friends: List[str] = []
 
 
 class OTPVerification(BaseModel):
@@ -84,7 +84,8 @@ class OTPVerification(BaseModel):
     # password: str
     contact_no: str
     works_at:str
-
+    dob: date
+    gender:str
 
 class EmailRequest(BaseModel):
     email: Optional[str]

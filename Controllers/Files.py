@@ -174,7 +174,7 @@ async def create_event_and_upload_files(
     return SuccessResponse(message=f"Event Created Successfully with event_id: {new_event['event_id']}", success=True)
 
 async def get_avatar(
-    userID: int,
+    userID: str,
     db: Session
 ) -> Dict[str, str]:
     # Fetch the avatar record from the database
@@ -229,7 +229,7 @@ async def upload_event_files(
 
     userId = current_user.id
     editor_access_list = existing_event.get("editor_access", "")
-    if str(userId) not in editor_access_list:
+    if userId not in editor_access_list:
         raise HTTPException(status_code=403, detail="User does not have editor access")
     if files:
         if len(files) > 5:
