@@ -64,7 +64,7 @@ def verify_otp(user: OTPVerification, db: Session) -> SuccessResponse:
     db.commit()
 
     # hashed_password = pwd_context.hash(user.password)
-    new_user = User(id=str(uuid4),email=user.email, username=user.username, contact_no=user.contact_no, works_at=user.works_at,dob=user.dob, gender=user.gender)
+    new_user = User(id=str(uuid4()),email=user.email, username=user.username, contact_no=user.contact_no, works_at=user.works_at,dob=user.dob, gender=user.gender)
     db.add(new_user)
     db.commit()
     
