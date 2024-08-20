@@ -1,14 +1,15 @@
 from fastapi import UploadFile, HTTPException
 from sqlalchemy.orm import Session
-from Database.Connection import get_db
+from Database.Connection import get_db, avatar_container_name, event_files_blob_container_name
 from Models.user_models import User
 from Models.Files import Avatar
-import pybase64 # type: ignore
+import pybase64  # type: ignore
 from uuid import uuid4
 from Controllers.Auth import get_current_user
 from typing import Dict, List
 from Schemas.UserSchemas import *
 from Schemas.EventSchemas import EventDetailsupdate, EventDetails
+from datetime import datetime
 MAX_FILE_SIZE_MB = 5  # Maximum file size in MB
 MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024  # Convert MB to bytes
 
@@ -21,7 +22,8 @@ async def avatar_upload(
     req: UserUpdate,
     db: Session,
     current_user: User,
-    file: UploadFile
+    file: UploadFile,
+    blob_service_client
 ):
     # Check if file is provided
     if file:
@@ -45,6 +47,13 @@ async def avatar_upload(
 
         # Process file details
         file_name = f"{current_user.id}_avatar.{ext}"
+        
+        # Upload the file to Azure Blob Storage
+        blob_client = blob_service_client.get_blob_client(container=avatar_container_name, blob=file_name)
+        blob_client.upload_blob(file_data, overwrite=True)
+
+        # Generate the URL of the uploaded file
+        file_url = blob_client.url
 
         # Check for existing avatar
         existing_avatar = db.query(Avatar).filter(Avatar.userID == current_user.id).first()
@@ -53,7 +62,7 @@ async def avatar_upload(
             # Create new avatar record if none exists
             avatar = Avatar(
                 filename=file_name,
-                filedata=file_data,
+                fileurl=file_url,  # Store URL instead of file data
                 filetype=file_type,
                 userID=current_user.id
             )
@@ -61,24 +70,26 @@ async def avatar_upload(
         else:
             # Update existing avatar record
             existing_avatar.filename = file_name
-            existing_avatar.filedata = file_data
+            existing_avatar.fileurl = file_url  # Update URL
             existing_avatar.filetype = file_type
 
-    user = db.query(User).filter(User.username==username).first()
-    if user:
+        db.commit()
+        db.refresh(existing_avatar if existing_avatar else avatar)
+
     # Update the user's details with the data from req
+    user = db.query(User).filter(User.username == username).first()
+    if user:
         if req.username is not None:
             user.username = req.username
         if req.works_at is not None:
             user.works_at = req.works_at
         if req.contact_no is not None:
             user.contact_no = req.contact_no
+        
         # Commit the changes to the database
         db.commit()
-
-        # Optionally, you might want to refresh the instance to reflect changes
         db.refresh(user)
-        db.commit()
+
     return {"message": "Avatar Updated", "success": True}
 
 
@@ -87,7 +98,8 @@ async def create_event_and_upload_files(
     files: List[UploadFile],
     current_user: User,
     event_container,
-    file_container
+    file_container,
+    blob_service_client
 ) -> SuccessResponse:
     # Prepare the query to check if the event already exists
     query = """
@@ -96,11 +108,13 @@ async def create_event_and_upload_files(
     
     params = [
         {"name": "@name", "value": event_data.event_name},
-        {"name": "@host_id", "value": event_data.host_information.id},
         {"name": "@type", "value": ','.join(event_data.event_type)},
-        {"name": "@start_date", "value": event_data.start_date_and_time.to_datetime().isoformat()},
-        {"name": "@end_date", "value": event_data.end_date_and_time.to_datetime().isoformat()}
+        {"name": "@start_date", "value": event_data.start_date_and_time},
+        {"name": "@end_date", "value": event_data.end_date_and_time}
     ]
+
+    if event_data.host_information != "0":
+        params.append({"name": "@host_id", "value": event_data.host_information})
     
     items = list(event_container.query_items(query=query, parameters=params, enable_cross_partition_query=True))
 
@@ -108,31 +122,38 @@ async def create_event_and_upload_files(
         raise HTTPException(status_code=400, detail="Event already created")
 
     # Calculate the duration in minutes
-    start_datetime = event_data.start_date_and_time.to_datetime()
-    end_datetime = event_data.end_date_and_time.to_datetime()
+    start_date_and_time_str = event_data.start_date_and_time
+    end_date_and_time_str = event_data.end_date_and_time
+
+    # Parse ISO format strings to datetime objects
+    start_datetime = datetime.fromisoformat(start_date_and_time_str.replace('Z', '+00:00'))
+    end_datetime = datetime.fromisoformat(end_date_and_time_str.replace('Z', '+00:00'))
+
+    # Calculate the duration in minutes
     duration_minutes = int((end_datetime - start_datetime).total_seconds() / 60)
 
     # Create a new event
     new_event = event_data.dict()
+    newId = str(uuid4())
     new_event.update({
-        "id": str(uuid4()),  # Generate a new UUID for the id field
-        "event_id": str(uuid4()),  # Generate a new UUID for the event_id field
+        "id": newId,  # Generate a new UUID for the id field
+        "event_id": newId,  # Generate a new UUID for the event_id field
         "type": ','.join(event_data.event_type),  # Convert list to comma-separated string
-        "start_date": start_datetime.isoformat(),  # Convert datetime to ISO format string
-        "end_date": end_datetime.isoformat(),  # Convert datetime to ISO format string
+        "start_date": start_date_and_time_str,  # Convert datetime to ISO format string
+        "end_date": end_date_and_time_str,  # Convert datetime to ISO format string
         "duration": str(duration_minutes),  # Store duration as a string
         "remaining_capacity": event_data.capacity,
         "creator_id": current_user.id,  # Use the current user's ID
-        "editor_access": [str(current_user.id)]  # Set the creator as the editor
+        "editor_access": [str(current_user.id)],  # Set the creator as the editor
+        "location": {
+            "venue": event_data.location.venue,
+            "geo_tag": {
+                "latitude": event_data.location.geo_tag.latitude,
+                "longitude": event_data.location.geo_tag.longitude
+            },
+            "city": event_data.location.city
+        }
     })
-    new_event["location"] = {
-        "venue": event_data.location.venue,
-        "geo_tag": {
-            "latitude": event_data.location.geo_tag.latitude,
-            "longitude": event_data.location.geo_tag.longitude
-        },
-        "city":event_data.location.city
-    }
 
     # Insert the new event into the event container
     event_container.create_item(new_event)
@@ -142,36 +163,52 @@ async def create_event_and_upload_files(
         if len(files) > 5:
             raise HTTPException(status_code=400, detail="Maximum 5 files can be uploaded at once")
 
-        file_columns = [
-            ('fileName1', 'fileData1', 'fileType1'),
-            ('fileName2', 'fileData2', 'fileType2'),
-            ('fileName3', 'fileData3', 'fileType3'),
-            ('fileName4', 'fileData4', 'fileType4'),
-            ('fileName5', 'fileData5', 'fileType5')
-        ]
-
-        new_record = {
-            "id": str(uuid4()),  # Generate a new UUID for the record
-            "eventId": new_event['event_id'],
-        }
-
+        # Prepare a list to store file metadata
+        file_metadata = []
+        
+        # Upload files to Azure Blob Storage and collect file metadata
         for i, file in enumerate(files):
-            if i < len(file_columns):
-                file_column = file_columns[i]
-                fileName = f"{new_event['event_id']}_{file.filename}"
-                fileType = file.content_type
+            if i >= 5:
+                break
+            
+            file_extension = file.filename.split('.')[-1]
+            file_name = f"{new_event['event_id']}_file_{i+1}.{file_extension}"
+            blob_client = blob_service_client.get_blob_client(container=event_files_blob_container_name, blob=file_name)
+            
+            # Read file data
+            file_data = await file.read()
+            
+            # Upload file
+            blob_client.upload_blob(file_data, overwrite=True)
+            
+            # Generate file URL
+            file_url = blob_client.url
+            
+            # Add file metadata to the list
+            file_metadata.append({
+                "fileName": file_name,
+                "fileUrl": file_url,
+                "fileType": file.content_type
+            })
 
-                # Encode file data as base64 string
-                file_data_base64 = pybase64.b64encode(await file.read()).decode('utf-8')
-
-                new_record[file_column[0]] = fileName
-                new_record[file_column[1]] = file_data_base64
-                new_record[file_column[2]] = fileType
-
+        # Create new record for files
+        new_record = {
+            "id": newId,  # Generate a new UUID for the record
+            "eventId": newId,
+        }
+        
+        # Add file metadata to the new record
+        for i, metadata in enumerate(file_metadata):
+            if i < 5:
+                new_record[f'fileName{i+1}'] = metadata["fileName"]
+                new_record[f'fileUrl{i+1}'] = metadata["fileUrl"]
+                new_record[f'fileType{i+1}'] = metadata["fileType"]
+        
         # Insert the new record into the file container
         file_container.create_item(new_record)
-
+    
     return SuccessResponse(message=f"Event Created Successfully with event_id: {new_event['event_id']}", success=True)
+
 
 async def get_avatar(
     userID: str,
@@ -186,24 +223,18 @@ async def get_avatar(
 
     # Retrieve file details
     file_name = getattr(avatar, 'filename', None)
-    file_data = getattr(avatar, 'filedata', None)
+    file_url = getattr(avatar, 'fileurl', None)
     file_type = getattr(avatar, 'filetype', None)
 
     # Ensure that all required fields are present
-    if not file_name or not file_data or not file_type:
+    if not file_name or not file_url or not file_type:
         raise HTTPException(status_code=500, detail="Incomplete avatar data")
-
-    try:
-        # Encode file data to base64
-        encoded_file_data = pybase64.b64encode(file_data).decode('utf-8')
-    except Exception as e:
-        raise HTTPException(status_code=500, detail="Error encoding file data")
 
     # Construct response
     response = {
         "fileName": file_name,
         "fileType": file_type,
-        "fileData": encoded_file_data
+        "fileUrl": file_url  # Return the URL of the file
     }
     
     return response
@@ -212,9 +243,10 @@ async def get_avatar(
 async def upload_event_files(
     eventId: str,
     files: List[UploadFile],
-    update_info:EventDetailsupdate,
+    update_info: BaseModel,
     current_user: User,
     event_container,
+    blob_service_client,
     file_container
 ):
     # Query to find the event
@@ -231,17 +263,34 @@ async def upload_event_files(
     editor_access_list = existing_event.get("editor_access", "")
     if userId not in editor_access_list:
         raise HTTPException(status_code=403, detail="User does not have editor access")
+    
     if files:
         if len(files) > 5:
             raise HTTPException(status_code=400, detail="Maximum 5 files can be uploaded at once")
-        file_columns = [
-            ('fileName1', 'fileData1', 'fileType1'),
-            ('fileName2', 'fileData2', 'fileType2'),
-            ('fileName3', 'fileData3', 'fileType3'),
-            ('fileName4', 'fileData4', 'fileType4'),
-            ('fileName5', 'fileData5', 'fileType5')
-        ]
-
+        
+        # Prepare a list to store file metadata
+        file_metadata = []
+        
+        # Upload files to Azure Blob Storage and collect file metadata
+        for i, file in enumerate(files):
+            if i >= 5:
+                break
+            
+            file_name = f"{eventId}_file_{i+1}.{file.filename.split('.')[-1]}"  # Adjusted file name pattern
+            blob_client = blob_service_client.get_blob_client(container=event_files_blob_container_name, blob=file_name)
+            file_data = await file.read()
+            await blob_client.upload_blob(file_data, overwrite=True)
+            
+            # Generate file URL
+            file_url = blob_client.url
+            
+            # Add file metadata to the list
+            file_metadata.append({
+                "fileName": file_name,
+                "fileUrl": file_url,
+                "fileType": file.content_type
+            })
+        
         # Query to find existing record of event files
         query_files = "SELECT * FROM eventfilescontainer ef WHERE ef.eventId = @eventId"
         params_files = [{"name": "@eventId", "value": eventId}]
@@ -249,55 +298,48 @@ async def upload_event_files(
 
         if file_items:
             existing_record = file_items[0]
-            for i, file in enumerate(files):
-                if i < len(file_columns):
-                    file_column = file_columns[i]
-                    fileName = f"{eventId}_{file.filename}"
-                    fileType = file.content_type
-                    
-                    # Encode file data as base64 string
-                    file_data_base64 = pybase64.b64encode(await file.read()).decode('utf-8')
-
-                    existing_record[file_column[0]] = fileName
-                    existing_record[file_column[1]] = file_data_base64
-                    existing_record[file_column[2]] = fileType
-
+            for i, metadata in enumerate(file_metadata):
+                if i < len(existing_record):
+                    existing_record[f'fileName{i+1}'] = metadata["fileName"]
+                    existing_record[f'fileUrl{i+1}'] = metadata["fileUrl"]
+                    existing_record[f'fileType{i+1}'] = metadata["fileType"]
+            
             file_container.replace_item(item=existing_record['id'], body=existing_record)
         else:
+            # Create new record
             new_record = {
                 "id": str(uuid4()),  # Generate a new UUID for the record
-                "eventId": eventId,
+                "eventId": eventId
             }
-
-            for i, file in enumerate(files):
-                if i < len(file_columns):
-                    file_column = file_columns[i]
-                    fileName = f"{eventId}_{file.filename}"
-                    fileType = file.content_type
-                    # Encode file data as base64 string
-                    file_data_base64 = pybase64.b64encode(await file.read()).decode('utf-8')
-                    new_record[file_column[0]] = fileName
-                    new_record[file_column[1]] = file_data_base64
-                    new_record[file_column[2]] = fileType
+            # Add file metadata to the new record
+            for i, metadata in enumerate(file_metadata):
+                new_record[f'fileName{i+1}'] = metadata["fileName"]
+                new_record[f'fileUrl{i+1}'] = metadata["fileUrl"]
+                new_record[f'fileType{i+1}'] = metadata["fileType"]
+            
             file_container.create_item(new_record)
+    
     if update_info:
-        print (update_info)
         update_data = update_info.dict(exclude_unset=True)
+        
         # Convert lists to comma-separated strings
         if 'event_type' in update_data and update_data['event_type'] is not None:
             update_data['type'] = ','.join(update_data.pop('event_type'))
         
         # Convert datetime fields to ISO format strings
         if 'start_date_and_time' in update_info and update_info.start_date_and_time is not None:
-            update_data['start_date'] = update_info.start_date_and_time.to_datetime().isoformat()
+            update_data['start_date'] = update_info.start_date_and_time.isoformat()
         if 'end_date_and_time' in update_info and update_info.end_date_and_time is not None:
-            update_data['end_date'] = update_info.end_date_and_time.to_datetime().isoformat()
-            # Update existing event with new data
+            update_data['end_date'] = update_info.end_date_and_time.isoformat()
+        
+        # Update existing event with new data
         for key, value in update_data.items():
             if value is not None:
                 existing_event[key] = value
         event_container.replace_item(item=existing_event['id'], body=existing_event)
+    
     return {"message": "Files Updated", "success": True}
+
 
 async def fetch_event_files(
     eventId: str,
@@ -317,13 +359,14 @@ async def fetch_event_files(
 
     for i in range(1, 6):
         fileName = existing_record.get(f'fileName{i}', None)
-        fileData = existing_record.get(f'fileData{i}', None)
+        fileUrl = existing_record.get(f'fileUrl{i}', None)
         fileType = existing_record.get(f'fileType{i}', None)
-        if fileName and fileData and fileType:
-            try:
-                
-                files.append({"fileName": fileName, "fileData": fileData, "fileType": fileType})
-            except Exception as e:
-                raise HTTPException(status_code=500, detail=f"Error decoding file data: {str(e)}")
+
+        if fileName and fileUrl and fileType:
+            files.append({
+                "fileName": fileName,
+                "fileUrl": fileUrl,  # URL instead of binary data
+                "fileType": fileType
+            })
     
     return files

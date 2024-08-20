@@ -8,4 +8,4 @@ def haversine(lat1, lon1, lat2, lon2):
     c = 2 * math.asin(math.sqrt(a))
     r = 6371  # Radius of Earth in kilometers
     distance = c * r
-    return distance
+    return round(distance, 2)

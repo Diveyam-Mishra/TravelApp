@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, File, UploadFile, HTTPException, Form
 from Schemas.Files import FileUploadResponse
 from Schemas.UserSchemas import UserUpdate
-from Database.Connection import get_db, get_container, get_file_container
+from Database.Connection import get_db, get_container, get_file_container, get_blob_service_client
 from sqlalchemy.orm import Session
 from Models.user_models import User
 from fastapi.responses import Response
@@ -22,6 +22,7 @@ async def upload_avatar(
     works_at: Optional[str] = Form(None),
     contact_no: Optional[str] = Form(None),
     db: Session = Depends(get_db),
+    blob_client=Depends(get_blob_service_client),
     current_user: User = Depends(get_current_user),
     file: UploadFile = File(...)
 ):
@@ -32,18 +33,17 @@ async def upload_avatar(
     req = UserUpdate(username=updated_username, works_at=works_at, contact_no=contact_no)
     
     # Call the function to handle the file upload and user update
-    return await avatar_upload(username, req, db, current_user, file)
+    return await avatar_upload(username, req, db, current_user, file, blob_client)
 
 
-@router.get("/avatar/fetch/{userID}/",dependencies=[Depends(JWTBearer())])
+@router.get("/avatar/fetch/",dependencies=[Depends(JWTBearer())])
 async def fetch_avatar(
-    userID: int,
     db: Session=Depends(get_db),
     current_user: User=Depends(get_current_user)
 ):
     if current_user is None:
         raise HTTPException(status_code=401, detail="Unauthorized")
-    return await get_avatar(userID, db)
+    return await get_avatar(current_user.id, db)
 
 
 @router.post("/event/{eventId}/files/upload/",dependencies=[Depends(JWTBearer())],
@@ -63,7 +63,8 @@ async def upload_files(
     host_information: Optional[HostDetails] = Form(None),
     location: Optional[Location] = Form(None),
     container=Depends(get_container),
-    fileContainer=Depends(get_file_container),
+    blob_client=Depends(get_blob_service_client),
+    file_container=Depends(get_file_container),
     current_user: User = Depends(get_current_user)
 ):
     if current_user is None:
@@ -82,7 +83,7 @@ async def upload_files(
     location=location
 )
     
-    return await upload_event_files(eventId, files,update_info, current_user, container, fileContainer)
+    return await upload_event_files(eventId, files,update_info, current_user, container, blob_client, file_container)
 
 @router.get("/event/{eventId}/files/",dependencies=[Depends(JWTBearer())])
 async def get_event_files(

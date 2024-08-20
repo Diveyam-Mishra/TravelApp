@@ -3,11 +3,13 @@ from Schemas.EventSchemas import *
 from Schemas.UserSchemas import SuccessResponse
 from Controllers.Auth import get_current_user
 from Models.user_models import User
-from fastapi import HTTPException, Depends
-from Database.Connection import get_container
+from fastapi import HTTPException, Depends, UploadFile
+from Database.Connection import get_container, event_files_blob_container_name
 from uuid import uuid4
 from datetime import datetime, timedelta
 from Helpers.Haversine import haversine
+from Controllers.Files import fetch_event_files
+from azure.cosmos.exceptions import CosmosHttpResponseError
 
 
 async def create_event(event_details: EventDetails, current_user: User, container=Depends(get_container)) -> SuccessResponse:
@@ -58,7 +60,16 @@ async def create_event(event_details: EventDetails, current_user: User, containe
     container.create_item(new_event)
     return SuccessResponse(message=f"Event Created Successfully with event_id: {new_event['id']}", success=True)
 
-async def update_event(event_id: str, event_details: EventDetailsupdate, container=Depends(get_container), current_user: User = Depends(get_current_user)) -> SuccessResponse:
+
+async def update_event(
+    event_id: str, 
+    event_data: EventDetails,
+    files: List[UploadFile],
+    current_user: User,
+    event_container,
+    file_container,
+    blob_service_client
+) -> SuccessResponse:
     if current_user is None:
         raise HTTPException(status_code=400, detail="User Not Found")
     
@@ -69,7 +80,7 @@ async def update_event(event_id: str, event_details: EventDetailsupdate, contain
     
     params = [{"name": "@id", "value": event_id}]
     
-    items = list(container.query_items(query=query, params=params, enable_cross_partition_query=True))
+    items = list(event_container.query_items(query=query, parameters=params, enable_cross_partition_query=True))
 
     if not items:
         raise HTTPException(status_code=400, detail="Event not found")
@@ -81,73 +92,111 @@ async def update_event(event_id: str, event_details: EventDetailsupdate, contain
     if existing_event["creator_id"] != current_user.id and current_user.id not in editor_access:
         raise HTTPException(status_code=401, detail="Not Authorized")
 
-    update_data = event_details.dict(exclude_unset=True)
+    update_data = event_data.dict(exclude_unset=True)
 
     # Convert lists to comma-separated strings
     if 'event_type' in update_data:
         update_data['type'] = ','.join(update_data.pop('event_type'))
 
-    # Convert datetime fields to ISO format strings
-    if 'start_date_and_time' in event_details:
-        update_data['start_date'] = event_details.start_date_and_time.to_datetime().isoformat()
-    if 'end_date_and_time' in event_details:
-        update_data['end_date'] = event_details.end_date_and_time.to_datetime().isoformat()
-
     # Update existing event with new data
     for key, value in update_data.items():
         existing_event[key] = value
 
-    container.replace_item(item=existing_event['id'], body=existing_event)
+    event_container.replace_item(item=existing_event['id'], body=existing_event)
+
+    if files:
+        if len(files) > 5:
+            raise HTTPException(status_code=400, detail="Maximum 5 files can be uploaded at once")
+
+        # Fetch the existing files metadata from the file container
+        query_files = "SELECT * FROM eventfilescontainer ef WHERE ef.eventId = @eventId"
+        params_files = [{"name": "@eventId", "value": event_id}]
+        file_items = list(file_container.query_items(query=query_files, parameters=params_files, enable_cross_partition_query=True))
+
+        if not file_items:
+            raise HTTPException(status_code=404, detail="Event files not found")
+
+        existing_files = file_items[0]
+
+        # Update only the specified files
+        for file in files:
+            # Extract the index from the file name pattern eventId_file_{i}
+            file_extension = file.filename.split('.')[-1]
+            file_index = int(file.filename.split('_')[-1].split('.')[0])  # Extract the index, e.g., '1' from 'eventId_file_1.jpg'
+
+            file_name = f"{event_id}_file_{file_index}.{file_extension}"
+            blob_client = blob_service_client.get_blob_client(container=event_files_blob_container_name, blob=file_name)
+            
+            # Read file data
+            file_data = await file.read()
+            
+            # Upload file
+            blob_client.upload_blob(file_data, overwrite=True)
+            
+            # Generate file URL
+            file_url = blob_client.url
+            
+            # Update the existing file metadata
+            existing_files[f'fileName{file_index}'] = file_name
+            existing_files[f'fileUrl{file_index}'] = file_url
+            existing_files[f'fileType{file_index}'] = file.content_type
+
+        # Replace the existing file record with the updated metadata
+        file_container.replace_item(item=existing_files['id'], body=existing_files)
+
     return SuccessResponse(message="Event Updated Successfully", success=True)
+
 
 async def give_editor_access(
     db: Session,
     userId: str,
     event_id: str,
-    current_user: User = Depends(get_current_user),
-    container=Depends(get_container)
+    current_user,
+    container
 ) -> SuccessResponse:
-    # Check if event exists in event container
-    query = """
-    SELECT * FROM eventcontainer e WHERE e.id = @id
-    """
+    try:
+        # Check if event exists in event container
+        query = "SELECT * FROM eventcontainer e WHERE e.event_id = @id"
+        params = [{"name": "@id", "value": event_id}]
+        items = list(container.query_items(query=query, parameters=params, enable_cross_partition_query=True))
+
+        if not items:
+            raise HTTPException(status_code=404, detail="Event not found")
+        
+        existing_event = items[0]
+
+        # Check if user exists
+        db_user = db.query(User).filter(User.id == userId).first()
+        if not db_user:
+            raise HTTPException(status_code=400, detail="User not found")
+
+        # Authorization check
+        if current_user.id != existing_event.get('creator_id'):
+            raise HTTPException(status_code=401, detail="Not Authorized")
+
+        # Check if user already has editor access
+        editor_access_list = existing_event.get('editor_access', [])
+        if str(userId) in map(str, editor_access_list):
+            raise HTTPException(status_code=400, detail="User already has editor access")
+
+        # Add the new user ID to the editor access list
+        editor_access_list.append(str(userId))
+        existing_event['editor_access'] = editor_access_list
+
+        # Replace the item in the container with the updated data
+        container.replace_item(item=existing_event['id'], body=existing_event)
+
+        # Commit the transaction to the database
+        db.commit()
+
+        return SuccessResponse(message=f"Editor Access Granted to user ID: {userId}", success=True)
     
-    params = [{"name": "@id", "value": event_id}]
-    
-    items = list(container.query_items(query=query, params=params, enable_cross_partition_query=True))
-
-    if not items:
-        raise HTTPException(status_code=404, detail="Event not found")
-    
-    existing_event = items[0]  # Assuming items is a list and taking the first element
-
-    # Check if user exists
-    db_user = db.query(User).filter(User.id == userId).first()
-    if not db_user:
-        raise HTTPException(status_code=400, detail="User not found")
-
-    # Authorization check
-    if current_user.id != existing_event.get('creator_id'):
-        raise HTTPException(status_code=401, detail="Not Authorized")
-
-    # Check if user already has editor access
-    editor_access_list = existing_event.get('editor_access', [])
-    if str(userId) in map(str, editor_access_list):
-        raise HTTPException(status_code=400, detail="User already has editor access")
-
-    # Add the new user ID to the editor access list
-    editor_access_list.append(str(userId))
-
-    # Update the event's editor access field
-    existing_event['editor_access'] = editor_access_list
-
-    # Replace the item in the container with the updated data
-    container.replace_item(item=existing_event['id'], body=existing_event)
-
-    # Commit the transaction to the database
-    db.commit()
-
-    return SuccessResponse(message=f"Editor Access Granted to user ID: {userId}", success=True)
+    except CosmosHttpResponseError as e:
+        # Handle Cosmos DB specific errors
+        raise HTTPException(status_code=500, detail=f"Cosmos DB Error: {str(e)}")
+    except Exception as e:
+        # Handle other exceptions
+        raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
 
 async def get_event_by_id(event_id: str, event_container, file_container):
     # Query to find the event by its event_id
@@ -167,24 +216,11 @@ async def get_event_by_id(event_id: str, event_container, file_container):
     event = events[0]  # Since event_id is unique, we get the first item
 
     # Query to find images associated with the event
-    image_query = "SELECT * FROM c WHERE c.eventId = @event_id"
-    
-    image_files = list(file_container.query_items(
-        query=image_query,
-        parameters=params,
-        enable_cross_partition_query=True
-    ))
+    image_files = await fetch_event_files(event_id, file_container)
 
     # Include the images in the event data
     if image_files:
-        event['images'] = [
-            {
-                "fileName": image.get("fileName1"),
-                "fileType": image.get("fileType1"),
-                "fileData": image.get("fileData1"),
-            }
-            for image in image_files
-        ]
+        event['images'] = image_files
 
     return event
 
@@ -263,73 +299,55 @@ async def get_event_by_id(event_id: str, event_container, file_container):
 #     # Limit and fetch results
 #     return query.limit(limit).all()
 
+
 async def get_filtered_events(
-    event_container, 
-    filters: EventFilter, 
+    event_container,
+    filters: EventFilter,
     current_user: User = Depends(get_current_user)
 ):
     if current_user is None:
         raise HTTPException(status_code=400, detail="User Not Found")
-    
+
     # Initialize the query with a base filter for valid events
-    query = "SELECT * FROM event_container e WHERE 1=1"
+    query = "SELECT * FROM event_container e WHERE IS_STRING(e.start_date_and_time)"
     params = []
 
     if filters.date_preference:
         today = datetime.today().date()
         if filters.date_preference == "Today":
             query += (
-                " AND e.start_date_and_time.day = @day"
-                " AND e.start_date_and_time.month = @month"
-                " AND e.start_date_and_time.year = @year"
+                " AND STARTSWITH(e.start_date_and_time, @date)"
             )
-            params.append({"name": "@day", "value": today.day})
-            params.append({"name": "@month", "value": today.month})
-            params.append({"name": "@year", "value": today.year})
+            params.append({"name": "@date", "value": today.isoformat()})
         elif filters.date_preference == "Tomorrow":
             tomorrow = today + timedelta(days=1)
             query += (
-                " AND e.start_date_and_time.day = @day"
-                " AND e.start_date_and_time.month = @month"
-                " AND e.start_date_and_time.year = @year"
+                " AND STARTSWITH(e.start_date_and_time, @date)"
             )
-            params.append({"name": "@day", "value": tomorrow.day})
-            params.append({"name": "@month", "value": tomorrow.month})
-            params.append({"name": "@year", "value": tomorrow.year})
+            params.append({"name": "@date", "value": tomorrow.isoformat()})
         elif filters.date_preference == "This week":
             start_of_week = today
             end_of_week = today + timedelta(days=(6 - today.weekday()))
             query += (
-                " AND e.start_date_and_time.year = @year"
                 " AND ("
-                " (e.start_date_and_time.month = @start_month AND e.start_date_and_time.day >= @start_day)"
-                " OR (e.start_date_and_time.month = @end_month AND e.start_date_and_time.day <= @end_day)"
+                " (e.start_date_and_time >= @start_of_week AND e.start_date_and_time <= @end_of_week)"
                 " )"
             )
-            params.append({"name": "@year", "value": today.year})
-            params.append({"name": "@start_day", "value": start_of_week.day})
-            params.append({"name": "@start_month", "value": start_of_week.month})
-            params.append({"name": "@end_day", "value": end_of_week.day})
-            params.append({"name": "@end_month", "value": end_of_week.month})
+            params.append({"name": "@start_of_week", "value": start_of_week.isoformat()})
+            params.append({"name": "@end_of_week", "value": end_of_week.isoformat()})
         elif filters.date_preference == "Specific Date" and filters.specific_date:
             query += (
-                " AND e.start_date_and_time.day = @day"
-                " AND e.start_date_and_time.month = @month"
-                " AND e.start_date_and_time.year = @year"
+                " AND STARTSWITH(e.start_date_and_time, @date)"
             )
-            params.append({"name": "@day", "value": filters.specific_date.day})
-            params.append({"name": "@month", "value": filters.specific_date.month})
-            params.append({"name": "@year", "value": filters.specific_date.year})
+            params.append({"name": "@date", "value": filters.specific_date.isoformat()})
 
     # Apply event type filter
     if filters.event_type_preference:
-        # Build the event type filter dynamically
         type_filters = []
         for i, event_type in enumerate(filters.event_type_preference):
             type_filters.append(f"ARRAY_CONTAINS(e.event_type, @event_type{i})")
             params.append({"name": f"@event_type{i}", "value": event_type})
 
-        # Join all filters with OR
         query += " AND (" + " OR ".join(type_filters) + ")"
 
     # Apply time filters
@@ -337,22 +355,21 @@ async def get_filtered_events(
         time_conditions = []
         for time_pref in filters.time_preference:
             if time_pref == "Morning":
-                time_conditions.append("(e.start_date_and_time.hour >= 6 AND e.start_date_and_time.hour < 12)")
+                time_conditions.append("(e.start_date_and_time >= '06:00:00' AND e.start_date_and_time < '12:00:00')")
             elif time_pref == "Afternoon":
-                time_conditions.append("(e.start_date_and_time.hour >= 12 AND e.start_date_and_time.hour < 17)")
+                time_conditions.append("(e.start_date_and_time >= '12:00:00' AND e.start_date_and_time < '17:00:00')")
             elif time_pref == "Evening":
-                time_conditions.append("(e.start_date_and_time.hour >= 17 AND e.start_date_and_time.hour < 21)")
+                time_conditions.append("(e.start_date_and_time >= '17:00:00' AND e.start_date_and_time < '21:00:00')")
             elif time_pref == "Night":
-                time_conditions.append("(e.start_date_and_time.hour >= 21 OR e.start_date_and_time.hour < 6)")
+                time_conditions.append("(e.start_date_and_time >= '21:00:00' OR e.start_date_and_time < '06:00:00')")
         if time_conditions:
             query += " AND (" + " OR ".join(time_conditions) + ")"
 
-    # Apply location filters
+    # Query the event container
     items = event_container.query_items(query=query, parameters=params, enable_cross_partition_query=True)
 
     filtered_events = []
     for item in items:
-        # Apply location filter using Haversine formula
         if filters.location_preference:
             event_lat = item['location']['geo_tag']['latitude']
             event_lon = item['location']['geo_tag']['longitude']
@@ -370,8 +387,9 @@ async def get_filtered_events(
         else:
             filtered_events.append(item)
 
-
     return filtered_events
+
+
     
 
 async def advertise_event(event_id: takeString, advertised_events_container, container=Depends(get_container)) -> SuccessResponse:

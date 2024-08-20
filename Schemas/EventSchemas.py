@@ -87,13 +87,13 @@ class EventDetails(BaseModel):
     event_name: str
     event_description: str
     event_type: List[str]
-    start_date_and_time: DateTimeDetails
-    end_date_and_time: DateTimeDetails
+    start_date_and_time: str  # iso
+    end_date_and_time: str  # iso
     age_group: str
     family_friendly: bool
-    price_fees: PriceDetails
+    price_fees: float 
     capacity: int
-    host_information: HostDetails
+    host_information: str
     location:Location
 
 
@@ -106,13 +106,13 @@ class EventDetailsupdate(BaseModel):
     event_name: Optional[str] = None
     event_description: Optional[str] = None
     event_type: Optional[List[str]] = None
-    start_date_and_time: Optional[DateTimeDetails] = None
-    end_date_and_time: Optional[DateTimeDetails] = None
+    start_date_and_time: Optional[str] = None
+    end_date_and_time: Optional[str] = None
     age_group: Optional[str] = None
     family_friendly: Optional[bool] = None
-    price_fees: Optional[PriceDetails] = None
+    price_fees: Optional[float] = None
     capacity: Optional[int] = None
-    host_information: Optional[HostDetails] = None
+    host_information: Optional[str] = None
     location:Optional[Location] = None
 
 
@@ -132,13 +132,13 @@ class SearchEvent(BaseModel):
     event_name: str
     event_description: str
     event_type: List[str]
-    start_date_and_time: DateTimeDetails
-    end_date_and_time: DateTimeDetails
+    start_date_and_time: str
+    end_date_and_time: str
     age_group: str
     family_friendly: bool
-    price_fees: PriceDetails
+    price_fees: float
     capacity: int
-    host_information: Dict[str, int]
+    host_information: str
     location: Location
     id: str
     event_id: str
@@ -154,9 +154,9 @@ class SearchEvent(BaseModel):
 
 
 class ImageDetails(BaseModel):
-    file_name: str
-    file_data: str  # This will be base64 encoded data
-    file_type: str
+    file_name: Optional[str]
+    file_url: Optional[str]  # This will be base64 encoded data
+    file_type: Optional[str]
 
 
 class SearchEventResult(BaseModel):
@@ -174,7 +174,6 @@ class PartialName(BaseModel):
 
 class CreatorId(BaseModel):
     creator:str
-
 
     
 class takeString(BaseModel):

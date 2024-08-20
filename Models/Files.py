@@ -7,7 +7,7 @@ class Avatar(Base):
     __tablename__ = 'avatar'
     id = Column(Integer, primary_key=True, index=True)
     filename = Column(String, nullable=True)
-    filedata = Column(LargeBinary, nullable=True)
+    fileurl = Column(String, nullable=True) 
     filetype = Column(String, nullable=True)
     userID = Column(Integer, unique=True, nullable=False)
     created_at = Column(DateTime, server_default=func.now())

@@ -5,6 +5,7 @@ from config import settings
 import urllib
 from azure.cosmos import CosmosClient
 from sqlalchemy.engine import URL
+from azure.storage.blob import BlobServiceClient
 
 Driver = settings.Driver
 Server = settings.Server
@@ -19,12 +20,19 @@ CONTAINER_NAME = settings.CONTAINER_NAME
 FILE_CONTAINER_NAME = settings.FILE_CONTAINER_NAME
 ADVERTISEMENT_CONTAINER_NAME=settings.ADVERTISEMENT_CONTAINER_NAME
 BOOKING_CONTAINER_NAME = settings.BOOKING_CONTAINER_NAME
+avatar_connection_string=settings.BLOB_AVATAR_CONNECTION_STRING
+avatar_container_name=settings.BLOB_CONTAINER_AVATAR_NAME
+event_files_blob_container_name=settings.BLOB_CONTAINER_EVENT_FILE_NAME
+
 client = CosmosClient(COSMOS_DB_ENDPOINT, COSMOS_DB_KEY)
 database = client.get_database_client(DATABASE_NAME)
 container = database.get_container_client(CONTAINER_NAME)
 file_container = database.get_container_client(FILE_CONTAINER_NAME)
 advertisement_container=database.get_container_client(ADVERTISEMENT_CONTAINER_NAME)
 booking_container = database.get_container_client(BOOKING_CONTAINER_NAME)
+
+blob_service_client = BlobServiceClient.from_connection_string(avatar_connection_string)
+
 params = urllib.parse.quote_plus(
     f'Driver={Driver};'
     f'Server={Server};'
@@ -39,7 +47,7 @@ params = urllib.parse.quote_plus(
 # Construct the connection string
 conn_str = f'mssql+pyodbc:///?odbc_connect={params}'
 
-connection_string = f"DRIVER={Driver};SERVER={Server};DATABASE={Database};UID={Uid};PWD=Iibart210"
+connection_string = f"DRIVER={Driver};SERVER={Server};DATABASE={Database};UID={Uid};PWD={SQLPwd}"
 connection_url = URL.create("mssql+pyodbc", query={"odbc_connect": connection_string})
 
 # connection_url = "sqlite:///./test.db"
@@ -78,5 +86,12 @@ def get_advertisement_container():
 def get_booking_container():
     try:
         yield booking_container
+    finally:
+        pass
+
+
+def get_blob_service_client():
+    try:
+        yield blob_service_client
     finally:
         pass

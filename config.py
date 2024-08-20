@@ -25,7 +25,9 @@ class Settings(BaseSettings):
     ADVERTISEMENT_CONTAINER_NAME:str
     BOOKING_CONTAINER_NAME: str
     OPENAI_API_KEY: str
-
+    BLOB_AVATAR_CONNECTION_STRING:str
+    BLOB_CONTAINER_AVATAR_NAME:str
+    BLOB_CONTAINER_EVENT_FILE_NAME:str
 
     class Config:
         env_file = ".env"

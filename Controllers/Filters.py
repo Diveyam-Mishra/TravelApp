@@ -14,7 +14,7 @@ def event_distance(lat1, lon1, lat2, lon2):
     c = 2 * math.asin(math.sqrt(a))
     r = 6371  
     distance = c * r
-    return distance
+    return round(distance, 2)
 
 async def get_category_events(filters: List[str], coord:List[float],event_container, file_container):
     # Fetch all events
@@ -38,7 +38,7 @@ async def get_category_events(filters: List[str], coord:List[float],event_contai
                 image = image_results[0]
                 event['thumbnail'] = {
                     "file_name": image.get('fileName1'),
-                    "file_data": image.get('fileData1'),  # This will be base64 encoded data
+                    "file_url": image.get('fileUrl1'),  # This will be base64 encoded data
                     "file_type": image.get('fileType1')
                 }
             event['match_count'] = match_count
@@ -111,11 +111,14 @@ async def search_events_by_name(
         if file_items:
             # Assume the first file in the list is the thumbnail
             thumbnail_file = file_items[0]
-            event['thumbnail'] = {
+            if thumbnail_file.get('fileUrl1'):
+                event['thumbnail'] = {
                 "file_name": thumbnail_file['fileName1'],
-                "file_data": thumbnail_file['fileData1'],
+                "file_url": thumbnail_file['fileUrl1'],
                 "file_type": thumbnail_file['fileType1']
             }
+            else:
+                event['thumbnail'] = None
         else:
             event['thumbnail'] = None
 
@@ -142,4 +145,5 @@ async def search_events_by_creator(
     ))
     for event in events:
         event['distance']=event_distance(event['location']['geo_tag']['latitude'],event['location']['geo_tag']['longitude'],coord[0],coord[1])
+        
     return events
