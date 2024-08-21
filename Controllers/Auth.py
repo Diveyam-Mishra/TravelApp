@@ -261,7 +261,7 @@ async def add_recent_search(userId, searchItem, user_specific_container):
     else:
         user_specific = UserSpecific(
             id=userId,
-            user_id=userId,
+            userId=userId,
             booked_events=[],
             recent_searches=[],  # Start with the new searchItem
             interest_areas=[]
