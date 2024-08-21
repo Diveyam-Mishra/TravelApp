@@ -23,6 +23,7 @@ BOOKING_CONTAINER_NAME = settings.BOOKING_CONTAINER_NAME
 avatar_connection_string=settings.BLOB_AVATAR_CONNECTION_STRING
 avatar_container_name=settings.BLOB_CONTAINER_AVATAR_NAME
 event_files_blob_container_name=settings.BLOB_CONTAINER_EVENT_FILE_NAME
+USER_SPECIFIC_CONTAINER=settings.USER_SPECIFIC_CONTAINER_NAME
 
 client = CosmosClient(COSMOS_DB_ENDPOINT, COSMOS_DB_KEY)
 database = client.get_database_client(DATABASE_NAME)
@@ -30,6 +31,7 @@ container = database.get_container_client(CONTAINER_NAME)
 file_container = database.get_container_client(FILE_CONTAINER_NAME)
 advertisement_container=database.get_container_client(ADVERTISEMENT_CONTAINER_NAME)
 booking_container = database.get_container_client(BOOKING_CONTAINER_NAME)
+user_specific_container=database.get_container_client(USER_SPECIFIC_CONTAINER)
 
 blob_service_client = BlobServiceClient.from_connection_string(avatar_connection_string)
 
@@ -93,5 +95,11 @@ def get_booking_container():
 def get_blob_service_client():
     try:
         yield blob_service_client
+    finally:
+        pass
+
+def get_user_specific_container():
+    try:
+        yield user_specific_container
     finally:
         pass

@@ -1,14 +1,17 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Body
 from sqlalchemy.orm import Session
 from Models.user_models import  User
 from Schemas.UserSchemas import SuccessResponse, EmailRequest, UserLoginVerify,UserUpdate, UserName
 from Schemas.UserSchemas import UserResponse, UserCreate, DeleteUserAfterCheckingPass, OTPVerification, UserLogin
 from Controllers.Auth import get_current_user, login_verify, update_user,\
-    check_unique_username
-from Database.Connection import get_db
+    check_unique_username, add_interest_areas_to_user, add_recent_search,\
+    get_user_specific_data
+from Database.Connection import get_db, get_user_specific_container
 from config import JWTBearer
 from Controllers.Auth import (create_user, register_user, login_user,delete_user,look_up_username)
 from Controllers.OtpGen import (verify_otp)
+from typing import List, Dict
+from Schemas.userSpecific import UserSpecific
 
 router = APIRouter()
 
@@ -44,11 +47,11 @@ async def check_username(username: UserName, db: Session = Depends(get_db)):
     return await check_unique_username(username.username, db)
 
 @router.post("/auth/{userId}/update_non_avatar/",dependencies=[Depends(JWTBearer())], response_model=SuccessResponse)
-def update_user_details(userId:str, req:UserUpdate, db: Session=Depends(get_db), current_user: User=Depends(get_current_user)):
+async def update_user_details(userId:str, req:UserUpdate, db: Session=Depends(get_db), current_user: User=Depends(get_current_user), user_specific_container=Depends(get_user_specific_container)):
     if current_user is None:
         raise HTTPException(status_code=401, detail="User is not authenticated")
-    return update_user(req, db, userId, current_user)
-
+    resp = await update_user(req, db, userId, current_user, user_specific_container)
+    return resp
 @router.post("/auth/send-otp/", response_model=SuccessResponse)
 def register_user_endpoint(req: EmailRequest, db: Session=Depends(get_db)):
     return register_user(db, req.email, req.username)
@@ -70,3 +73,27 @@ def login_verify_otp(login_data: UserLoginVerify, db: Session=Depends(get_db)):
 @router.post("/auth/get_user_info/",dependencies=[Depends(JWTBearer())])
 def get_username_info(username: UserName,db: Session=Depends(get_db), current_user: User = Depends(get_current_user)):
     return look_up_username(username,db,current_user)
+
+@router.post("/auth/add_interest_areas/", dependencies=[Depends(JWTBearer())],response_model=SuccessResponse)
+async def add_interest_areas(interestAreas: List[str], user_specific_container=Depends(get_user_specific_container), current_user: User=Depends(get_current_user)):
+    if current_user is None:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    userId = current_user.id
+    resp = await add_interest_areas_to_user(userId, interestAreas, user_specific_container)
+    return resp
+
+@router.post("/add_recent_search/", dependencies=[Depends(JWTBearer())], response_model=SuccessResponse)
+async def addRecentSearch(searchItem:str=Body(...), user_specific_container=Depends(get_user_specific_container), current_user: User=Depends(get_current_user)):
+    if current_user is None:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    userId = current_user.id
+    resp = await add_recent_search(userId, searchItem, user_specific_container)
+    return resp
+
+@router.get("/userSpecific/", dependencies=[Depends(JWTBearer())], response_model=UserSpecific)
+async def get_user_specific_container(user_specific_container=Depends(get_user_specific_container), current_user:User=Depends(get_current_user)):
+    if current_user is None:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    userId = current_user.id
+    resp = await get_user_specific_data(userId, user_specific_container)
+    return resp

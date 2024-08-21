@@ -39,6 +39,9 @@ class UserUpdate(BaseModel):
     username: Optional[str] = None
     works_at: Optional[str] = None
     contact_no: Optional[str] = None
+    interestAreas: Optional[List[str]] = None
+    gender : Optional[str] = None
+    dob : Optional[date] = None
 
 class UserLogin(BaseModel):
     email: Optional[str] = None

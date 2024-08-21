@@ -9,16 +9,40 @@ from operator import itemgetter
 router = APIRouter()
 
 
-@router.post("/events/filtered/category/", response_model=List[SearchEventResult])
-async def filter_events(filters: List[str], coord:List[float],event_container=Depends(get_container), file_container=Depends(get_file_container)):
-    events= await get_category_events(filters,coord ,event_container, file_container)
+@router.post("/events/filtered/category/", response_model=SearchEventResultWithCnt)
+async def filter_events(
+    filters: List[str],
+    coord: List[float],
+    event_container=Depends(get_container),
+    file_container=Depends(get_file_container),
+    page: int = 0
+):
+    eventsRes = await get_category_events(filters, coord, event_container, file_container, page)
+    
+    # Extract the total count and results from the response
+    total_count = eventsRes['cnt']
+    events = eventsRes['results']
     
     # Sort the events based on the number of matching types
     sorted_events = sorted(events, key=itemgetter('match_count'), reverse=True)
 
-    # print(sorted_events)
-    result = [{"id": event["id"], "name": event["event_name"], "description": event["event_description"], "type":event.get("event_type"), "thumbnail":event.get("thumbnail"), "distance":str(event["distance"])+"km"} for event in sorted_events]
-    return result
+    # Format the results
+    result = [
+        {
+            "id": event.get("event_id"),
+            "name": event.get("event_name"),
+            "description": event.get("event_description"),
+            "type": event.get("event_type"),
+            "thumbnail": event.get("thumbnail"),
+            "distance": f"{event.get('distance')} km"
+        } for event in sorted_events
+    ]
+
+    # Return the updated response
+    return {
+        "cnt": total_count,
+        "results": result
+    }
 
 # @router.get("/events/search_by_name_and_access/", response_model=List[Dict[str, str]])
 # async def search_events_by_name_with_access(
@@ -32,15 +56,17 @@ async def filter_events(filters: List[str], coord:List[float],event_container=De
 #     return result
 
 
-@router.post("/events/search_by_name/", response_model=List[SearchEventResult])
+@router.post("/events/search_by_name/", response_model=SearchEventResultWithCnt)
 async def search_events_by_name1(
     partial_name: PartialName,
     coord:List[float],
     event_container=Depends(get_container),
-    file_container=Depends(get_file_container)
+    file_container=Depends(get_file_container),page: int = 0
 ):
-    events = await search_events_by_name(partial_name, coord, event_container, file_container)
+    eventsRes = await search_events_by_name(partial_name, coord, event_container, file_container, page)
     
+    total_count = eventsRes['cnt']
+    events = eventsRes['results']
     # Create the result list with the required fields
     result = [
         {
@@ -54,15 +80,24 @@ async def search_events_by_name1(
         for event in events
     ]
     # print(len(result))
-    return result
+    return {
+        "cnt": total_count,
+        "results": result
+    }
 
 
-@router.post("/events/search_by_creator/", response_model=List[SearchEventResult])
+@router.post("/events/search_by_creator/", response_model=SearchEventResultWithCnt)
 async def search_events_by_creator1(
     creator_id: CreatorId,
     coord: List[float],
-    event_container=Depends(get_container)
+    event_container=Depends(get_container),
+    page: int = 0
 ):
-    events = await search_events_by_creator(creator_id,coord, event_container)
+    eventsRes = await search_events_by_creator(creator_id,coord, event_container, page)
+    total_count = eventsRes['cnt']
+    events = eventsRes['results']
     result = [{"id": event["id"], "name": event["event_name"], "description": event["event_description"], "type":event.get("event_type"), "thumbnail":event.get("thumbnail"), "distance":str(event["distance"])+"km"} for event in events]
-    return result
+    return {
+        "cnt": total_count,
+        "results": result
+    }

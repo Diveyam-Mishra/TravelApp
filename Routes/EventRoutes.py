@@ -123,8 +123,8 @@ async def filter_events(filters: EventFilter, event_container=Depends(get_contai
 
 
 @router.get("/event/details/{eventId}", response_model=SearchEvent)
-async def get_event(eventId: str, event_container=Depends(get_container), file_container=Depends(get_file_container)):
-    event = await get_event_by_id(eventId, event_container, file_container)
+async def get_event(eventId: str, event_container=Depends(get_container), file_container=Depends(get_file_container),lat:float=0.0, long:float=0.0):
+    event = await get_event_by_id(eventId, event_container, file_container, lat, long)
     if event:
         return event
     else:

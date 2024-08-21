@@ -167,6 +167,9 @@ class SearchEventResult(BaseModel):
     thumbnail: Optional[ImageDetails] = None
     distance: str
 
+class SearchEventResultWithCnt(BaseModel):
+    cnt: int
+    results: List[SearchEventResult]
 
 class PartialName(BaseModel):
     partial_name:str

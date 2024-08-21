@@ -16,7 +16,7 @@ def event_distance(lat1, lon1, lat2, lon2):
     distance = c * r
     return round(distance, 2)
 
-async def get_category_events(filters: List[str], coord:List[float],event_container, file_container):
+async def get_category_events(filters: List[str], coord:List[float],event_container, file_container, page):
     # Fetch all events
     query = "SELECT * FROM c"
     
@@ -47,9 +47,16 @@ async def get_category_events(filters: List[str], coord:List[float],event_contai
 
     # Sort events based on the number of matching types
     sorted_events = sorted(events, key=lambda e: e['match_count'], reverse=True)
-    
-    
-    return sorted_events
+    total_count = len(sorted_events)
+    items_per_page = 15
+    start_index = page * items_per_page
+    end_index = start_index + items_per_page
+    paginated_events = sorted_events[start_index:end_index]
+
+    return {
+        "cnt": total_count,
+        "results": paginated_events
+    }
 #filters Coming as Objects
 
 
@@ -81,7 +88,7 @@ async def search_events_by_name(
     partialname: PartialName,
     coord:List[float], 
     event_container,
-    file_container 
+    file_container , page
 ):
     query = """
     SELECT * FROM c 
@@ -121,13 +128,21 @@ async def search_events_by_name(
                 event['thumbnail'] = None
         else:
             event['thumbnail'] = None
+    total_count = len(events)
+    items_per_page = 15
+    start_index = page * items_per_page
+    end_index = start_index + items_per_page
+    paginated_events = events[start_index:end_index]
 
-    return events
+    return {
+        "cnt": total_count,
+        "results": paginated_events
+    }
 
 async def search_events_by_creator(
     creator_id: CreatorId,
     coord:List[float],
-    event_container
+    event_container,page
 ):
     query = """
     SELECT * FROM eventcontainer e 
@@ -145,5 +160,14 @@ async def search_events_by_creator(
     ))
     for event in events:
         event['distance']=event_distance(event['location']['geo_tag']['latitude'],event['location']['geo_tag']['longitude'],coord[0],coord[1])
+    
+    total_count = len(events)
+    items_per_page = 15
+    start_index = page * items_per_page
+    end_index = start_index + items_per_page
+    paginated_events = events[start_index:end_index]
         
-    return events
+    return {
+        "cnt": total_count,
+        "results": paginated_events
+    }

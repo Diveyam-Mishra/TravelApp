@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from Models.user_models import User, OTP,deletedUser
+from Models.user_models import User, OTP, deletedUser
 from Schemas.UserSchemas import *
 from jose import JWTError
 from fastapi import HTTPException, Depends
@@ -12,6 +12,8 @@ from Database.Connection import get_db
 from Controllers.OtpGen import create_otp
 from datetime import timedelta
 import uuid
+from typing import List
+from Schemas.userSpecific import UserSpecific
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -28,13 +30,12 @@ def get_user_by_username(db: Session, username: str):
     return db.query(User).filter(User.username == username).first()
 
 
-
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 JWT_SECRET = settings.JWT_SECRET
 ALGORITHM = settings.ALGORITHM
 
 
-def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+def get_current_user(token: str=Depends(oauth2_scheme), db: Session=Depends(get_db)):
     try:
         # Decode the token and verify its signature and expiration
         payload = jwt.decode(token, JWT_SECRET, algorithms=[ALGORITHM])
@@ -60,13 +61,14 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     return user
 
 
-def update_user(req: UserUpdate, db: Session, userId:str, current_user:User):
+async def update_user(req: UserUpdate, db: Session, userId:str, current_user:User, user_specific_container):
     user = db.query(User).filter(User.id == userId).first()
 
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    if current_user.id is not userId:
+    # print(userId, current_user.id)
+    if str(current_user.id) != str(userId):
         raise HTTPException(status_code=403, detail="You are not authorized to update this user")
 
     # Update the user's details with the data from req
@@ -76,6 +78,12 @@ def update_user(req: UserUpdate, db: Session, userId:str, current_user:User):
         user.works_at = req.works_at
     if req.contact_no is not None:
         user.contact_no = req.contact_no
+    if req.dob is not None:
+        user.dob = req.dob
+    if req.gender is not None:
+        user.gender = req.gender
+    if req.interestAreas is not None:
+        await add_interest_areas_to_user(userId, req.interestAreas, user_specific_container)
 
     # Commit the changes to the database
     db.commit()
@@ -95,6 +103,7 @@ async def check_unique_username(username: str, db: Session) -> SuccessResponse:
     
     return SuccessResponse(message="Username Available", success=True)
 
+
 def create_user(db: Session, user: UserCreate) -> UserResponse:
     # hashed_password = pwd_context.hash(user.password)
     db_user = User(
@@ -111,8 +120,8 @@ def create_user(db: Session, user: UserCreate) -> UserResponse:
 
 
 def delete_user(delete_data: DeleteUserAfterCheckingPass, current_user: User, db: Session) -> SuccessResponse:
-    if delete_data.password=="delete":
-        deleted_user=deletedUser(email=current_user.email,
+    if delete_data.password == "delete":
+        deleted_user = deletedUser(email=current_user.email,
                                  username=current_user.username,
                                  works_at=current_user.works_at,
                                  contact_no=current_user.contact_no)
@@ -121,9 +130,10 @@ def delete_user(delete_data: DeleteUserAfterCheckingPass, current_user: User, db
         db.commit()
         return SuccessResponse(message="User deleted successfully", success=True)
     else:
-        return SuccessResponse(message="wrong",success=True)
+        return SuccessResponse(message="wrong", success=True)
+
     
-def register_user(db: Session, email: str = None, username: str = None) -> SuccessResponse:
+def register_user(db: Session, email: str=None, username: str=None) -> SuccessResponse:
     if (not email) and (not username):
         raise HTTPException(status_code=400, detail="Both Email and Username are required")
     
@@ -141,6 +151,7 @@ def register_user(db: Session, email: str = None, username: str = None) -> Succe
         create_otp(db, email)
     
     return SuccessResponse(message="OTP sent to your email", success=True)
+
 
 def login_user(login_data: UserLogin, db: Session) -> SuccessResponse:
     if not login_data.email and not login_data.username:
@@ -200,17 +211,81 @@ def login_verify(login_data: UserLoginVerify, db: Session) -> SuccessResponse:
         'exp': expiry_time
     }
 
-
     token = jwt.encode(token_data, JWT_SECRET, algorithm="HS256")
     db.delete(db_otp)
     db.commit()
     
     return SuccessResponse(message="User logged in successfully", token=token, success=True)
 
-def look_up_username(username:str,db: Session, current_user: User = Depends(get_current_user)):
+
+def look_up_username(username:str, db: Session, current_user: User=Depends(get_current_user)):
     if current_user is None:
         raise HTTPException(status_code=400, detail="User Not Found")
     db_user = db.query(User).filter(User.username == username.username).first()
     if not db_user:
             raise HTTPException(status_code=400, detail="User not found")
     return db_user
+
+
+async def add_interest_areas_to_user(userId:str, interestAreas:List[str], user_specific_container):
+    query = "SELECT * FROM c where c.userId = @userId"
+    params = [{"name":"@userId", "value":userId}]
+
+    search = list(user_specific_container.query_items(query=query,
+        parameters=params,
+        enable_cross_partition_query=True))
+
+    if not search:
+        user_specific = UserSpecific(id=userId, userId=userId, booked_events=[], recent_searches=[], interest_areas=interestAreas)
+        user_specific_container.create_item(user_specific.to_dict())
+        return SuccessResponse(message="User Interest areas updated successfully", success=True)
+    else:
+        # Update the interest_areas if the user already exists
+        user_specific = search[0]
+        user_specific["interest_areas"] = interestAreas
+        user_specific_container.replace_item(user_specific["id"], user_specific)
+        return {"message": "User interest areas updated successfully", "success": True}
+
+
+async def add_recent_search(userId, searchItem, user_specific_container):
+    query = "SELECT * FROM c where c.userId = @userId"
+    params = [{"name":"@userId", "value":userId}]
+
+    search = list(user_specific_container.query_items(query=query,
+        parameters=params,
+        enable_cross_partition_query=True))
+    
+    if search:
+        user_specific_data = search[0]
+        user_specific = UserSpecific(**user_specific_data)
+    else:
+        user_specific = UserSpecific(
+            id=userId,
+            user_id=userId,
+            booked_events=[],
+            recent_searches=[],  # Start with the new searchItem
+            interest_areas=[]
+        )
+    # Update recent searches
+    user_specific.add_search(searchItem)
+    
+    # Update the user document in the container
+    user_specific_container.upsert_item(user_specific.to_dict())
+
+    return SuccessResponse(message="Added search in recent items", success=True)
+    
+
+async def get_user_specific_data(userId: str, user_specific_container):
+    query = "SELECT * FROM c WHERE c.userId = @userId"
+    params = [{"name": "@userId", "value": userId}]
+    
+    search = list(user_specific_container.query_items(
+        query=query,
+        parameters=params,
+        enable_cross_partition_query=True
+    ))
+    
+    if not search:
+        raise HTTPException(status_code=404, detail="User-specific data not found")
+    
+    return search[0]

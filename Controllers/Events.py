@@ -198,7 +198,7 @@ async def give_editor_access(
         # Handle other exceptions
         raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
 
-async def get_event_by_id(event_id: str, event_container, file_container):
+async def get_event_by_id(event_id: str, event_container, file_container, lat:float=0.0, long:float=0.0):
     # Query to find the event by its event_id
     event_query = "SELECT * FROM c WHERE c.event_id = @event_id"
     params = [{"name": "@event_id", "value": event_id}]
@@ -214,13 +214,18 @@ async def get_event_by_id(event_id: str, event_container, file_container):
         raise HTTPException(status_code=404, detail="Event not found")
     
     event = events[0]  # Since event_id is unique, we get the first item
-
+    event_lat = event['location']['geo_tag']['latitude']
+    event_lon = event['location']['geo_tag']['longitude']
+    distance = haversine(lat, long, event_lat, event_lon)
     # Query to find images associated with the event
-    image_files = await fetch_event_files(event_id, file_container)
-
-    # Include the images in the event data
-    if image_files:
-        event['images'] = image_files
+    event['distance']=distance
+    try:
+        image_files = await fetch_event_files(event_id, file_container)
+        if image_files:
+            event['images'] = image_files
+    except HTTPException:
+        # If fetch_event_files raises an HTTPException, skip adding images
+        pass
 
     return event
 
