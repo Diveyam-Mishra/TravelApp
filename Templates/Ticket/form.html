@@ -181,7 +181,7 @@
             color: #b8b6af;
             text-decoration: none;
             font-size: 14px;
-            margin: 10px 0; /* Added spacing between elements */
+            margin: 10px 0; 
         }
 
         .contact-info img {
@@ -233,6 +233,10 @@
                     <td>Payment Id:</td>
                     <td>{{payment_id}}</td>
                 </tr>
+                 <tr>
+                  <td>Number of Members:</td>
+                    <td id="members-details">{{members_details}}</td>
+                </tr>
             </table>
         </div>
 
@@ -278,5 +282,28 @@
         </div>
     </div>
 </body>
+    <script>
+        
+        let membersString = prompt("Please enter the names of the members, separated by commas:");
+
+    
+        if (membersString) {
+            //  heree Calculate the number of members..
+            let membersArray = membersString.split(',').map(name => name.trim()); 
+            let numberOfMembers = membersArray.length;   // Count the number of elements in the array
+
+           
+            let membersDetails = `${numberOfMembers} member(s)`; 
+
+           
+            let htmlContent = document.getElementById("ticket-html-content").innerHTML;
+            htmlContent = htmlContent.replace("{{members_details}}", membersDetails);
+
+            //  updated HTML content..
+            document.getElementById("ticket-html-content").innerHTML = htmlContent;
+        } else {
+            alert("No member names were entered.");
+        }
+    </script>
 
 </html>
