@@ -12,8 +12,9 @@ from Database.Connection import get_db
 from Controllers.OtpGen import create_otp
 from datetime import timedelta
 import uuid
-from typing import List
+from typing import List, Dict
 from Schemas.userSpecific import UserSpecific
+from Models.Files import Carousel_image
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -289,3 +290,21 @@ async def get_user_specific_data(userId: str, user_specific_container):
         raise HTTPException(status_code=404, detail="User-specific data not found")
     
     return search[0]
+
+
+def fetch_carousel_images_db(db: Session) -> List[Dict[str, str]]:
+    # Fetch all carousel images from the database
+    db_images = db.query(Carousel_image).all()
+    
+    # Convert each Carousel_image instance to a dictionary
+    images_as_dicts = [
+        {
+            "id": str(image.id),  # Convert id to string
+            "filename": image.filename,
+            "fileurl": image.fileurl,
+            "filetype": image.filetype
+        }
+        for image in db_images
+    ]
+    
+    return images_as_dicts

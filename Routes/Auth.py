@@ -5,13 +5,14 @@ from Schemas.UserSchemas import SuccessResponse, EmailRequest, UserLoginVerify,U
 from Schemas.UserSchemas import UserResponse, UserCreate, DeleteUserAfterCheckingPass, OTPVerification, UserLogin
 from Controllers.Auth import get_current_user, login_verify, update_user,\
     check_unique_username, add_interest_areas_to_user, add_recent_search,\
-    get_user_specific_data
+    get_user_specific_data, fetch_carousel_images_db
 from Database.Connection import get_db, get_user_specific_container
 from config import JWTBearer
 from Controllers.Auth import (create_user, register_user, login_user,delete_user,look_up_username)
 from Controllers.OtpGen import (verify_otp)
 from typing import List, Dict
 from Schemas.userSpecific import UserSpecific
+from Schemas.Files import CarouselImageResponse
 
 router = APIRouter()
 
@@ -97,3 +98,7 @@ async def get_user_specific_container(user_specific_container=Depends(get_user_s
     userId = current_user.id
     resp = await get_user_specific_data(userId, user_specific_container)
     return resp
+
+@router.get("/getCarouselImages", response_model=List[CarouselImageResponse])
+def fetch_carousel_images(db: Session = Depends(get_db)):
+    return fetch_carousel_images_db(db)

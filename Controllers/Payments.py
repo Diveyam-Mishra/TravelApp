@@ -3,13 +3,14 @@ from fastapi import HTTPException
 from Schemas.PaymentSchemas import PaymentInformation, PaymentLists, \
     AttendedInformation, ticketData
 from Schemas.EventSchemas import SuccessResponse
+from Schemas.userSpecific import EventData, UserSpecific
 from uuid import uuid4
 from datetime import datetime
 from Models.user_models import User
 from email.message import EmailMessage
 from pathlib import Path
 from azure.communication.email import EmailClient
-import pdfkit # type: ignore
+import pdfkit  # type: ignore
 from tempfile import NamedTemporaryFile
 import jinja2
 from config import settings, connectionString
@@ -18,6 +19,7 @@ from Helpers.QRCode import generate_qr_code
 from typing import Dict
 from azure.core.exceptions import HttpResponseError
 import base64
+import hashlib
 
 async def getUserBookingStatus(eventId: str, userId: str, bookingContainer, eventContainer):
     event_query = "SELECT * FROM c WHERE c.event_id = @eventId"
@@ -77,7 +79,49 @@ async def getUserBookingStatus(eventId: str, userId: str, bookingContainer, even
         return SuccessResponse(message="User has booked the event", success=True)
 
 
-async def bookEventForUser(eventId: str, userId: str, bookingContainer, eventContainer, bookingDetails: PaymentInformation):
+async def addBookingDataInUserSpecific(
+    userId: str,
+    eventId: str,
+    eventContainer,
+    paymentDetails: PaymentInformation,
+    userSpecificContainer
+):
+    event_query = "SELECT * from c WHERE c.event_id = @eventId"
+    params = [{"name": "@eventId", "value": eventId}]
+    event = list(eventContainer.query_items(query=event_query, parameters=params, enable_cross_partition_query=True))
+    if not event:
+        return SuccessResponse(message="Event does not exist", success=False)
+    
+    query = "SELECT * FROM c where c.userId = @userId"
+    params = [{"name": "@userId", "value": userId}]
+    search = list(userSpecificContainer.query_items(query=query, parameters=params, enable_cross_partition_query=True))
+
+    if not search:
+        user_specific = UserSpecific(id=userId, userId=userId, booked_events=[], recent_searches=[], interest_areas=[])
+    else:
+        user_specific = UserSpecific(**search[0])
+
+    event_time = event[0]['start_date_and_time']  # Assuming you want to use the first event found
+    newUserBookingData = EventData(
+        event_id=eventId,
+        payment_id=paymentDetails.payment_id,
+        paid_amount=paymentDetails.paid_amount,
+        payment_date=paymentDetails.payment_date,
+        event_date=event_time
+    )
+
+    user_specific.booked_events.append(newUserBookingData)
+
+    # Convert user_specific back to dictionary format for storage
+    user_specific_data = user_specific.to_dict()
+
+    # Store the updated user-specific data in the container
+    userSpecificContainer.upsert_item(user_specific_data)
+
+    return SuccessResponse(message="Booking data added", success=True)
+
+
+async def bookEventForUser(eventId: str, userId: str, bookingContainer, eventContainer, bookingDetails: PaymentInformation, userSpecificContainer):
     # Check if the user has already booked the event
     status_response = await getUserBookingStatus(eventId, userId, bookingContainer, eventContainer)
     
@@ -115,9 +159,9 @@ async def bookEventForUser(eventId: str, userId: str, bookingContainer, eventCon
     SELECT * FROM eventcontainer e WHERE e.event_id = @id
     """
     params = [{"name": "@id", "value": eventId}]
-    items = list( eventContainer.query_items(query=query, params=params, enable_cross_partition_query=True))
+    items = list(eventContainer.query_items(query=query, parameters=params, enable_cross_partition_query=True))
     
-    existing_event=items[0]
+    existing_event = items[0]
     
     remaining_capacity = existing_event.get("remaining_capacity", 0)
     
@@ -127,6 +171,11 @@ async def bookEventForUser(eventId: str, userId: str, bookingContainer, eventCon
     existing_event["remaining_capacity"] = remaining_capacity - 1
 
     eventContainer.replace_item(item=existing_event['id'], body=existing_event)
+
+    try:
+        await addBookingDataInUserSpecific(userId, eventId, eventContainer, bookingDetails, userSpecificContainer)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error adding booking data to user specific container: {str(e)}")
     return SuccessResponse(message="User successfully booked the event", success=True)
 
 
@@ -242,10 +291,29 @@ async def getAttendedUsers(eventId: str, bookingContainer, current_user, db):
 
 TEMPLATE_DIR = Path(__file__).parent / "../Templates/Ticket"
 options = {
-    "enable-local-file-access": True,
+    "enable-local-file-access": "",  # This flag should be passed without a value
+    "margin-left": "0mm",  # Use hyphen and specify units
+    "margin-right": "0mm",  # Use hyphen and specify units
+    "margin-top":"0mm",
+    "margin-bottom":"0mm",
+    "page-height":"295mm",
+    "page-width":"215mm"
 }
 
-async def create_ticket_pdf(ticket_data: ticketData, output_path: str):
+def generate_ticket_id(user_id: str, event_id: str) -> str:
+    # Create a combined string of user_id and event_id
+    combined_string = f"{user_id}_{event_id}"
+    
+    # Generate a SHA-256 hash of the combined string
+    hash_object = hashlib.sha256(combined_string.encode())
+    hash_hex = hash_object.hexdigest()
+    
+    # Shorten the hash to a desired length for the ticket ID
+    ticket_id = hash_hex[:16]  # For example, take the first 16 characters
+    
+    return ticket_id
+
+async def create_ticket_pdf(ticket_data: ticketData, output_path: str, eventContainer, db):
     ticket_data_dict = ticket_data.dict()
    
     # Ensure ticket_data is an instance of ticketData and convert it to a dictionary
@@ -261,6 +329,34 @@ async def create_ticket_pdf(ticket_data: ticketData, output_path: str):
         "user_id": ticket_data_dict['userId']  # Use relevant data for user_id if available
     }
     
+    event_query ="""
+    SELECT * FROM eventcontainer e WHERE e.event_id = @id
+    """
+    params = [{"name": "@id", "value": ticket_data_dict['eventId']}]
+    items = list(eventContainer.query_items(query=event_query, parameters=params, enable_cross_partition_query=True))
+    
+    existing_event = items[0]
+    ticket_data_dict['event_name']=existing_event['event_name']
+
+    iso_string=existing_event['start_date_and_time']
+    event_datetime = datetime.fromisoformat(iso_string.replace('Z', '+00:00'))
+    date_format = '%Y-%m-%d'       # Format: '2024-08-20'
+    time_format = '%H:%M:%S'       # Format: '15:03:19'
+    ticket_data_dict['event_date']=str(event_datetime.strftime(date_format))
+    ticket_data_dict['event_time']=str(event_datetime.strftime(time_format))
+    ticket_data_dict['event_venue']=existing_event['location']['venue']
+
+    ticket_data_dict['ticketId'] = generate_ticket_id(ticket_data_dict['userId'], ticket_data_dict['eventId'])
+
+    ticket_data_dict['organizer']=existing_event['host_information']
+
+    user = db.query(User).filter(User.id == ticket_data_dict['userId']).first()
+    ticket_data_dict['email'] = user.email
+    ticket_data_dict['UserName'] = user.username
+
+
+    updated_ticket_data= ticketData(**ticket_data_dict)
+
     # Generate the QR code
     qr_code_path = str(Path(TEMPLATE_DIR) / "qr_code.png")
     generate_qr_code(qr_data, qr_code_path)
@@ -290,25 +386,30 @@ async def create_ticket_pdf(ticket_data: ticketData, output_path: str):
     os.remove(temp_html_path)
     os.remove(qr_code_path)
 
+    return updated_ticket_data
+
+
 sender_email = settings.sender_email
 email_client = EmailClient.from_connection_string(connectionString)
 
-async def send_ticket(email: str, ticket_data: Dict[str, str]) -> SuccessResponse:
-    if not email:
-        raise HTTPException(status_code=400, detail="Email is required")
+
+async def send_ticket(ticket_data: Dict[str, str], eventContainer, db) -> SuccessResponse:
 
     # Generate the PDF
     with NamedTemporaryFile(delete=False, suffix=".pdf") as temp_file:
         pdf_path = temp_file.name
-        await create_ticket_pdf(ticket_data, pdf_path)
+        updated_ticket_data = await create_ticket_pdf(ticket_data, pdf_path, eventContainer, db)
 
+    ticket_data_dict = updated_ticket_data.dict()
     # Send the email with the PDF attachment
-    send_email_with_attachment(email, pdf_path)
+    # print(ticket_data_dict)
+    send_email_with_attachment(ticket_data_dict['email'], pdf_path)
 
     # Clean up: Remove the temporary file
     os.remove(pdf_path)
 
-    return SuccessResponse(message="Ticket sent to your email", success=True)
+    return SuccessResponse(message="Ticket sent to your registered email id", success=True)
+
 
 def send_email_with_attachment(email: str, attachment_path: str):
     subject = "Your Ticket Confirmation"

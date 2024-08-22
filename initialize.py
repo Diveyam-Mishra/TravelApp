@@ -15,11 +15,11 @@ from Routes.AiInteract import router as AiInteract
 from Routes.Files import router as FileRouter
 from Routes.Fiters import router as FilterRouter
 from Routes.Payments import router as PaymentRouter
+from Routes.admin.promotionImages import router as adminImageRouter
 from sqlalchemy import MetaData
 # print(settings.sqlURI)
 
 app = FastAPI(title="Backend with MongoDB and SQL")
-
 
 origins = ['http://localhost:3000']
 
@@ -30,6 +30,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.include_router(adminImageRouter, tags=["Admin - File Management"])
 app.include_router(auth_router, tags=["Authentication"])
 app.include_router(organization_router, tags=["Organizations"])
 app.include_router(forgot_password, tags=["Forgot Password"])
@@ -55,13 +56,14 @@ async def startup_event():
     from Database.Connection import Base
     Base.metadata.create_all(bind=engine)
 
-
     metadata = MetaData()
     metadata.reflect(bind=engine)
+
 
 @app.get("/")
 async def read_root():
     return {"Trabii Server!!"}
+
 
 if __name__ == "__main__":
     import uvicorn

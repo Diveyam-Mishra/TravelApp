@@ -8,3 +8,10 @@ class FileUploadRequest(BaseModel):
 class FileUploadResponse(BaseModel):
     message: str
     success: bool
+
+
+class CarouselImageResponse(BaseModel):
+    id: str
+    filename: str
+    fileurl: str
+    filetype: str

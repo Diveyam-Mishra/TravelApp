@@ -7,10 +7,17 @@ class EventData(BaseModel):
     payment_id: str
     paid_amount: float
     payment_date: datetime
+    event_date: str  # Storing event_date as an ISO string
 
+    def to_dict(self):
+        return {
+            "event_id": self.event_id,
+            "payment_id": self.payment_id,
+            "paid_amount": self.paid_amount,
+            "payment_date": self.payment_date.isoformat(),
+            "event_date": self.event_date
+        }
 
-from typing import List
-from pydantic import BaseModel
 
 class UserSpecific(BaseModel):
     id: str

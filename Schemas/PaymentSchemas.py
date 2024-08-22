@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 from datetime import datetime
 
 
@@ -45,15 +45,17 @@ class PaymentLists(BaseModel):
 
 
 class ticketData(BaseModel):
-    email: str
-    UserName: str
-    event_name: str
+    email: Optional[str] = None
+    UserName: Optional[str] = None
+    event_name: Optional[str] = None
     eventId:str
     userId:str
-    event_date: str
-    event_venue: str
-    ticketId: str
-    organizer: str
+    event_date: Optional[str] = None
+    event_time: Optional[str] = None
+    event_venue: Optional[str] = None
+    ticketId: Optional[str] = None
+    organizer: Optional[str] = None
     paid_amount: str
     payment_id: str
+    members_details: str
     

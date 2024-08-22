@@ -124,9 +124,10 @@
 
         .button-container {
             display: flex;
-            justify-content: space-between;
+            justify-content: space-evenly;
             align-items: center;
             margin-top: 20px;
+            flex-direction: row;
         }
 
         .footer-button {
@@ -211,7 +212,7 @@
                 </tr>
                 <tr>
                     <td>Time:</td>
-                    <td>[Event Time]</td>
+                    <td>{{event_time}}</td>
                 </tr>
                 <tr>
                     <td>Venue:</td>
@@ -252,37 +253,47 @@
             </div>
             <div class="follow-us">
                 <p>Follow Us</p>
-                <div class="button-container">
-                    <a href="mailto:support@trabii.com" class="footer-button">Contact Us</a>
-                    <div class="social-icons">
-                        <a href="[Facebook URL]"><img src="{{media_folder}}/Facebook_Logo.png" alt="Facebook"></a>
-                        <a href="[Twitter URL]"><img src="{{media_folder}}/twit.jpg" alt="Twitter"></a>
-                        <a href="[Instagram URL]"><img src="{{media_folder}}/Instagram_logo.png" alt="Instagram"></a>
-                        <a href="[LinkedIn URL]"><img src="{{media_folder}}/LinkedIn_logo_initials.png" alt="LinkedIn"></a>
-                    </div>
-                    <a href="[Suggestion Form URL]" class="footer-button">Suggestion Form</a>
-                </div>
+                <table class="button-container">
+                    <tr>
+                        <td>
+                            <a href="mailto:support@trabii.com" class="footer-button">Contact Us</a>
+                        </td>
+                        <td>
+                            <div class="social-icons">
+                                <a href="[Facebook URL]"><img src="{{media_folder}}/Facebook_Logo.png" alt="Facebook"></a>
+                                <a href="[Twitter URL]"><img src="{{media_folder}}/twit.jpg" alt="Twitter"></a>
+                                <a href="[Instagram URL]"><img src="{{media_folder}}/Instagram_logo.png" alt="Instagram"></a>
+                                <a href="[LinkedIn URL]"><img src="{{media_folder}}/LinkedIn_logo_initials.png" alt="LinkedIn"></a>
+                            </div>
+                        </td>
+                        <td>
+                            <a href="[Suggestion Form URL]" class="footer-button">Suggestion Form</a>
+                        </td>
+                    </tr>
+                </table>
             </div>
             <p>If you have any questions, feel free to <a href="mailto:support@trabii.com">contact us</a>.</p>
             <p>Looking forward to seeing you at the event!</p>
 
-            <a href="tel:+91-99718 55077">
-                <img src="{{media_folder}}/phone_icon.png" alt="Phone">
-                +91 99718 55077
-            </a>
-            <a href="mailto:support@trabii.com">
-                <img src="{{media_folder}}/email_icon.png" alt="Email">
-                support@trabii.com
-            </a>
-            <a href="https://www.trabii.com">
-                <img src="{{media_folder}}/website_icon.png" alt="Website">
-                www.trabii.com
-            </a>   
+            <div class="social-icons">
+                <a href="tel:+91-99718 55077">
+                    <img src="{{media_folder}}/phone_icon.jpg" alt="Phone">
+                    +91 99718 55077
+                </a>
+                <a href="mailto:support@trabii.com">
+                    <img src="{{media_folder}}/email_icon.jpg" alt="Email">
+                    support@trabii.com
+                </a>
+                <a href="https://www.trabii.com">
+                    <img src="{{media_folder}}/website_icon.jpg" alt="Website">
+                    www.trabii.com
+                </a>
+            </div>   
             </div>
         </div>
     </div>
 </body>
-    <script>
+    <!-- <script>
         
         let membersString = prompt("Please enter the names of the members, separated by commas:");
 
@@ -304,6 +315,6 @@
         } else {
             alert("No member names were entered.");
         }
-    </script>
+    </script> -->
 
 </html>

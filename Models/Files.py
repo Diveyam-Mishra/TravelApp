@@ -12,6 +12,13 @@ class Avatar(Base):
     userID = Column(Integer, unique=True, nullable=False)
     created_at = Column(DateTime, server_default=func.now())
 
+class Carousel_image(Base):
+    __tablename__ = 'carousel_images'
+    id = Column(Integer, primary_key=True, index=True)
+    filename = Column(String, nullable=True)
+    fileurl = Column(String, nullable=True)
+    filetype = Column(String, nullable=True)
+
 class EventFiles(Base):
     __tablename__ = 'event_files'
 
