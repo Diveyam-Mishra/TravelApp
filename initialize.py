@@ -16,6 +16,7 @@ from Routes.Files import router as FileRouter
 from Routes.Fiters import router as FilterRouter
 from Routes.Payments import router as PaymentRouter
 from Routes.admin.promotionImages import router as adminImageRouter
+from Routes.Delete import router as DeleteRouter
 from sqlalchemy import MetaData
 # print(settings.sqlURI)
 
@@ -35,6 +36,7 @@ app.include_router(auth_router, tags=["Authentication"])
 app.include_router(organization_router, tags=["Organizations"])
 app.include_router(forgot_password, tags=["Forgot Password"])
 app.include_router(events, tags=["Events"])
+app.include_router(DeleteRouter,tags=["Delete"])
 app.include_router(AiInteract, tags=["AI Interaction"])
 app.include_router(FileRouter, tags=["File Management"])
 app.include_router(FilterRouter, tags=["Filters"])
