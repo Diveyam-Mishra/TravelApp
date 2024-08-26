@@ -165,7 +165,8 @@ class SearchEventResult(BaseModel):
     description:str
     type: List[str]
     thumbnail: Optional[ImageDetails] = None
-    distance: str
+    distance: Optional[str] = None
+    location: Optional[Location] = None
 
 class SearchEventResultWithCnt(BaseModel):
     cnt: int

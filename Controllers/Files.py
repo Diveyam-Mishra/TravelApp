@@ -99,7 +99,7 @@ async def create_event_and_upload_files(
     current_user: User,
     event_container,
     file_container,
-    blob_service_client
+    blob_service_client , redis
 ) -> SuccessResponse:
     # Prepare the query to check if the event already exists
     query = """
@@ -157,6 +157,10 @@ async def create_event_and_upload_files(
 
     # Insert the new event into the event container
     event_container.create_item(new_event)
+
+    for category in event_data.event_type:
+        cache_key = f"events:{category}"
+        redis.delete(cache_key)
 
     # Handle file uploads
     if files:

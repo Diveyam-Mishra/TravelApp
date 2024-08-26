@@ -29,6 +29,9 @@ class Settings(BaseSettings):
     BLOB_CONTAINER_AVATAR_NAME:str
     BLOB_CONTAINER_EVENT_FILE_NAME:str
     USER_SPECIFIC_CONTAINER_NAME:str
+    REDIS_HOST:str
+    REDIS_PORT:str
+    REDIS_PASSWORD:str
 
     class Config:
         env_file = ".env"

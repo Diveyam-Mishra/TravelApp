@@ -103,3 +103,18 @@ def get_user_specific_container():
         yield user_specific_container
     finally:
         pass
+
+import redis
+
+redis_host = settings.REDIS_HOST
+redis_port = settings.REDIS_PORT
+redis_password = settings.REDIS_PASSWORD
+
+async def get_redis():
+    r = redis.Redis(
+        host=redis_host,
+        port=redis_port,
+        password=redis_password,
+        decode_responses=True  # Decode responses from bytes to strings
+    )
+    return r

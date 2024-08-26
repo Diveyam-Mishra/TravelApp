@@ -16,6 +16,32 @@ def event_distance(lat1, lon1, lat2, lon2):
     distance = c * r
     return round(distance, 2)
 
+async def get_event_of_single_category(category: str, event_container, file_container):
+    # Define the query to fetch events of a specific category
+    query = f"SELECT c.event_id, c.event_name, c.event_description, c.event_type, c.location FROM c WHERE ARRAY_CONTAINS(c.event_type, '{category}')"
+
+    events = []
+    for event in event_container.query_items(
+            query=query,
+            enable_cross_partition_query=True
+        ):
+        # Fetch the first image associated with the event
+        image_query = f"SELECT TOP 1 * FROM c WHERE c.eventId = '{event['event_id']}'"
+        image_results = list(file_container.query_items(query=image_query, enable_cross_partition_query=True))
+        
+        if image_results:
+            # Add the first image's details to the event
+            image = image_results[0]
+            event['thumbnail'] = {
+                "file_name": image.get('fileName1'),
+                "file_url": image.get('fileUrl1'),  # Ensure this is handled correctly
+                "file_type": image.get('fileType1')
+            }
+        
+        events.append(event)
+
+    return events
+
 async def get_category_events(filters: List[str], coord:List[float],event_container, file_container, page):
     # Fetch all events
     query = "SELECT * FROM c"

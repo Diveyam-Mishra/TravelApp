@@ -13,6 +13,8 @@ from Controllers.OtpGen import (verify_otp)
 from typing import List, Dict
 from Schemas.userSpecific import UserSpecific
 from Schemas.Files import CarouselImageResponse
+from Database.Connection import get_redis
+import json
 
 router = APIRouter()
 
@@ -100,5 +102,18 @@ async def get_user_specific_container(user_specific_container=Depends(get_user_s
     return resp
 
 @router.get("/getCarouselImages", response_model=List[CarouselImageResponse])
-def fetch_carousel_images(db: Session = Depends(get_db)):
-    return fetch_carousel_images_db(db)
+async def fetch_carousel_images(
+    db: Session = Depends(get_db),
+    redis = Depends(get_redis)
+):
+    cached_images = redis.get("carousel_images")
+    
+    if cached_images:
+        # print("cache hit")
+        return json.loads(cached_images)
+    
+    images = fetch_carousel_images_db(db)
+    
+    redis.set("carousel_images", json.dumps(images))
+    
+    return images

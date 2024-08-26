@@ -34,7 +34,8 @@ async def create_event(
     container=Depends(get_container),
     fileContainer=Depends(get_file_container),
     current_user: User=Depends(get_current_user),
-    blob_client=Depends(get_blob_service_client)
+    blob_client=Depends(get_blob_service_client),
+    redis = Depends(get_redis)
 ):
     if current_user is None:
         raise HTTPException(status_code=401, detail="Unauthorized")
@@ -64,7 +65,7 @@ async def create_event(
         location=location
     )
 
-    return await create_event_and_upload_files(event_data, files, current_user, container, fileContainer, blob_client)
+    return await create_event_and_upload_files(event_data, files, current_user, container, fileContainer, blob_client, redis)
 
 
 @router.post("/event/{eventId}/edit/", dependencies=[Depends(JWTBearer())], response_model=SuccessResponse)
@@ -146,3 +147,20 @@ async def add_editor(
 async def add_advertisement(eventId: takeString, container=Depends(get_container), advertised_events_container=Depends(get_advertisement_container)) -> SuccessResponse:
     print("ok")
     return await advertise_event(eventId, advertised_events_container, container)
+
+
+# SEEDERS
+# from Seeders.fakeEvent import seed_events
+# @router.post("/events/seed/", response_model=SuccessResponse)
+# async def seed_events_route(
+#     number_of_events: Optional[int] = 10,
+#     event_container=Depends(get_container),
+#     file_container=Depends(get_file_container)
+# ) -> SuccessResponse:
+#     try:
+#         seed_events(event_container, file_container, number_of_events)
+#         return SuccessResponse(message="Events seeded successfully", success=True)
+#     except HTTPException as e:
+#         raise e
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail="Failed to seed events")
