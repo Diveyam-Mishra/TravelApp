@@ -65,10 +65,9 @@ async def filter_events(
     filters: List[str],
     coord: List[float],
     event_container=Depends(get_container),
-    file_container=Depends(get_file_container),
     page: int = 0
 ):
-    eventsRes = await get_category_events(filters, coord, event_container, file_container, page)
+    eventsRes = await get_category_events(filters, coord, event_container, page)
     
     # Extract the total count and results from the response
     total_count = eventsRes['cnt']

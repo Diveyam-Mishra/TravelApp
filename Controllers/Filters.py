@@ -2,6 +2,7 @@ from Schemas.UserSchemas import *
 from Schemas.EventSchemas import *
 import random
 import math
+import asyncio
 
 def event_distance(lat1, lon1, lat2, lon2):
     lat1, lon1, lat2, lon2 = map(math.radians, [lat1, lon1, lat2, lon2])
@@ -16,33 +17,74 @@ def event_distance(lat1, lon1, lat2, lon2):
     distance = c * r
     return round(distance, 2)
 
+
 async def get_event_of_single_category(category: str, event_container, file_container):
-    # Define the query to fetch events of a specific category
+    # Query to fetch events of a specific category
     query = f"SELECT c.event_id, c.event_name, c.event_description, c.event_type, c.location FROM c WHERE ARRAY_CONTAINS(c.event_type, '{category}')"
 
     events = []
-    for event in event_container.query_items(
-            query=query,
-            enable_cross_partition_query=True
-        ):
-        # Fetch the first image associated with the event
-        image_query = f"SELECT TOP 1 * FROM c WHERE c.eventId = '{event['event_id']}'"
+    event_ids = []
+
+    for event in event_container.query_items(query=query, enable_cross_partition_query=True):
+        events.append(event)
+        event_ids.append(event['event_id'])
+
+    if not event_ids:
+        return events
+
+    # Parallel execution of image queries
+    async def fetch_image(event_id):
+        image_query = f"SELECT TOP 1 c.fileName1, c.fileUrl1, c.fileType1 FROM c WHERE c.eventId = '{event_id}'"
         image_results = list(file_container.query_items(query=image_query, enable_cross_partition_query=True))
-        
+        return image_results[0] if image_results else None
+
+    image_futures = [fetch_image(event_id) for event_id in event_ids]
+    images = await asyncio.gather(*image_futures)
+
+    for event, image in zip(events, images):
+        if image:
+            event['thumbnail'] = {
+                "file_name": image.get('fileName1'),
+                "file_url": image.get('fileUrl1'),
+                "file_type": image.get('fileType1')
+            }
+
+    return events
+
+async def update_events_with_thumbnails(event_container, file_container):
+    # Query to fetch all events
+    query = "SELECT * FROM c"
+
+    # List to hold all event updates
+    updates = []
+    print("ok")
+    async def update_event(event):
+        # Fetch the first image associated with the event
+        image_query = f"SELECT TOP 1 c.fileName1, c.fileUrl1, c.fileType1 FROM c WHERE c.eventId = '{event['event_id']}'"
+        image_results = list(file_container.query_items(query=image_query, enable_cross_partition_query=True))
+
         if image_results:
             # Add the first image's details to the event
             image = image_results[0]
             event['thumbnail'] = {
                 "file_name": image.get('fileName1'),
-                "file_url": image.get('fileUrl1'),  # Ensure this is handled correctly
+                "file_url": image.get('fileUrl1'),
                 "file_type": image.get('fileType1')
             }
-        
-        events.append(event)
+            # Update the event in the database
+            await event_container.replace_item(item=event['event_id'], body=event)
+            print("done")
 
-    return events
+    # Fetch and update each event
+    for event in event_container.query_items(query=query, enable_cross_partition_query=True):
+        updates.append(update_event(event))
 
-async def get_category_events(filters: List[str], coord:List[float],event_container, file_container, page):
+    # Run all updates concurrently
+    # await asyncio.gather(*updates)
+
+    return "Events updated with thumbnails."
+
+async def get_category_events(filters: List[str], coord: List[float], event_container, page: int):
     # Fetch all events
     query = "SELECT * FROM c"
     
@@ -55,20 +97,13 @@ async def get_category_events(filters: List[str], coord:List[float],event_contai
         match_count = sum(1 for event_type in filters if event_type in event['event_type'])
         
         if match_count > 0:
-            # Fetch the first image associated with the event
-            image_query = f"SELECT TOP 1 * FROM c WHERE c.eventId = '{event['event_id']}'"
-            image_results = list(file_container.query_items(query=image_query, enable_cross_partition_query=True))
-            
-            if image_results:
-                # Add the first image's details to the event
-                image = image_results[0]
-                event['thumbnail'] = {
-                    "file_name": image.get('fileName1'),
-                    "file_url": image.get('fileUrl1'),  # This will be base64 encoded data
-                    "file_type": image.get('fileType1')
-                }
             event['match_count'] = match_count
-            event['distance']=event_distance(event['location']['geo_tag']['latitude'],event['location']['geo_tag']['longitude'],coord[0],coord[1])
+            event['distance'] = event_distance(
+                event['location']['geo_tag']['latitude'],
+                event['location']['geo_tag']['longitude'],
+                coord[0],
+                coord[1]
+            )
             events.append(event)
 
     # Sort events based on the number of matching types
@@ -83,6 +118,7 @@ async def get_category_events(filters: List[str], coord:List[float],event_contai
         "cnt": total_count,
         "results": paginated_events
     }
+
 #filters Coming as Objects
 
 

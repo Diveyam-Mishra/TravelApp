@@ -35,7 +35,7 @@ async def create_event(
     fileContainer=Depends(get_file_container),
     current_user: User=Depends(get_current_user),
     blob_client=Depends(get_blob_service_client),
-    redis = Depends(get_redis)
+    redis=Depends(get_redis)
 ):
     if current_user is None:
         raise HTTPException(status_code=401, detail="Unauthorized")
@@ -124,7 +124,7 @@ async def filter_events(filters: EventFilter, event_container=Depends(get_contai
 
 
 @router.get("/event/details/{eventId}", response_model=SearchEvent)
-async def get_event(eventId: str, event_container=Depends(get_container), file_container=Depends(get_file_container),lat:float=0.0, long:float=0.0):
+async def get_event(eventId: str, event_container=Depends(get_container), file_container=Depends(get_file_container), lat:float=0.0, long:float=0.0):
     event = await get_event_by_id(eventId, event_container, file_container, lat, long)
     if event:
         return event
@@ -148,7 +148,6 @@ async def add_advertisement(eventId: takeString, container=Depends(get_container
     print("ok")
     return await advertise_event(eventId, advertised_events_container, container)
 
-
 # SEEDERS
 # from Seeders.fakeEvent import seed_events
 # @router.post("/events/seed/", response_model=SuccessResponse)
@@ -164,3 +163,9 @@ async def add_advertisement(eventId: takeString, container=Depends(get_container
 #         raise e
 #     except Exception as e:
 #         raise HTTPException(status_code=500, detail="Failed to seed events")
+
+
+# @router.get("/fix/events")
+# async def fix(event_container= Depends(get_container), file_container= Depends(get_file_container)):
+#     res = await update_events_with_thumbnails(event_container, file_container)
+#     return res
