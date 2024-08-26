@@ -170,26 +170,6 @@ async def search_events_by_name(
     # Fetch and attach the thumbnail (first image file) for each event
     for event in events:
         event['distance']=event_distance(event['location']['geo_tag']['latitude'],event['location']['geo_tag']['longitude'],coord[0],coord[1])
-        event_id = event['event_id']
-        file_query = f"SELECT * FROM c WHERE c.eventId = '{event_id}'"
-        file_items = list(file_container.query_items(
-            query=file_query,
-            enable_cross_partition_query=True
-        ))
-
-        if file_items:
-            # Assume the first file in the list is the thumbnail
-            thumbnail_file = file_items[0]
-            if thumbnail_file.get('fileUrl1'):
-                event['thumbnail'] = {
-                "file_name": thumbnail_file['fileName1'],
-                "file_url": thumbnail_file['fileUrl1'],
-                "file_type": thumbnail_file['fileType1']
-            }
-            else:
-                event['thumbnail'] = None
-        else:
-            event['thumbnail'] = None
     total_count = len(events)
     items_per_page = 15
     start_index = page * items_per_page
