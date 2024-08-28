@@ -12,15 +12,15 @@ router = APIRouter()
 
 @router.get("/events/filtered/category", response_model=SearchEventResultWithCnt)
 async def filter_events_v1(
+    page: takeString,
     filters: List[str] = Query(...),
-    page: int = 0,
     event_container=Depends(get_container),
     file_container=Depends(get_file_container),
     redis = Depends(get_redis)
 ):
     unique_events = set()
     items_per_page = 15
-
+    page=int(page)
     for category in filters:
         cache_key = f"events:{category}"
 
@@ -64,10 +64,10 @@ async def filter_events_v1(
 async def filter_events(
     filters: List[str],
     coord: List[float],
-    event_container=Depends(get_container),
-    page: int = 0
+    page: takeString,
+    event_container=Depends(get_container)
 ):
-    eventsRes = await get_category_events(filters, coord, event_container, page)
+    eventsRes = await get_category_events(filters, coord, event_container, int(page))
     
     # Extract the total count and results from the response
     total_count = eventsRes['cnt']
@@ -110,10 +110,11 @@ async def filter_events(
 async def search_events_by_name1(
     partial_name: PartialName,
     coord:List[float],
+    page: takeString,
     event_container=Depends(get_container),
-    file_container=Depends(get_file_container),page: int = 0
+    file_container=Depends(get_file_container)
 ):
-    eventsRes = await search_events_by_name(partial_name, coord, event_container, file_container, page)
+    eventsRes = await search_events_by_name(partial_name, coord, event_container, file_container, int(page))
     
     total_count = eventsRes['cnt']
     events = eventsRes['results']
@@ -140,10 +141,11 @@ async def search_events_by_name1(
 async def search_events_by_creator1(
     creator_id: CreatorId,
     coord: List[float],
-    event_container=Depends(get_container),
-    page: int = 0
+    page: takeString,
+    event_container=Depends(get_container)
+    
 ):
-    eventsRes = await search_events_by_creator(creator_id,coord, event_container, page)
+    eventsRes = await search_events_by_creator(creator_id,coord, event_container, int(page))
     total_count = eventsRes['cnt']
     events = eventsRes['results']
     result = [{"id": event["id"], "name": event["event_name"], "description": event["event_description"], "type":event.get("event_type"), "thumbnail":event.get("thumbnail"), "distance":str(event["distance"])+"km"} for event in events]
@@ -155,10 +157,10 @@ async def search_events_by_creator1(
 async def search_events_by_creator_past1(
     creator_id: CreatorId,
     coord: List[float],
-    event_container=Depends(get_container),
-    page: int = 0
+    page: takeString,
+    event_container=Depends(get_container)
 ):
-    eventsRes = await search_events_by_creator_past(creator_id,coord, event_container, page)
+    eventsRes = await search_events_by_creator_past(creator_id,coord, event_container, int(page))
     total_count = eventsRes['cnt']
     events = eventsRes['results']
     result = [{"id": event["id"], "name": event["event_name"], "description": event["event_description"], "type":event.get("event_type"), "thumbnail":event.get("thumbnail"), "distance":str(event["distance"])+"km"} for event in events]
@@ -166,14 +168,14 @@ async def search_events_by_creator_past1(
         "cnt": total_count,
         "results": result
     }
-@router.post("/events/search_by_creator/", response_model=SearchEventResultWithCnt)
+@router.post("/events/search_by_creator_future1/", response_model=SearchEventResultWithCnt)
 async def search_events_by_creator_future1(
     creator_id: CreatorId,
     coord: List[float],
-    event_container=Depends(get_container),
-    page: int = 0
+    page: takeString,
+    event_container=Depends(get_container)
 ):
-    eventsRes = await search_events_by_creator_future(creator_id,coord, event_container, page)
+    eventsRes = await search_events_by_creator_future(creator_id,coord, event_container, int(page))
     total_count = eventsRes['cnt']
     events = eventsRes['results']
     result = [{"id": event["id"], "name": event["event_name"], "description": event["event_description"], "type":event.get("event_type"), "thumbnail":event.get("thumbnail"), "distance":str(event["distance"])+"km"} for event in events]
