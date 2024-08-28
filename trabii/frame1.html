@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trabii - Loop of Fun</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700&family=Poppins:wght@500&family=Roboto:wght@400&display=swap" rel="stylesheet">
+    <style>
+        /* Reset and Base Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body, html {
+            height: 100%;
+            width: 100%;
+            font-family: 'Roboto', sans-serif; /* Default font */
+            overflow: hidden;
+        }
+
+        /* Background Images */
+        .background {
+            position: relative;
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        .background img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: 1; 
+            filter: brightness(1.0);
+        }
+
+        /* Dark Overlay */
+        .dark-overlay {
+            background-color: rgba(0, 0, 0, 0.2); /* Dark overlay on top of the background */
+            height: 100%;
+            width: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 2; /* Overlay above the base background */
+        }
+
+        /* Content Wrapper */
+        .content {
+            position: relative;
+            height: 100%;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 5%;
+            z-index: 3; /* Content on top of overlay */
+        }
+
+        /* Left Section with Text */
+        .left-section {
+            flex: 1;
+            color: white;
+            position: relative;
+            top: 200px; /* Adjust the vertical position */
+        }
+
+        .dots {
+            display: flex;
+            margin-bottom: 20px;
+        }
+
+        .dot {
+            width: 10px;
+            height: 10px;
+            background-color: white;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+
+        /* Typography Adjustments */
+        .left-section h1 {
+            font-family: 'Montserrat', sans-serif; /* Heading font */
+            font-size: 48px; /* Main Heading Size */
+            font-weight: 700;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.6); /* Text shadow for highlighting */
+        }
+
+        .left-section p {
+            font-family: 'Roboto', sans-serif; /* Description font */
+            font-size: 22px; /* Primary Subheading Size */
+            max-width: 600px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.6); /* Text shadow for highlighting */
+        }
+
+        /* Right Section - Mobile Shape with Translucency */
+        .right-section {
+            background-color: rgba(17, 16, 16, 0.446); /* Slightly translucent white */
+            padding: 20px;
+            border-radius: 50px; /* Rounded corners for mobile shape */
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3); /* Stronger shadow for depth */
+            width: 340px; /* Width of the mobile container */
+            height: 680px; /* Height of the mobile container */
+            display: flex;
+            flex-direction: column;
+            justify-content: center; /* Center content vertically */
+            align-items: center;
+            position: relative;
+            border: 1px solid #f9f8f6;
+        }
+
+        /* Logo Container */
+        .logo-container {
+            text-align: center;
+            margin-bottom: 20px; /* Space between logo and buttons */
+        }
+
+        .logo-container img {
+            width: 250px;
+            height: inherit;
+            margin: 50px; 
+       
+            filter: drop-shadow(0 0 15px rgba(15, 13, 13, 0.8)); /* Glow effect */
+        }
+
+        /* Button Styles */
+        .button {
+            font-family: 'Poppins', sans-serif; /* Button font */
+            width: 80%;
+            padding: 12px;
+            margin-bottom: 15px;
+            font-size: 18px; /* Primary Button Text Size */
+            border: none;
+            border-radius: 25px; /* Rounded buttons */
+            cursor: pointer;
+            text-align: center;
+            text-decoration: none;
+        }
+
+        .yellow-button {
+            background-color: #FFD700;
+            color: black;
+            box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.2); 
+            margin-top: 250px;
+        }
+
+        .blue-button {
+            background-color: #00BFFF;
+            color: white;
+            box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.2); 
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="background">
+        <!-- First Background Image -->
+        <img src="images/image1.jpg" alt="Background Image 1">
+
+        <!-- Second Background Image -->
+        <img src="images/overlay.jpg" alt="Background Image 2" style="opacity:0.2;"> <!-- Adjust opacity as needed -->
+
+        <div class="dark-overlay"></div>
+
+        <div class="content">
+            <div class="left-section">
+                <div class="dots">
+                    <span class="dot"></span>
+                    <span class="dot"></span>
+                    <span class="dot"></span>
+                    <span class="dot"></span>
+                </div>
+                <h1>Discover and Join Events</h1>
+                <p>Find exciting events happening around you and book them effortlessly with a few taps.</p>
+            </div>
+            <div class="right-section">
+                <div class="logo-container">
+                    <!-- Replace 'logo.png' with the actual path to your logo image -->
+                    <img src="images/logo.png" alt="Trabii Logo">
+                </div>
+                <a href="browsing.html" class="button yellow-button">Browse without Sign up</a>
+                <a href="frame2.html" class="button blue-button">Login/Sign up using Phone</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

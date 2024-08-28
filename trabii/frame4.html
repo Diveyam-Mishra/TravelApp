@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trabii - Loop of Fun</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700&family=Poppins:wght@500&family=Roboto:wght@400&display=swap" rel="stylesheet">
+
+    <style>
+        /* Reset and Base Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body, html {
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        /* Font Styles */
+        h1 {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 48px; /* Main Heading (H1) */
+        }
+
+        h2 {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 34px; /* Sub-Heading (H2) */
+        }
+
+        h3 {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 26px; /* Section Heading (H3) */
+        }
+
+        h4 {
+            font-family: 'Montserrat', sans-serif;
+            font-size: 22px; /* Sub-Section Heading (H4) */
+        }
+
+        .primary-subheading {
+            font-family: 'Roboto', sans-serif;
+            font-size: 22px; /* Primary Subheading */
+        }
+
+        .secondary-subheading {
+            font-family: 'Roboto', sans-serif;
+            font-size: 20px; /* Secondary Subheading */
+        }
+
+        p {
+            font-family: 'Roboto', sans-serif;
+            font-size: 16px; /* Standard Body Text */
+        }
+
+        .small-text {
+            font-family: 'Roboto', sans-serif;
+            font-size: 14px; /* Small Text/Annotations */
+        }
+
+        .button {
+            font-family: 'Poppins', sans-serif;
+            font-size: 18px; /* Primary Button Text */
+        }
+
+        .secondary-button {
+            font-family: 'Poppins', sans-serif;
+            font-size: 16px; /* Secondary Button Text */
+        }
+
+        /* Background Images */
+        .background {
+            position: relative;
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        .background img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: 1;
+            filter: brightness(1.0);
+        }
+
+        /* Dark Overlay */
+        .dark-overlay {
+            background-color: rgba(0, 0, 0, 0.2); /* Dark overlay on top of the background */
+            height: 100%;
+            width: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 2; /* Overlay above the base background */
+        }
+
+        /* Content Wrapper */
+        .content {
+            position: relative;
+            height: 100%;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 5%;
+            z-index: 3; /* Content on top of overlay */
+        }
+
+        /* Left Section with Text */
+        .left-section {
+            flex: 1;
+            color: white;
+            position: relative;
+            top: 200px; /* Adjust the vertical position */
+        }
+
+        .dots {
+            display: flex;
+            margin-bottom: 20px;
+        }
+
+        .dot {
+            width: 10px;
+            height: 10px;
+            background-color: white;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+
+        .left-section h1 {
+            font-weight: 700;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.6); /* Text shadow for highlighting */
+        }
+
+        .left-section p {
+            max-width: 600px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.6); /* Text shadow for highlighting */
+        }
+
+        /* Right Section - Mobile Shape with Translucency */
+        .right-section {
+            background-color: rgba(17, 16, 16, 0.446); /* Slightly translucent white */
+            padding: 20px;
+            border-radius: 50px; /* Rounded corners for mobile shape */
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3); /* Stronger shadow for depth */
+            width: 340px; /* Width of the mobile container */
+            height: 680px; /* Height of the mobile container */
+            display: flex;
+            flex-direction: column;
+            justify-content: center; /* Center content vertically */
+            align-items: center;
+            position: relative;
+            border: 1px solid #f9f8f6;
+        }
+
+        /* Logo Container */
+        .logo-container {
+            text-align: center;
+        }
+
+        .logo-container img {
+            width: 100px;
+            height: inherit;
+            margin: 180px;
+            margin-top: 50px;
+            margin-left: 120px;
+            filter: drop-shadow(0 0 15px rgba(15, 13, 13, 0.8));
+        }
+
+        .additional-text {
+            margin-bottom: 120px;
+            margin-top: 100px;
+            color: white;
+            text-align: center;
+        }
+
+        .name {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 10%;
+            position: relative;
+            top: -220px;
+        }
+
+        .name input {
+            width: 90%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 25px;
+            border: 1px solid #ccc;
+            box-sizing: border-box;
+            margin-top: 100px;
+        }
+
+        .name label {
+            color: white;
+            margin-bottom: 10px;
+        }
+
+        .additional-text2 {
+            margin-bottom: 20px;
+            margin-top: 10px;
+            color: white;
+            text-align: center;
+            position: relative;
+            bottom: 100px;
+        }
+
+        /* Button Styles */
+        .button {
+            width: 80%;
+            padding: 12px;
+            margin-bottom: 70px;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            text-align: center;
+            position: relative;
+            top: 60px;
+        }
+
+        .yellow-button {
+            background-color: #FFD700;
+            color: black;
+            box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.2); /* Shadow for button highlighting */
+        }
+
+        /* Animation for dots in the logo */
+        .dot-animate {
+            animation: bounce 1.5s infinite;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="background">
+        <img src="images/image3.png" alt="Background Image 1">
+        <img src="images/overlay.jpg" alt="Background Image 2" style="opacity:0.2;">
+        <div class="dark-overlay"></div>
+        <div class="content">
+            <div class="left-section">
+                <div class="dots">
+                    <span class="dot"></span>
+                    <span class="dot"></span>
+                    <span class="dot"></span>
+                    <span class="dot"></span>
+                </div>
+                <h1>Empowering Individuals</h1> <!-- Main Heading -->
+                <p>Quickly make and manage events for everyone. Invite friends and enjoy seamless planning.</p>
+            </div>
+            <div class="right-section">
+                <div class="logo-container">
+                    <img src="images/logo.png" alt="Trabii Logo">
+                    <div class="additional-text primary-subheading"> <!-- Primary Subheading -->
+                        Enter Your Name
+                    </div>
+                    <div class="additional-text2 secondary-subheading"> <!-- Secondary Subheading -->
+                        Unique name for your unique identity
+                    </div> 
+                </div>
+                <div class="name">
+                    <input type="text" id="name" placeholder="Enter Name">
+                </div>
+                <a href="frame5.html" class="button yellow-button">Next</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
