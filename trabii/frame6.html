@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trabii - Loop of Fun</title>
+    <style>
+        /* Importing Fonts */
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&family=Roboto:wght@400;700&display=swap');
+
+        /* Reset and Base Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body, html {
+            height: 100%;
+            width: 100%;
+            font-family: 'Arial', sans-serif;
+            overflow: hidden;
+        }
+
+        /* Background Images */
+        .background {
+            position: relative;
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        .background img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: 1;
+            filter: brightness(1.0);
+        }
+
+        /* Dark Overlay */
+        .dark-overlay {
+            background-color: rgba(0, 0, 0, 0.2); /* Dark overlay on top of the background */
+            height: 100%;
+            width: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 2; /* Overlay above the base background */
+        }
+
+        /* Content Wrapper */
+        .content {
+            position: relative;
+            height: 100%;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 5%;
+            z-index: 3; /* Content on top of overlay */
+        }
+
+        /* Left Section with Text */
+        .left-section {
+            flex: 1;
+            color: white;
+            position: relative;
+            top: 200px;
+        }
+
+        .dots {
+            display: flex;
+            margin-bottom: 20px;
+        }
+
+        .dot {
+            width: 10px;
+            height: 10px;
+            background-color: white;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+
+        /* Main Heading (H1) */
+        .left-section h1 {
+            font-size: 3rem; /* 36-48px */
+            font-weight: 700;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.6); /* Text shadow for highlighting */
+        }
+
+        /* Sub-Heading (H2) */
+        .left-section h2 {
+            font-size: 2.5rem; /* 28-34px */
+            font-weight: 700;
+            margin-bottom: 15px;
+            font-family: 'Roboto', sans-serif; /* Roboto Font */
+        }
+
+        /* Section Heading (H3) */
+        .left-section h3 {
+            font-size: 1.8rem; /* 22-26px */
+            font-weight: 700;
+            margin-bottom: 10px;
+            font-family: 'Roboto', sans-serif; /* Roboto Font */
+        }
+
+        /* Sub-Section Heading (H4) */
+        .left-section h4 {
+            font-size: 1.5rem; /* 18-22px */
+            font-weight: 700;
+            margin-bottom: 8px;
+            font-family: 'Roboto', sans-serif; /* Roboto Font */
+        }
+
+        /* Body Text */
+        .left-section p {
+            font-size: 1rem; /* 14-16px */
+            max-width: 600px;
+            font-family: 'Roboto', sans-serif; /* Roboto Font */
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.6); /* Text shadow for highlighting */
+        }
+
+        /* Small Text */
+        .small-text {
+            font-size: 0.875rem; /* 12-14px */
+            font-family: 'Roboto', sans-serif; /* Roboto Font */
+        }
+
+        /* Right Section - Mobile Shape with Translucency */
+        .right-section {
+            background-color: rgba(17, 16, 16, 0.446); 
+            padding: 20px;
+            border-radius: 50px; 
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3); 
+            width: 340px;
+            height: 680px; 
+            display: flex;
+            flex-direction: column;
+            justify-content: center; /* Center content vertically */
+            align-items: center;
+            position: relative;
+            border: 1px solid #f9f8f6;
+        }
+
+        /* Logo Container */
+        .logo-container {
+            text-align: center;
+        }
+
+        .logo-container img {
+            width: 100px;
+            height: inherit;
+            margin: 180px; /* Adjust width to fit your logo */
+            margin-top: 50px;
+            margin-left: 120px;
+            filter: drop-shadow(0 0 15px rgba(15, 13, 13, 0.8)); /* Glow effect */
+        }
+
+        .additional-text {
+            margin-bottom: 120px;
+            margin-top: 30px;
+            color: white;
+            text-align: center;
+            font-size: 1.2rem; /* 18-22px */
+            font-family: 'Roboto', sans-serif; /* Roboto Font */
+        }
+
+        .interest {
+            width: 90%;
+            margin-top: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .interest select {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 25px;
+            border: 1px solid #ccc;
+            font-size: 1rem; /* 14-16px */
+            box-sizing: border-box;
+            background-color: transparent; 
+            color: white;
+        }
+
+        .interest select option {
+            background-color: #333; 
+            color: white; 
+        }
+
+        .additional-text2 {
+            margin-bottom: 20px;
+            margin-top: 30px;
+            color: white;
+            text-align: center;
+            font-size: 1rem; /* 16-20px */
+            font-family: 'Roboto', sans-serif; /* Roboto Font */
+        }
+
+        /* Button Styles */
+        .button {
+            width: 80%;
+            padding: 12px;
+            margin-bottom: 100px;
+            font-size: 1rem; /* 16-18px */
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            text-align: center;
+            font-family: 'Poppins', sans-serif; /* Poppins Font */
+        }
+
+        .yellow-button {
+            background-color: #FFD700;
+            color: black;
+            box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.2); 
+        }
+      
+        /* Animation for dots in the logo */
+        .dot-animate {
+            animation: bounce 1.5s infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="background">
+        <img src="images/image3.png" alt="Background Image 1">
+        <img src="images/overlay.jpg" alt="Background Image 2" style="opacity:0.2;">
+        <div class="dark-overlay"></div>
+        <div class="content">
+            <div class="left-section">
+                <div class="dots">
+                    <span class="dot"></span>
+                    <span class="dot"></span>
+                    <span class="dot"></span>
+                    <span class="dot"></span>
+                </div>
+                <h1>Empowering Individuals</h1>
+                <p>Quickly make and manage events for everyone. Invite friends and enjoy seamless planning.</p>
+            </div>
+            <div class="right-section">
+                <div class="logo-container">
+                    <img src="images/logo.png" alt="Trabii Logo">
+                    <div class="additional-text">
+                        Your Interest
+                    </div>
+                    <div class="additional-text2">
+                        Choose Interests 0/5
+                    </div> 
+                </div>
+                <div class="interest">
+                    <select id="interest-select" name="interest">
+                        <option value="weekend-trips">Weekend trips</option>
+                        <option value="concerts">Concerts</option>
+                        <option value="workshops">Workshops</option>
+                        <option value="parties">Parties</option>
+                        <option value="others">Others</option>
+                    </select>
+                </div>
+                <a href="frame7.html" class="button yellow-button">Next</a>     
+            </div>
+        </div>
+    </div>
+</body>
+</html>
