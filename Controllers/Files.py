@@ -155,8 +155,7 @@ async def create_event_and_upload_files(
         }
     })
 
-    # Insert the new event into the event container
-    event_container.create_item(new_event)
+    
 
     for category in event_data.event_type:
         cache_key = f"events:{category}"
@@ -203,6 +202,12 @@ async def create_event_and_upload_files(
         
         # Add file metadata to the new record
         for i, metadata in enumerate(file_metadata):
+            if i==0:
+                new_event.update({
+                "Thumbnail": metadata["fileName"],
+                "ThumbnailUrl": metadata["fileUrl"],
+                "ThumbnailType": metadata["fileType"]
+            })
             if i < 5:
                 new_record[f'fileName{i+1}'] = metadata["fileName"]
                 new_record[f'fileUrl{i+1}'] = metadata["fileUrl"]
@@ -210,6 +215,8 @@ async def create_event_and_upload_files(
         
         # Insert the new record into the file container
         file_container.create_item(new_record)
+        # Insert the new event into the event container
+        event_container.create_item(new_event)
     
     return SuccessResponse(message=f"Event Created Successfully with event_id: {new_event['event_id']}", success=True)
 
