@@ -203,11 +203,10 @@ async def create_event_and_upload_files(
         # Add file metadata to the new record
         for i, metadata in enumerate(file_metadata):
             if i==0:
-                new_event.update({
-                "Thumbnail": metadata["fileName"],
-                "ThumbnailUrl": metadata["fileUrl"],
-                "ThumbnailType": metadata["fileType"]
-            })
+                new_event.update({"thumbnail": {
+                "file_name": metadata["fileName"],
+                "file_url":  metadata["fileUrl"],
+                "file_type": metadata["fileType"]}})
             if i < 5:
                 new_record[f'fileName{i+1}'] = metadata["fileName"]
                 new_record[f'fileUrl{i+1}'] = metadata["fileUrl"]
