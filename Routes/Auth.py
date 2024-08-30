@@ -104,16 +104,16 @@ async def get_user_specific_container(user_specific_container=Depends(get_user_s
 @router.get("/getCarouselImages", response_model=List[CarouselImageResponse])
 async def fetch_carousel_images(
     db: Session = Depends(get_db),
-    redis = Depends(get_redis)
+    # redis = Depends(get_redis)
 ):
-    cached_images = redis.get("carousel_images")
+    # cached_images = redis.get("carousel_images")
     
-    if cached_images:
+    # if cached_images:
         # print("cache hit")
-        return json.loads(cached_images)
+        # return json.loads(cached_images)
     
     images = fetch_carousel_images_db(db)
     
-    redis.set("carousel_images", json.dumps(images))
+    # redis.set("carousel_images", json.dumps(images))
     
     return images

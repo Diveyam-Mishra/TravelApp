@@ -141,7 +141,8 @@ class SearchEvent(BaseModel):
     host_information: str
     location: Location
     id: str
-    event_id: str
+    event_id: Optional[str] = None
+    event_ID: Optional[str] = None
     start_date: str
     end_date: str
     duration: str

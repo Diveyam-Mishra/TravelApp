@@ -62,6 +62,30 @@ def get_current_user(token: str=Depends(oauth2_scheme), db: Session=Depends(get_
     
     return user
 
+async def get_current_user_optional(token: str=Depends(oauth2_scheme), db: Session=Depends(get_db)):
+    try:
+        # Decode the token and verify its signature and expiration
+        payload = jwt.decode(token, JWT_SECRET, algorithms=[ALGORITHM])
+        user_id = payload.get("user_id")
+        if user_id is None:
+            raise HTTPException(status_code=401, detail="Invalid token")
+        
+        # Query the user from the database
+        user = db.query(User).filter(User.id == user_id).first()
+        if user is None:
+            raise HTTPException(status_code=404, detail="User not found")
+    
+    except ExpiredSignatureError:
+        # Handle token expiration
+        raise HTTPException(status_code=401, detail="Token has expired")
+    except JWTError:
+        # Handle other JWT errors
+        raise HTTPException(status_code=401, detail="Invalid token")
+    except Exception as e:
+        # Handle other potential exceptions
+        raise HTTPException(status_code=401, detail=f"Token error: {str(e)}")
+    
+    return user
 
 async def update_user(req: UserUpdate, db: Session, userId:str, current_user:User, user_specific_container):
     user = db.query(User).filter(User.id == userId).first()

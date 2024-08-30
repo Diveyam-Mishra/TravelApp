@@ -22,7 +22,7 @@ import base64
 import hashlib
 
 async def getUserBookingStatus(eventId: str, userId: str, bookingContainer, eventContainer):
-    event_query = "SELECT * FROM c WHERE c.event_id = @eventId"
+    event_query = "SELECT * FROM c WHERE c.id = @eventId"
     params = [{"name": "@eventId", "value": eventId}]
     
     # Query the event container for the event with the specified event_id
@@ -36,7 +36,7 @@ async def getUserBookingStatus(eventId: str, userId: str, bookingContainer, even
         raise HTTPException(status_code=404, detail="Event not found")
     
     # Query the booking container for the event with the specified event_id
-    booking_event_query = "SELECT * FROM c WHERE c.event_id = @eventId"
+    booking_event_query = "SELECT * FROM c WHERE c.id = @eventId"
     params = [{"name": "@eventId", "value": eventId}]
 
     bookingLists = list(bookingContainer.query_items(
@@ -86,7 +86,7 @@ async def addBookingDataInUserSpecific(
     paymentDetails: PaymentInformation,
     userSpecificContainer
 ):
-    event_query = "SELECT * from c WHERE c.event_id = @eventId"
+    event_query = "SELECT * from c WHERE c.id = @eventId"
     params = [{"name": "@eventId", "value": eventId}]
     event = list(eventContainer.query_items(query=event_query, parameters=params, enable_cross_partition_query=True))
     if not event:
@@ -330,7 +330,7 @@ async def create_ticket_pdf(ticket_data: ticketData, output_path: str, eventCont
     }
     
     event_query ="""
-    SELECT * FROM eventcontainer e WHERE e.event_id = @id
+    SELECT * FROM eventcontainer e WHERE e.id = @id
     """
     params = [{"name": "@id", "value": ticket_data_dict['eventId']}]
     items = list(eventContainer.query_items(query=event_query, parameters=params, enable_cross_partition_query=True))

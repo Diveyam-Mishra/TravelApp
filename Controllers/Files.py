@@ -18,7 +18,6 @@ VALID_IMAGE_EXTENSIONS = {"jpg", "jpeg", "png", "gif"}  # Add any other valid im
 
 
 async def avatar_upload(
-    username: str,
     req: UserUpdate,
     db: Session,
     current_user: User,
@@ -77,7 +76,7 @@ async def avatar_upload(
         db.refresh(existing_avatar if existing_avatar else avatar)
 
     # Update the user's details with the data from req
-    user = db.query(User).filter(User.username == username).first()
+    user = db.query(User).filter(User.id == current_user.id).first()
     if user:
         if req.username is not None:
             user.username = req.username
@@ -85,6 +84,10 @@ async def avatar_upload(
             user.works_at = req.works_at
         if req.contact_no is not None:
             user.contact_no = req.contact_no
+        if req.gender is not None:
+            user.gender = req.gender
+        if req.dob is not None:
+            user.dob = req.dob
         
         # Commit the changes to the database
         db.commit()
@@ -137,7 +140,7 @@ async def create_event_and_upload_files(
     newId = str(uuid4())
     new_event.update({
         "id": newId,  # Generate a new UUID for the id field
-        "event_id": newId,  # Generate a new UUID for the event_id field
+        "event_ID": newId,  # Generate a new UUID for the event_id field
         "type": ','.join(event_data.event_type),  # Convert list to comma-separated string
         "start_date": start_date_and_time_str,  # Convert datetime to ISO format string
         "end_date": end_date_and_time_str,  # Convert datetime to ISO format string
@@ -175,7 +178,7 @@ async def create_event_and_upload_files(
                 break
             
             file_extension = file.filename.split('.')[-1]
-            file_name = f"{new_event['event_id']}_file_{i+1}.{file_extension}"
+            file_name = f"{new_event['id']}_file_{i+1}.{file_extension}"
             blob_client = blob_service_client.get_blob_client(container=event_files_blob_container_name, blob=file_name)
             
             # Read file data
@@ -197,7 +200,7 @@ async def create_event_and_upload_files(
         # Create new record for files
         new_record = {
             "id": newId,  # Generate a new UUID for the record
-            "eventId": newId,
+            "event_ID": newId,
         }
         
         # Add file metadata to the new record
@@ -217,7 +220,7 @@ async def create_event_and_upload_files(
         # Insert the new event into the event container
         event_container.create_item(new_event)
     
-    return SuccessResponse(message=f"Event Created Successfully with event_id: {new_event['event_id']}", success=True)
+    return SuccessResponse(message=f"Event Created Successfully with event_id: {new_event['id']}", success=True)
 
 
 async def get_avatar(
@@ -302,7 +305,7 @@ async def upload_event_files(
             })
         
         # Query to find existing record of event files
-        query_files = "SELECT * FROM eventfilescontainer ef WHERE ef.eventId = @eventId"
+        query_files = "SELECT * FROM eventfilescontainer ef WHERE ef.id = @eventId"
         params_files = [{"name": "@eventId", "value": eventId}]
         file_items = list(file_container.query_items(query=query_files, parameters=params_files, enable_cross_partition_query=True))
 
@@ -318,8 +321,8 @@ async def upload_event_files(
         else:
             # Create new record
             new_record = {
-                "id": str(uuid4()),  # Generate a new UUID for the record
-                "eventId": eventId
+                "id": eventId,  # Generate a new UUID for the record
+                "event_ID": eventId
             }
             # Add file metadata to the new record
             for i, metadata in enumerate(file_metadata):
@@ -356,7 +359,7 @@ async def fetch_event_files(
     file_container
 ):
     # Query to find the existing record of event files
-    query = "SELECT * FROM eventfilescontainer ef WHERE ef.eventId = @eventId"
+    query = "SELECT * FROM eventfilescontainer ef WHERE ef.id = @eventId"
     params = [{"name": "@eventId", "value": eventId}]
     file_items = list(file_container.query_items(query=query, parameters=params, enable_cross_partition_query=True))
 

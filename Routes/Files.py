@@ -12,28 +12,30 @@ from Controllers.Files import avatar_upload, get_avatar, upload_event_files,\
 from Controllers.Auth import get_current_user
 from typing import Optional, List
 from config import JWTBearer
+from datetime import date
 router = APIRouter()
 
 
 @router.post("/auth/update/", dependencies=[Depends(JWTBearer())],response_model=FileUploadResponse)
 async def upload_avatar(
-    username: str = Form(...),
     updated_username:Optional[str]=Form(None),
     works_at: Optional[str] = Form(None),
+    gender: Optional[str] = Form(None),
+    dob: Optional[date] = Form(None),
     contact_no: Optional[str] = Form(None),
     db: Session = Depends(get_db),
     blob_client=Depends(get_blob_service_client),
     current_user: User = Depends(get_current_user),
-    file: UploadFile = File(...)
+    file: Optional[UploadFile] = File(None)
 ):
     if current_user is None:
         raise HTTPException(status_code=401, detail="Unauthorized")
     
     # Create UserUpdate instance from form data
-    req = UserUpdate(username=updated_username, works_at=works_at, contact_no=contact_no)
+    req = UserUpdate(username=updated_username, works_at=works_at, contact_no=contact_no, gender=gender, dob=dob)
     
     # Call the function to handle the file upload and user update
-    return await avatar_upload(username, req, db, current_user, file, blob_client)
+    return await avatar_upload(req, db, current_user, file, blob_client)
 
 
 @router.get("/avatar/fetch/",dependencies=[Depends(JWTBearer())])

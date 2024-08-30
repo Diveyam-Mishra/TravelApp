@@ -39,5 +39,5 @@ class EventFiles(Base):
     fileData5 = Column(LargeBinary, nullable=True)
     fileType5 = Column(String, nullable=True)  
     
-    eventId = Column(Integer, unique=True, nullable=False)
+    event_ID = Column(Integer, unique=True, nullable=False)
     date = Column(DateTime, default=func.now())

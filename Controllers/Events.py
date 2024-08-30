@@ -38,9 +38,10 @@ async def create_event(event_details: EventDetails, current_user: User, containe
 
     # Create a new event
     new_event = event_details.dict()
+    new_id = str(uuid4())
     new_event.update({
-        "id": str(uuid4()),  # Generate a new UUID for the id field
-        "event_id": str(uuid4()),  # Generate a new UUID for the event_id field
+        "id": new_id,  # Generate a new UUID for the id field
+        "event_ID": new_id,  # Generate a new UUID for the event_id field
         "type": ','.join(event_details.event_type),  # Convert list to comma-separated string
         "start_date": start_datetime.isoformat(),  # Convert datetime to ISO format string
         "end_date": end_datetime.isoformat(),  # Convert datetime to ISO format string
@@ -109,7 +110,7 @@ async def update_event(
             raise HTTPException(status_code=400, detail="Maximum 5 files can be uploaded at once")
 
         # Fetch the existing files metadata from the file container
-        query_files = "SELECT * FROM eventfilescontainer ef WHERE ef.eventId = @eventId"
+        query_files = "SELECT * FROM eventfilescontainer ef WHERE ef.id = @eventId"
         params_files = [{"name": "@eventId", "value": event_id}]
         file_items = list(file_container.query_items(query=query_files, parameters=params_files, enable_cross_partition_query=True))
 
@@ -156,7 +157,7 @@ async def give_editor_access(
 ) -> SuccessResponse:
     try:
         # Check if event exists in event container
-        query = "SELECT * FROM eventcontainer e WHERE e.event_id = @id"
+        query = "SELECT * FROM eventcontainer e WHERE e.id = @id"
         params = [{"name": "@id", "value": event_id}]
         items = list(container.query_items(query=query, parameters=params, enable_cross_partition_query=True))
 
@@ -200,7 +201,7 @@ async def give_editor_access(
 
 async def get_event_by_id(event_id: str, event_container, file_container, lat:float=0.0, long:float=0.0):
     # Query to find the event by its event_id
-    event_query = "SELECT * FROM c WHERE c.event_id = @event_id"
+    event_query = "SELECT * FROM c WHERE c.id = @event_id"
     params = [{"name": "@event_id", "value": event_id}]
     
     # Query the event container for the event with the specified event_id
@@ -400,7 +401,7 @@ async def get_filtered_events(
 async def advertise_event(event_id: takeString, advertised_events_container, container=Depends(get_container)) -> SuccessResponse:
     print("ok")
     query = """
-    SELECT * FROM eventcontainer e WHERE e.event_id = @event_id
+    SELECT * FROM eventcontainer e WHERE e.id = @event_id
     """
     params = [
         {"name": "@event_id", "value": event_id.eventId}

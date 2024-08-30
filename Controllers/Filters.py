@@ -20,21 +20,21 @@ def event_distance(lat1, lon1, lat2, lon2):
 
 async def get_event_of_single_category(category: str, event_container, file_container):
     # Query to fetch events of a specific category
-    query = f"SELECT c.event_id, c.event_name, c.event_description, c.event_type, c.location FROM c WHERE ARRAY_CONTAINS(c.event_type, '{category}')"
+    query = f"SELECT c.id, c.event_name, c.event_description, c.event_type, c.location FROM c WHERE ARRAY_CONTAINS(c.event_type, '{category}')"
 
     events = []
     event_ids = []
 
     for event in event_container.query_items(query=query, enable_cross_partition_query=True):
         events.append(event)
-        event_ids.append(event['event_id'])
+        event_ids.append(event['id'])
 
     if not event_ids:
         return events
 
     # Parallel execution of image queries
     async def fetch_image(event_id):
-        image_query = f"SELECT TOP 1 c.fileName1, c.fileUrl1, c.fileType1 FROM c WHERE c.eventId = '{event_id}'"
+        image_query = f"SELECT TOP 1 c.fileName1, c.fileUrl1, c.fileType1 FROM c WHERE c.id = '{event_id}'"
         image_results = list(file_container.query_items(query=image_query, enable_cross_partition_query=True))
         return image_results[0] if image_results else None
 
@@ -60,7 +60,7 @@ async def update_events_with_thumbnails(event_container, file_container):
     print("ok")
     async def update_event(event):
         # Fetch the first image associated with the event
-        image_query = f"SELECT TOP 1 c.fileName1, c.fileUrl1, c.fileType1 FROM c WHERE c.eventId = '{event['event_id']}'"
+        image_query = f"SELECT TOP 1 c.fileName1, c.fileUrl1, c.fileType1 FROM c WHERE c.id = '{event['event_id']}'"
         image_results = list(file_container.query_items(query=image_query, enable_cross_partition_query=True))
 
         if image_results:
