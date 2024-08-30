@@ -145,21 +145,19 @@ def create_user(db: Session, user: UserCreate) -> UserResponse:
     return db_user
 
 
-def delete_user(delete_data: DeleteUserAfterCheckingPass, current_user: User, db: Session) -> SuccessResponse:
-    if delete_data.password == "delete":
-        deleted_user = deletedUser(email=current_user.email,
-                                 username=current_user.username,
-                                 works_at=current_user.works_at,
-                                 contact_no=current_user.contact_no)
-        x=current_user.id
-        db.add(deleted_user)
-        db.delete(current_user)
-        avatar = db.query(Avatar).filter(Avatar.user_id ==x).first()
+def delete_user( current_user: User, db: Session) -> SuccessResponse:
+    deleted_user = deletedUser(email=current_user.email,
+                                username=current_user.username,
+                                works_at=current_user.works_at,
+                                contact_no=current_user.contact_no)
+    x=current_user.id
+    db.add(deleted_user)
+    db.delete(current_user)
+    avatar = db.query(Avatar).filter(Avatar.userID ==x).first()
+    if avatar:
         db.delete(avatar)
-        db.commit()
-        return SuccessResponse(message="User deleted successfully", success=True)
-    else:
-        return SuccessResponse(message="wrong", success=True)
+    db.commit()
+    return SuccessResponse(message="User deleted successfully", success=True)
 
     
 def register_user(db: Session, email: str=None, username: str=None) -> SuccessResponse:
