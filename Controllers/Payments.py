@@ -351,6 +351,9 @@ async def create_ticket_pdf(ticket_data: ticketData, output_path: str, eventCont
     ticket_data_dict['organizer']=existing_event['host_information']
 
     user = db.query(User).filter(User.id == ticket_data_dict['userId']).first()
+    if user is None:
+        raise HTTPException(status_code=400,detail="User Not found")
+    
     ticket_data_dict['email'] = user.email
     ticket_data_dict['UserName'] = user.username
 
