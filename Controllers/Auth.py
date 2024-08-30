@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session
 from Models.user_models import User, OTP, deletedUser
+from Models.Files import Avatar
 from Schemas.UserSchemas import *
 from jose import JWTError
 from fastapi import HTTPException, Depends
@@ -126,8 +127,11 @@ def delete_user(delete_data: DeleteUserAfterCheckingPass, current_user: User, db
                                  username=current_user.username,
                                  works_at=current_user.works_at,
                                  contact_no=current_user.contact_no)
+        x=current_user.id
         db.add(deleted_user)
         db.delete(current_user)
+        avatar = db.query(Avatar).filter(Avatar.user_id ==x).first()
+        db.delete(avatar)
         db.commit()
         return SuccessResponse(message="User deleted successfully", success=True)
     else:

@@ -1,8 +1,6 @@
 
 from sqlalchemy import Column, Integer, String, Boolean, DateTime,Date, func
-from sqlalchemy.dialects.mssql import UNIQUEIDENTIFIER
 from Database.Connection import Base
-import uuid
 
 class User(Base):
     __tablename__ = 'users'

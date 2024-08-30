@@ -182,3 +182,6 @@ class CreatorId(BaseModel):
     
 class takeString(BaseModel):
     eventId:str
+class strAndint(BaseModel):
+    event_id:str
+    image: int

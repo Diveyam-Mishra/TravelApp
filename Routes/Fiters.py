@@ -151,3 +151,33 @@ async def search_events_by_creator1(
         "cnt": total_count,
         "results": result
     }
+@router.post("/events/search_by_creator_past/", response_model=SearchEventResultWithCnt)
+async def search_events_by_creator_past1(
+    creator_id: CreatorId,
+    coord: List[float],
+    event_container=Depends(get_container),
+    page: int = 0
+):
+    eventsRes = await search_events_by_creator_past(creator_id,coord, event_container, page)
+    total_count = eventsRes['cnt']
+    events = eventsRes['results']
+    result = [{"id": event["id"], "name": event["event_name"], "description": event["event_description"], "type":event.get("event_type"), "thumbnail":event.get("thumbnail"), "distance":str(event["distance"])+"km"} for event in events]
+    return {
+        "cnt": total_count,
+        "results": result
+    }
+@router.post("/events/search_by_creator_future/", response_model=SearchEventResultWithCnt)
+async def search_events_by_creator_future1(
+    creator_id: CreatorId,
+    coord: List[float],
+    event_container=Depends(get_container),
+    page: int = 0
+):
+    eventsRes = await search_events_by_creator_future(creator_id,coord, event_container, page)
+    total_count = eventsRes['cnt']
+    events = eventsRes['results']
+    result = [{"id": event["id"], "name": event["event_name"], "description": event["event_description"], "type":event.get("event_type"), "thumbnail":event.get("thumbnail"), "distance":str(event["distance"])+"km"} for event in events]
+    return {
+        "cnt": total_count,
+        "results": result
+    }

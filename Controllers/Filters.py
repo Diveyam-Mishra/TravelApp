@@ -170,26 +170,6 @@ async def search_events_by_name(
     # Fetch and attach the thumbnail (first image file) for each event
     for event in events:
         event['distance']=event_distance(event['location']['geo_tag']['latitude'],event['location']['geo_tag']['longitude'],coord[0],coord[1])
-        event_id = event['event_id']
-        file_query = f"SELECT * FROM c WHERE c.eventId = '{event_id}'"
-        file_items = list(file_container.query_items(
-            query=file_query,
-            enable_cross_partition_query=True
-        ))
-
-        if file_items:
-            # Assume the first file in the list is the thumbnail
-            thumbnail_file = file_items[0]
-            if thumbnail_file.get('fileUrl1'):
-                event['thumbnail'] = {
-                "file_name": thumbnail_file['fileName1'],
-                "file_url": thumbnail_file['fileUrl1'],
-                "file_type": thumbnail_file['fileType1']
-            }
-            else:
-                event['thumbnail'] = None
-        else:
-            event['thumbnail'] = None
     total_count = len(events)
     items_per_page = 15
     start_index = page * items_per_page
@@ -213,6 +193,80 @@ async def search_events_by_creator(
 
     params = [
         {"name": "@creator_id", "value": creator_id.creator}
+    ]
+
+    events = list(event_container.query_items(
+        query=query,
+        parameters=params,
+        enable_cross_partition_query=True
+    ))
+    for event in events:
+        event['distance']=event_distance(event['location']['geo_tag']['latitude'],event['location']['geo_tag']['longitude'],coord[0],coord[1])
+    
+    total_count = len(events)
+    items_per_page = 15
+    start_index = page * items_per_page
+    end_index = start_index + items_per_page
+    paginated_events = events[start_index:end_index]
+        
+    return {
+        "cnt": total_count,
+        "results": paginated_events
+    }
+
+async def search_events_by_creator_past(
+    creator_id: CreatorId,
+    coord:List[float],
+    event_container,page
+):
+    current_datetime_iso = datetime.utcnow().isoformat()
+
+    query = """
+    SELECT * FROM eventcontainer e 
+    WHERE e.creator_id = @creator_id
+    AND e.start_date > @current_datetime
+    """
+
+    params = [
+        {"name": "@creator_id", "value": creator_id.creator},
+        {"name": "@current_datetime", "value": current_datetime_iso}
+    ]
+
+    events = list(event_container.query_items(
+        query=query,
+        parameters=params,
+        enable_cross_partition_query=True
+    ))
+    for event in events:
+        event['distance']=event_distance(event['location']['geo_tag']['latitude'],event['location']['geo_tag']['longitude'],coord[0],coord[1])
+    
+    total_count = len(events)
+    items_per_page = 15
+    start_index = page * items_per_page
+    end_index = start_index + items_per_page
+    paginated_events = events[start_index:end_index]
+        
+    return {
+        "cnt": total_count,
+        "results": paginated_events
+    }
+
+async def search_events_by_creator_future(
+    creator_id: CreatorId,
+    coord:List[float],
+    event_container,page
+):
+    current_datetime_iso = datetime.utcnow().isoformat()
+
+    query = """
+    SELECT * FROM eventcontainer e 
+    WHERE e.creator_id = @creator_id
+    AND e.start_date <= @current_datetime
+    """
+
+    params = [
+        {"name": "@creator_id", "value": creator_id.creator},
+        {"name": "@current_datetime", "value": current_datetime_iso}
     ]
 
     events = list(event_container.query_items(

@@ -53,4 +53,6 @@ Dockerfile
 # Other files
 *.sqlite3
 *.db
+
+div.txt
 *.pdf
