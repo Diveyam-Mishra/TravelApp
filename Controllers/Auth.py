@@ -20,7 +20,7 @@ from Models.Files import Carousel_image
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
-def get_user(db: Session, user_id: int):
+def get_user(db: Session, user_id: str):
     return db.query(User).filter(User.id == user_id).first()
 
 
@@ -42,6 +42,7 @@ def get_current_user(token: str=Depends(oauth2_scheme), db: Session=Depends(get_
         # Decode the token and verify its signature and expiration
         payload = jwt.decode(token, JWT_SECRET, algorithms=[ALGORITHM])
         user_id = payload.get("user_id")
+        # print(user_id)
         if user_id is None:
             raise HTTPException(status_code=401, detail="Invalid token")
         

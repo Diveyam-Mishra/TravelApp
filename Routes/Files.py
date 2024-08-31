@@ -48,44 +48,44 @@ async def fetch_avatar(
     return await get_avatar(current_user.id, db)
 
 
-@router.post("/event/{eventId}/files/upload/",dependencies=[Depends(JWTBearer())],
-response_model=FileUploadResponse)
-async def upload_files(
-    eventId: str,
-    files: List[UploadFile] = File(...),
-    event_name: Optional[str] = Form(None),
-    event_description: Optional[str] = Form(None),
-    event_type: Optional[List[str]] = Form(None),
-    start_date_and_time: Optional[DateTimeDetails] = Form(None),
-    end_date_and_time: Optional[DateTimeDetails] = Form(None),
-    age_group: Optional[str] = Form(None),
-    family_friendly: Optional[bool] = Form(None),
-    price_fees: Optional[PriceDetails] = Form(None),
-    capacity: Optional[int] = Form(None),
-    host_information: Optional[HostDetails] = Form(None),
-    location: Optional[Location] = Form(None),
-    container=Depends(get_container),
-    blob_client=Depends(get_blob_service_client),
-    file_container=Depends(get_file_container),
-    current_user: User = Depends(get_current_user)
-):
-    if current_user is None:
-        raise HTTPException(status_code=401, detail="Unauthorized")
-    update_info=EventDetailsupdate(
-    event_name=event_name,
-    event_description=event_description,
-    event_type=event_type,
-    start_date_and_time=start_date_and_time,
-    end_date_and_time=end_date_and_time,
-    age_group=age_group,
-    family_friendly=family_friendly,
-    price_fees=price_fees,
-    capacity=capacity,
-    host_information=host_information,
-    location=location
-)
+# @router.post("/event/{eventId}/files/upload/",dependencies=[Depends(JWTBearer())],
+# response_model=FileUploadResponse)
+# async def upload_files(
+#     eventId: str,
+#     files: List[UploadFile] = File(...),
+#     event_name: Optional[str] = Form(None),
+#     event_description: Optional[str] = Form(None),
+#     event_type: Optional[List[str]] = Form(None),
+#     start_date_and_time: Optional[str] = Form(None),
+#     end_date_and_time: Optional[str] = Form(None),
+#     age_group: Optional[str] = Form(None),
+#     family_friendly: Optional[bool] = Form(None),
+#     price_fees: Optional[PriceDetails] = Form(None),
+#     capacity: Optional[int] = Form(None),
+#     host_information: Optional[HostDetails] = Form(None),
+#     location: Optional[Location] = Form(None),
+#     container=Depends(get_container),
+#     blob_client=Depends(get_blob_service_client),
+#     file_container=Depends(get_file_container),
+#     current_user: User = Depends(get_current_user)
+# ):
+#     if current_user is None:
+#         raise HTTPException(status_code=401, detail="Unauthorized")
+#     update_info=EventDetailsupdate(
+#     event_name=event_name,
+#     event_description=event_description,
+#     event_type=event_type,
+#     start_date_and_time=start_date_and_time,
+#     end_date_and_time=end_date_and_time,
+#     age_group=age_group,
+#     family_friendly=family_friendly,
+#     price_fees=price_fees,
+#     capacity=capacity,
+#     host_information=host_information,
+#     location=location
+# )
     
-    return await upload_event_files(eventId, files,update_info, current_user, container, blob_client, file_container)
+#     return await upload_event_files(eventId, files,update_info, current_user, container, blob_client, file_container)
 
 @router.get("/event/{eventId}/files/",dependencies=[Depends(JWTBearer())])
 async def get_event_files(
@@ -95,7 +95,7 @@ async def get_event_files(
 ):
     if current_user is None:
         raise HTTPException(status_code=401, detail="Unauthorized")
-    
+    # print(current_user)
     return await fetch_event_files(eventId, container)
 
 

@@ -41,6 +41,8 @@ def get_user_details(current_user: User=Depends(get_current_user)):
         "is_admin": current_user.is_admin,
         "works_at": current_user.works_at,
         "contact_no": current_user.contact_no,
+        "dob": current_user.dob,
+        "gender":current_user.gender,
         "created_at": current_user.created_at
     }
     return user_data
@@ -55,6 +57,8 @@ async def update_user_details(userId:str, req:UserUpdate, db: Session=Depends(ge
         raise HTTPException(status_code=401, detail="User is not authenticated")
     resp = await update_user(req, db, userId, current_user, user_specific_container)
     return resp
+
+    
 @router.post("/auth/send-otp/", response_model=SuccessResponse)
 def register_user_endpoint(req: EmailRequest, db: Session=Depends(get_db)):
     return register_user(db, req.email, req.username)
@@ -73,6 +77,7 @@ def login_user_otp(login_data: UserLogin, db: Session=Depends(get_db)):
 @router.post("/auth/verify-login-otp/", response_model=SuccessResponse)
 def login_verify_otp(login_data: UserLoginVerify, db: Session=Depends(get_db)):
     return login_verify(login_data, db)
+
 @router.post("/auth/get_user_info/",dependencies=[Depends(JWTBearer())])
 def get_username_info(username: UserName,db: Session=Depends(get_db), current_user: User = Depends(get_current_user)):
     return look_up_username(username,db,current_user)

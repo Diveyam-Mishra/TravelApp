@@ -129,7 +129,7 @@ async def bookEventForUser(eventId: str, userId: str, bookingContainer, eventCon
         return SuccessResponse(message="User has already booked the event", success=False)
     
     # Query the booking container for the event
-    booking_event_query = "SELECT * FROM c WHERE c.event_id = @eventId"
+    booking_event_query = "SELECT * FROM c WHERE c.id = @eventId"
     params = [{"name": "@eventId", "value": eventId}]
 
     bookingLists = list(bookingContainer.query_items(
@@ -156,11 +156,14 @@ async def bookEventForUser(eventId: str, userId: str, bookingContainer, eventCon
     # Replace the existing item in the database with the updated one
     bookingContainer.replace_item(item=booking_lists['id'], body=booking_lists)
     query = """
-    SELECT * FROM eventcontainer e WHERE e.event_id = @id
+    SELECT * FROM eventcontainer e WHERE e.id = @id
     """
     params = [{"name": "@id", "value": eventId}]
     items = list(eventContainer.query_items(query=query, parameters=params, enable_cross_partition_query=True))
     
+    if not items:
+        raise HTTPException(status_code=404, detail="Event record not found")
+        
     existing_event = items[0]
     
     remaining_capacity = existing_event.get("remaining_capacity", 0)

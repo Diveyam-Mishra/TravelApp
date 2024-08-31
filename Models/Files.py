@@ -9,7 +9,7 @@ class Avatar(Base):
     filename = Column(String, nullable=True)
     fileurl = Column(String, nullable=True) 
     filetype = Column(String, nullable=True)
-    userID = Column(Integer, unique=True, nullable=False)
+    userID = Column(String(255), unique=True, nullable=False)
     created_at = Column(DateTime, server_default=func.now())
 
 class Carousel_image(Base):
