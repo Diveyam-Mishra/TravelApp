@@ -26,8 +26,8 @@ async def payment_redirect(
         return SuccessResponse(message="Payment failed", success=False)
 
     newTransactionDetails=PaymentInformation(
-        id=decoded_json["data"].get("transactionId"),
-        transactionId=decoded_json["data"].get("transactionId"),
+        id=decoded_json["data"].get("merchantTransactionId"),
+        transactionId=decoded_json["data"].get("merchantTransactionId"),
         data=decoded_json["data"]
     )
 

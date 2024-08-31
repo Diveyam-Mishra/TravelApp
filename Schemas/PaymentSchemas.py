@@ -71,7 +71,7 @@ class PaymentLists(BaseModel):
 
     def add_booking_by_user_id(self, userId: str, booking_details: PaymentInformation):
         # Find the user booking by userId
-        print('reached')
+        # print('reached')
         user_booking = next((user for user in self.booked_users if user.user_id == userId), None)
         
         if user_booking:

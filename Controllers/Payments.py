@@ -217,17 +217,17 @@ async def bookEventForUser(
         del transaction_dict["data"]["merchantId"]
         del transaction_dict["data"]["merchantTransactionId"]
 
-        print("ok")
+        # print("ok")
         # Update booking list with user details
         booking_list_item.add_booking_by_user_id(userId, PaymentInformation(**transaction_dict))
 
-        print('ok2')
+        # print('ok2')
         print(booking_list_item.id)
         bookingContainer.replace_item(item=booking_list_item.id, body=booking_list_item.to_dict())
-        print('ok3')
+        # print('ok3')
         # Add booking data in user-specific container
         await addBookingDataInUserSpecific(userId, eventId, eventContainer, transaction, userSpecificContainer)
-        print('ok4')
+        # print('ok4')
         return SuccessResponse(message="User booked the event", success=True)
     
     except Exception as e:
