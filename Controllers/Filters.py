@@ -215,55 +215,27 @@ async def search_events_by_creator(
     }
 
 async def search_events_by_creator_past(
+    time:str,
     creator_id: CreatorId,
     coord:List[float],
     event_container,page
 ):
     current_datetime_iso = datetime.utcnow().isoformat()
 
-    query = """
-    SELECT * FROM eventcontainer e 
-    WHERE e.creator_id = @creator_id
-    AND e.start_date > @current_datetime
-    """
-
-    params = [
-        {"name": "@creator_id", "value": creator_id.creator},
-        {"name": "@current_datetime", "value": current_datetime_iso}
-    ]
-
-    events = list(event_container.query_items(
-        query=query,
-        parameters=params,
-        enable_cross_partition_query=True
-    ))
-    for event in events:
-        event['distance']=event_distance(event['location']['geo_tag']['latitude'],event['location']['geo_tag']['longitude'],coord[0],coord[1])
+    time=time.lower()
     
-    total_count = len(events)
-    items_per_page = 15
-    start_index = page * items_per_page
-    end_index = start_index + items_per_page
-    paginated_events = events[start_index:end_index]
-        
-    return {
-        "cnt": total_count,
-        "results": paginated_events
-    }
-
-async def search_events_by_creator_future(
-    creator_id: CreatorId,
-    coord:List[float],
-    event_container,page
-):
-    current_datetime_iso = datetime.utcnow().isoformat()
-
-    query = """
-    SELECT * FROM eventcontainer e 
-    WHERE e.creator_id = @creator_id
-    AND e.start_date <= @current_datetime
-    """
-
+    if time!="future":
+        query = """
+        SELECT * FROM eventcontainer e 
+        WHERE e.creator_id = @creator_id
+        AND e.start_date > @current_datetime
+        """
+    else:
+        query = """
+        SELECT * FROM eventcontainer e 
+        WHERE e.creator_id = @creator_id
+        AND e.start_date <= @current_datetime
+        """
     params = [
         {"name": "@creator_id", "value": creator_id.creator},
         {"name": "@current_datetime", "value": current_datetime_iso}

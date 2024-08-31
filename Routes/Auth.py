@@ -25,9 +25,9 @@ def add_user(user: UserCreate, db: Session=Depends(get_db)):
     return db_user
 
 
-@router.post("/auth/delete_user/", dependencies=[Depends(JWTBearer())],response_model=SuccessResponse)
-def delete_user_endpoint(delete_data: DeleteUserAfterCheckingPass, current_user: User=Depends(get_current_user), db: Session=Depends(get_db)):
-    return delete_user(delete_data, current_user, db)
+@router.delete("/auth/delete_user/", dependencies=[Depends(JWTBearer())],response_model=SuccessResponse)
+def delete_user_endpoint( current_user: User=Depends(get_current_user), db: Session=Depends(get_db)):
+    return delete_user(current_user, db)
 
 
 @router.get("/auth/get_user/",dependencies=[Depends(JWTBearer())])

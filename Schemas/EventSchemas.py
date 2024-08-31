@@ -155,9 +155,9 @@ class SearchEvent(BaseModel):
 
 
 class ImageDetails(BaseModel):
-    file_name: Optional[str]
-    file_url: Optional[str]  # This will be base64 encoded data
-    file_type: Optional[str]
+    fileName: Optional[str]
+    fileUrl: Optional[str]  # This will be base64 encoded data
+    fileType: Optional[str]
 
 
 class SearchEventResult(BaseModel):
