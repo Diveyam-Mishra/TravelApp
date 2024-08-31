@@ -3,6 +3,7 @@ from Schemas.EventSchemas import *
 import random
 import math
 import asyncio
+from fastapi.exceptions import HTTPException
 
 def event_distance(lat1, lon1, lat2, lon2):
     lat1, lon1, lat2, lon2 = map(math.radians, [lat1, lon1, lat2, lon2])
@@ -25,7 +26,15 @@ async def get_event_of_single_category(category: str, event_container, file_cont
     events = []
     event_ids = []
 
-    for event in event_container.query_items(query=query, enable_cross_partition_query=True):
+    items = event_container.query_items(query=query, enable_cross_partition_query=True)
+
+    if not items:
+        raise HTTPException(status_code=400, detail="Events not found")
+
+    print(items)
+
+
+    for event in items:
         events.append(event)
         event_ids.append(event['id'])
 
@@ -37,6 +46,8 @@ async def get_event_of_single_category(category: str, event_container, file_cont
         image_query = f"SELECT TOP 1 c.fileName1, c.fileUrl1, c.fileType1 FROM c WHERE c.id = '{event_id}'"
         image_results = list(file_container.query_items(query=image_query, enable_cross_partition_query=True))
         return image_results[0] if image_results else None
+    
+    # print(events)
 
     image_futures = [fetch_image(event_id) for event_id in event_ids]
     images = await asyncio.gather(*image_futures)

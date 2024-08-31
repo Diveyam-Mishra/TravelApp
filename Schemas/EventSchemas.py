@@ -100,6 +100,8 @@ class EventDetails(BaseModel):
 class SuccessResponse(BaseModel):
     message: str
     success: bool
+    class Config:
+        extra = 'allow'
 
 
 class EventDetailsupdate(BaseModel):
@@ -155,9 +157,12 @@ class SearchEvent(BaseModel):
 
 
 class ImageDetails(BaseModel):
-    fileName: Optional[str]
-    fileUrl: Optional[str]  # This will be base64 encoded data
-    fileType: Optional[str]
+    file_name: Optional[str] = None
+    file_url: Optional[str] = None  # This will be base64 encoded data
+    file_type: Optional[str] = None
+
+    class Config:
+        extra = 'allow'
 
 
 class SearchEventResult(BaseModel):

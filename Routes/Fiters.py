@@ -82,7 +82,7 @@ async def filter_events_v1(
     }
 
 
-@router.post("/events/filtered/category/", response_model=SearchEventResultWithCnt)
+@router.post("/events/filtered/category/")
 async def filter_events(
     filters: List[str],
     coord: List[float],
@@ -102,7 +102,7 @@ async def filter_events(
     # Format the results
     result = [
         {
-            "id": event.get("event_id"),
+            "id": event.get("id"),
             "name": event.get("event_name"),
             "description": event.get("event_description"),
             "type": event.get("event_type"),
