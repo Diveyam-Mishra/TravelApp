@@ -1,7 +1,7 @@
 from Controllers.Events import get_event_by_id
 from fastapi import HTTPException
 from Schemas.PaymentSchemas import PaymentInformation, PaymentLists, \
-    AttendedInformation, ticketData
+    AttendedInformation, ticketData, UserBookings
 from Schemas.EventSchemas import SuccessResponse
 from Schemas.userSpecific import EventData, UserSpecific
 from uuid import uuid4
@@ -20,6 +20,7 @@ from typing import Dict
 from azure.core.exceptions import HttpResponseError
 import base64
 import hashlib
+from Helpers.calculateAge import calculate_age
 
 async def getUserBookingStatus(eventId: str, userId: str, bookingContainer, eventContainer):
     event_query = "SELECT * FROM c WHERE c.id = @eventId"
@@ -58,25 +59,58 @@ async def getUserBookingStatus(eventId: str, userId: str, bookingContainer, even
         # Return that the user has not booked the event yet
         return SuccessResponse(message="User has not booked the event", success=False)
     
-    booking_lists = bookingLists[0]
+    booking_lists_data = bookingLists[0]  # Raw data from Cosmos DB
 
-    # Convert the booking_lists to PaymentLists model
+    # Convert the raw data to PaymentLists model
     try:
-        booked_users = [PaymentInformation(**user) for user in booking_lists.get("booked_users", [])]
+        # Convert raw data to PaymentLists model
+        booking_lists = PaymentLists(**booking_lists_data)
+
+        # Convert booked_users to a list of UserBookings models
+        booked_users = []
+        for user_booking_data in booking_lists.booked_users:
+            # Convert user_booking_data to UserBookings instance
+            user_bookings = UserBookings(**user_booking_data.to_dict())
+
+            # print(user_bookings)
+
+            # Convert each booking in user_bookings to PaymentInformation instance
+            try:
+                payment_info_list = [PaymentInformation(**booking.to_dict()) for booking in user_bookings.bookings]
+                user_bookings.bookings = payment_info_list
+            except TypeError as e:
+                raise HTTPException(status_code=500, detail=f"Error parsing bookings for user {user_bookings.user_id}: {str(e)}")
+
+            booked_users.append(user_bookings)
+
+        booking_lists.booked_users = booked_users
+
     except TypeError as e:
-        raise HTTPException(status_code=500, detail=f"Error parsing booked users: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error parsing booking lists: {str(e)}")
 
     # Debug: Print out booked_users for inspection
     # print(f"Booked Users: {booked_users}")
     # print(f"User ID to Check: {userId}")
 
     # Check if the userId exists in the booked_users list
-    user_booked = any(user.user_id == str(userId) for user in booked_users)
-
-    if not user_booked:
+    user_booking = next((user for user in booked_users if user.user_id == str(userId)), None)
+    # print(user_booking.bookings.to_dict())
+    if not user_booking:
         return SuccessResponse(message="User has not booked the event", success=False)
     else:
-        return SuccessResponse(message="User has booked the event", success=True)
+        # Extract booking details
+        # booking_details = {
+        #     "booking_id": user_booking.booking_id,
+        #     "event_id": user_booking.event_id,
+        #     "user_id": user_booking.user_id,
+        #     "booking_date": user_booking.booking_date,
+        #     # Add other relevant details
+        # }
+        return SuccessResponse(
+            message="User has booked the event",
+            success=True,
+            data=user_booking.bookings
+        )
 
 
 async def addBookingDataInUserSpecific(
@@ -104,9 +138,9 @@ async def addBookingDataInUserSpecific(
     event_time = event[0]['start_date_and_time']  # Assuming you want to use the first event found
     newUserBookingData = EventData(
         event_id=eventId,
-        payment_id=paymentDetails.payment_id,
-        paid_amount=paymentDetails.paid_amount,
-        payment_date=paymentDetails.payment_date,
+        payment_id=paymentDetails.transactionId,
+        paid_amount=paymentDetails.data['amount'],
+        payment_date=paymentDetails.paymentDate,
         event_date=event_time
     )
 
@@ -121,66 +155,88 @@ async def addBookingDataInUserSpecific(
     return SuccessResponse(message="Booking data added", success=True)
 
 
-async def bookEventForUser(eventId: str, userId: str, bookingContainer, eventContainer, bookingDetails: PaymentInformation, userSpecificContainer):
-    # Check if the user has already booked the event
-    status_response = await getUserBookingStatus(eventId, userId, bookingContainer, eventContainer)
-    
-    if status_response.success:
-        return SuccessResponse(message="User has already booked the event", success=False)
-    
-    # Query the booking container for the event
-    booking_event_query = "SELECT * FROM c WHERE c.id = @eventId"
-    params = [{"name": "@eventId", "value": eventId}]
-
-    bookingLists = list(bookingContainer.query_items(
-        query=booking_event_query,
-        parameters=params,
-        enable_cross_partition_query=True
-    ))
-
-    if not bookingLists:
-        raise HTTPException(status_code=404, detail="Booking record not found")
-
-    booking_lists = bookingLists[0]
-
-    # Convert bookingDetails to dictionary
-    payment_info_dict = bookingDetails.to_dict()
-    
-    # Add new payment information to the booked_users list
-    booked_users = booking_lists.get("booked_users", [])
-    booked_users.append(payment_info_dict)
-    
-    # Update the booking list with the new booked_users
-    booking_lists["booked_users"] = booked_users
-    
-    # Replace the existing item in the database with the updated one
-    bookingContainer.replace_item(item=booking_lists['id'], body=booking_lists)
-    query = """
-    SELECT * FROM eventcontainer e WHERE e.id = @id
-    """
-    params = [{"name": "@id", "value": eventId}]
-    items = list(eventContainer.query_items(query=query, parameters=params, enable_cross_partition_query=True))
-    
-    if not items:
-        raise HTTPException(status_code=404, detail="Event record not found")
-        
-    existing_event = items[0]
-    
-    remaining_capacity = existing_event.get("remaining_capacity", 0)
-    
-    if remaining_capacity <= 0:
-        raise HTTPException(status_code=400, detail="No remaining capacity")
-
-    existing_event["remaining_capacity"] = remaining_capacity - 1
-
-    eventContainer.replace_item(item=existing_event['id'], body=existing_event)
-
+async def bookEventForUser(
+    eventId: str,
+    userId: str,
+    bookingContainer,
+    eventContainer,
+    transactionId: str,
+    userSpecificContainer,
+    transactionContainer,
+    members: int
+):
     try:
-        await addBookingDataInUserSpecific(userId, eventId, eventContainer, bookingDetails, userSpecificContainer)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error adding booking data to user specific container: {str(e)}")
-    return SuccessResponse(message="User successfully booked the event", success=True)
+        # Check if the event exists
+        event_query = "SELECT * FROM c WHERE c.id = @eventId"
+        params = [{"name": "@eventId", "value": eventId}]
+        eventList = list(eventContainer.query_items(query=event_query, parameters=params, enable_cross_partition_query=True))
 
+        if not eventList:
+            return SuccessResponse(message="Event does not exist", success=False)
+        
+        # Check if the transaction exists
+        transaction_query = "SELECT * FROM c WHERE c.transactionId = @transactionId"
+        params = [{"name": "@transactionId", "value": transactionId}]
+        transactionsList = list(transactionContainer.query_items(query=transaction_query, parameters=params, enable_cross_partition_query=True))
+
+        if not transactionsList:
+            return SuccessResponse(message="Transaction does not exist", success=False)
+        
+        transaction = PaymentInformation(**transactionsList[0])
+        transaction_dict = transaction.to_dict()
+
+        if transaction_dict.get('added_in_event_booking', False):
+            return SuccessResponse(message="User has already booked the event", success=False)
+
+        # Check booking list for the event
+        booking_event_query = "SELECT * FROM c WHERE c.id = @eventId"
+        params = [{"name": "@eventId", "value": eventId}]
+        bookingLists = list(bookingContainer.query_items(query=booking_event_query, parameters=params, enable_cross_partition_query=True))
+
+        if not bookingLists:
+            booking_list_item = PaymentLists(
+                id=eventId,
+                event_id=eventId,
+                booked_users=[],
+                attended_users=[]
+            )
+            # Store the booking_lists object in the container
+            bookingContainer.create_item(booking_list_item.to_dict())
+        else:
+            booking_list_item = PaymentLists(**bookingLists[0])
+
+        # Update booking list
+        booking_list_item.add_new_user(userId)
+        transaction_dict['members'] = members
+        transaction_dict['added_in_event_booking'] = True
+
+        # Replace transaction item
+        transactionContainer.replace_item(item=transaction_dict['id'], body=transaction_dict)
+
+        # Clean up transaction data
+        del transaction_dict["data"]["merchantId"]
+        del transaction_dict["data"]["merchantTransactionId"]
+
+        print("ok")
+        # Update booking list with user details
+        booking_list_item.add_booking_by_user_id(userId, PaymentInformation(**transaction_dict))
+
+        print('ok2')
+        print(booking_list_item.id)
+        bookingContainer.replace_item(item=booking_list_item.id, body=booking_list_item.to_dict())
+        print('ok3')
+        # Add booking data in user-specific container
+        await addBookingDataInUserSpecific(userId, eventId, eventContainer, transaction, userSpecificContainer)
+        print('ok4')
+        return SuccessResponse(message="User booked the event", success=True)
+    
+    except Exception as e:
+        # Log the exception (you can use logging or any other method)
+        print(f"An error occurred: {str(e)}")
+
+        # Return a generic error response
+        return SuccessResponse(message="An error occurred while booking the event", success=False)
+    
 
 async def addAttendee(eventId: str, userId: str, bookingContainer, eventContainer):
     # Check if the user has booked the event
@@ -253,10 +309,19 @@ async def getBookedUsers(eventId: str, bookingContainer, current_user, db):
     user_ids = [user["user_id"] for user in booked_users]
 
     # Query the User model to get usernames
-    usernames = db.query(User.username).filter(User.id.in_(user_ids)).all()
+    users = db.query(User).filter(User.id.in_(user_ids)).all()
 
     # Return a list of usernames
-    return {"usernames": [username for (username,) in usernames]}
+    return {
+        "users": [
+            {
+                "username": user.username,
+                "gender": user.gender,
+                "age": calculate_age(user.dob) # Convert date to ISO format if not None
+            }
+            for user in users
+        ]
+    }
 
 
 async def getAttendedUsers(eventId: str, bookingContainer, current_user, db):
