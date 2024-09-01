@@ -16,34 +16,34 @@ import os
 router = APIRouter()
 
 
-@router.get("/bookingStatus/{eventId}+{userID}/", dependencies=[Depends(JWTBearer())], response_model=SuccessResponse)
-async def checkUserBookingStatus(eventId: str, userID: str, bookingContainer=Depends(get_booking_container),
+@router.get("/bookingStatus/{eventId}/", dependencies=[Depends(JWTBearer())], response_model=SuccessResponse)
+async def checkUserBookingStatus(eventId: str, bookingContainer=Depends(get_booking_container),
 eventContainer=Depends(get_container), current_user:User=Depends(get_current_user)):
     if current_user is None:
         raise HTTPException(status_code=401, detail="Unauthorized")
 
-    return await getUserBookingStatus(eventId, userID, bookingContainer, eventContainer)
+    return await getUserBookingStatus(eventId, current_user.id, bookingContainer, eventContainer)
 
 
-@router.post("/bookEvent/{eventId}+{userID}/", dependencies=[Depends(JWTBearer())], response_model=SuccessResponse)
-async def newBooking(eventId: str, userID: str, merchantTransactionId: str=Body(...), members:int=Body(...), bookingContainer=Depends(get_booking_container), eventContainer=Depends(get_container), current_user: User=Depends(get_current_user), userSpecificContainer=Depends(get_user_specific_container), transactionContainer=Depends(get_successful_transaction_container)):
+@router.post("/bookEvent/{eventId}/", dependencies=[Depends(JWTBearer())], response_model=SuccessResponse)
+async def newBooking(eventId: str, merchantTransactionId: str=Body(...), members:int=Body(...), bookingContainer=Depends(get_booking_container), eventContainer=Depends(get_container), current_user: User=Depends(get_current_user), userSpecificContainer=Depends(get_user_specific_container), transactionContainer=Depends(get_successful_transaction_container)):
 
     if current_user is None:
         raise HTTPException(status_code=401, detail="Unauthorized")
 
-    if userID != str(current_user.id):
-        raise HTTPException(status_code=401, detail="You are not authorized to book an event for another user")
+    # if current_user.id != str(current_user.id):
+    #     raise HTTPException(status_code=401, detail="You are not authorized to book an event for another user")
 
-    return await bookEventForUser(eventId, userID, bookingContainer, eventContainer, merchantTransactionId, userSpecificContainer, transactionContainer, members)
+    return await bookEventForUser(eventId, current_user.id, bookingContainer, eventContainer, merchantTransactionId, userSpecificContainer, transactionContainer, members)
 
 
-@router.put("/addAttendee/{eventId}+{userId}/", dependencies=[Depends(JWTBearer())], response_model=SuccessResponse, tags=["Will not work"])
-async def addAttendeeToEvent(eventId: str, userId: str, bookingContainer=Depends(get_booking_container),
+@router.put("/addAttendee/{eventId}/", dependencies=[Depends(JWTBearer())], response_model=SuccessResponse, tags=["Will not work"])
+async def addAttendeeToEvent(eventId: str, bookingContainer=Depends(get_booking_container),
                               eventContainer=Depends(get_container), current_user: User=Depends(get_current_user)):
     if current_user is None:
         raise HTTPException(status_code=401, detail="Unauthorized")
 
-    response = await addAttendee(eventId, userId, bookingContainer, eventContainer)
+    response = await addAttendee(eventId, current_user.id, bookingContainer, eventContainer)
 
     return response
 
@@ -101,7 +101,7 @@ async def generate_ticket(ticket_data: ticketData, ticketNo:int=0, booking_conta
     pdf_path = "ticket.pdf"
     ticket_data_dict = ticket_data.dict()
 
-    status_response = await getUserBookingStatus(ticket_data_dict['eventId'], ticket_data_dict['userId'], booking_container, event_container)
+    status_response = await getUserBookingStatus(ticket_data_dict['eventId'], current_user.id, booking_container, event_container)
     
     if not status_response.success: 
         return SuccessResponse(message="User has not booked the event", success=False) 

@@ -91,19 +91,19 @@ class PaymentLists(BaseModel):
         
 
 class ticketData(BaseModel):
-    email: Optional[str] = None
-    UserName: Optional[str] = None
-    event_name: Optional[str] = None
+    email_O: Optional[str] = None
+    UserName_O: Optional[str] = None
+    event_name_O: Optional[str] = None
     eventId:str
-    userId:str
-    event_date: Optional[str] = None
-    event_time: Optional[str] = None
-    event_venue: Optional[str] = None
-    ticketId: Optional[str] = None
-    organizer: Optional[str] = None
-    paid_amount: int
-    payment_id: str
-    members_details: int
+    userId_O:Optional[str] = None
+    event_date_O: Optional[str] = None
+    event_time_O: Optional[str] = None
+    event_venue_O: Optional[str] = None
+    ticketId_O: Optional[str] = None
+    organizer_O: Optional[str] = None
+    paid_amount_O: Optional[int] = None
+    payment_id_O: Optional[str] = None
+    members_details_O: Optional[str] = None
     
 
 
