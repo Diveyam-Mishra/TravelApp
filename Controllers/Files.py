@@ -13,8 +13,52 @@ from datetime import datetime
 MAX_FILE_SIZE_MB = 5  # Maximum file size in MB
 MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024  # Convert MB to bytes
 
-VALID_IMAGE_MIME_TYPES = {"image/jpeg", "image/png", "image/gif"}  # Add any other valid image MIME types here
-VALID_IMAGE_EXTENSIONS = {"jpg", "jpeg", "png", "gif"}  # Add any other valid image extensions here
+VALID_IMAGE_MIME_TYPES = {
+    "image/jpeg",  # JPG, JPEG
+    "image/png",   # PNG
+    "image/gif",   # GIF
+    "image/bmp",   # BMP
+    "image/webp",  # WEBP
+    "image/tiff",  # TIFF
+    "image/x-icon",  # ICO
+    "image/svg+xml",  # SVG
+    "image/heif",  # HEIF
+    "image/heic",  # HEIC
+    "image/avif",  # AVIF
+    "image/x-cmu-raster",  # RAS
+    "image/x-portable-anymap",  # PNM
+    "image/x-portable-bitmap",  # PBM
+    "image/x-portable-graymap",  # PGM
+    "image/x-portable-pixmap",  # PPM
+    "image/x-xbitmap",  # XBM
+    "image/x-xpixmap",  # XPM
+    "image/x-xwindowdump",  # XWD
+    "image/vnd.adobe.photoshop",  # PSD
+    "image/vnd.microsoft.icon",  # ICO (alternative MIME type)
+}
+
+VALID_IMAGE_EXTENSIONS = {
+    "jpg", "jpeg",  # JPEG
+    "png",  # PNG
+    "gif",  # GIF
+    "bmp",  # BMP
+    "webp",  # WEBP
+    "tif", "tiff",  # TIFF
+    "ico",  # ICO
+    "svg",  # SVG
+    "heif",  # HEIF
+    "heic",  # HEIC
+    "avif",  # AVIF
+    "ras",  # RAS
+    "pnm",  # PNM
+    "pbm",  # PBM
+    "pgm",  # PGM
+    "ppm",  # PPM
+    "xbm",  # XBM
+    "xpm",  # XPM
+    "xwd",  # XWD
+    "psd",  # Photoshop
+}
 
 
 async def avatar_upload(
