@@ -1,8 +1,12 @@
 from Schemas.UserSchemas import *
 from Schemas.EventSchemas import *
+from Controllers.Auth import get_current_user
+from Models.user_models import User
+from Controllers.Payments import getBookedUsers
 import random
 import math
 import asyncio
+from fastapi import Depends
 from fastapi.exceptions import HTTPException
 
 def event_distance(lat1, lon1, lat2, lon2):
@@ -193,17 +197,18 @@ async def search_events_by_name(
     }
 
 async def search_events_by_creator(
-    creator_id: CreatorId,
     coord:List[float],
-    event_container,page
+    event_container,page,
+    creator_id: User = Depends(get_current_user)
 ):
+    creator_id=User.id
     query = """
     SELECT * FROM eventcontainer e 
     WHERE e.creator_id = @creator_id
     """
 
     params = [
-        {"name": "@creator_id", "value": creator_id.creator}
+        {"name": "@creator_id", "value": creator_id}
     ]
 
     events = list(event_container.query_items(
@@ -227,28 +232,29 @@ async def search_events_by_creator(
 
 async def search_events_by_creator_past(
     time:str,
-    creator_id: CreatorId,
-    coord:List[float],
-    event_container,page
+    db,bookingContainer,
+    event_container,page,
+    current_user: User
+    
 ):
     current_datetime_iso = datetime.utcnow().isoformat()
-
+    CreatorId=current_user.id
     time=time.lower()
     
     if time!="future":
         query = """
         SELECT * FROM eventcontainer e 
-        WHERE e.creator_id = @creator_id
+        WHERE e.creator_id = @current_user
         AND e.start_date > @current_datetime
         """
     else:
         query = """
         SELECT * FROM eventcontainer e 
-        WHERE e.creator_id = @creator_id
+        WHERE e.creator_id = @current_user
         AND e.start_date <= @current_datetime
         """
     params = [
-        {"name": "@creator_id", "value": creator_id.creator},
+        {"name": "@current_user", "value": "dummy"},
         {"name": "@current_datetime", "value": current_datetime_iso}
     ]
 
@@ -258,8 +264,13 @@ async def search_events_by_creator_past(
         enable_cross_partition_query=True
     ))
     for event in events:
-        event['distance']=event_distance(event['location']['geo_tag']['latitude'],event['location']['geo_tag']['longitude'],coord[0],coord[1])
-    
+        try:
+            print(0)
+            event["booked users"]=await getBookedUsers(event['id'], bookingContainer, current_user, db)
+            print(event)
+        except Exception as e:
+            pass
+            
     total_count = len(events)
     items_per_page = 15
     start_index = page * items_per_page

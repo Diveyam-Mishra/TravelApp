@@ -173,6 +173,10 @@ class SearchEventResult(BaseModel):
     thumbnail: Optional[ImageDetails] = None
     distance: Optional[str] = None
     location: Optional[Location] = None
+    
+    class Config:
+        extra = 'allow'
+
 
 class SearchEventResultWithCnt(BaseModel):
     cnt: int

@@ -7,6 +7,7 @@ from Schemas.userSpecific import EventData, UserSpecific
 from uuid import uuid4
 from datetime import datetime
 from Models.user_models import User
+from Models.Files import Avatar
 from email.message import EmailMessage
 from pathlib import Path
 from azure.communication.email import EmailClient
@@ -15,6 +16,7 @@ from tempfile import NamedTemporaryFile
 import jinja2
 from config import settings, connectionString
 import os
+from sqlalchemy.orm import joinedload
 from Helpers.QRCode import generate_qr_code
 from typing import Dict
 from azure.core.exceptions import HttpResponseError
@@ -307,19 +309,24 @@ async def getBookedUsers(eventId: str, bookingContainer, current_user, db):
     # Convert booked_users to PaymentInformation models
     booked_users = booking_lists.get("booked_users", [])
     user_ids = [user["user_id"] for user in booked_users]
+    
 
     # Query the User model to get usernames
-    users = db.query(User).filter(User.id.in_(user_ids)).all()
-
+    results = (
+    db.query(User, Avatar.fileurl)
+    .join(Avatar, User.id == Avatar.userID)  # Join condition
+    .filter(User.id.in_(user_ids))  # Filter users based on user_ids list
+    .all())
     # Return a list of usernames
     return {
         "users": [
             {
                 "username": user.username,
                 "gender": user.gender,
-                "age": calculate_age(user.dob) # Convert date to ISO format if not None
+                "age": calculate_age(user.dob) ,# Convert date to ISO format if not None
+                "Avatar": avatar_url  # Corrected to fetch the avatar URL
             }
-            for user in users
+            for user, avatar_url in results  # Destructure the tuple to access user and avatar_url
         ]
     }
 

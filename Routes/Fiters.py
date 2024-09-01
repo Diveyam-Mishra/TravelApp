@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Query
 from Database.Connection import get_container, get_file_container, get_redis, \
-    get_db, user_specific_container, get_user_specific_container
+    get_db, user_specific_container, get_user_specific_container, get_booking_container
 from typing import List
 from Schemas.EventSchemas import*
 from Controllers.Filters import *
@@ -166,7 +166,7 @@ async def search_events_by_name1(
     }
 
 
-@router.post("/events/search_by_creator/", response_model=SearchEventResultWithCnt)
+@router.post("/events/search_by_creator/" ,dependencies=[Depends(JWTBearer())],response_model=SearchEventResultWithCnt)
 async def search_events_by_creator1(
     creator_id: CreatorId,
     coord: List[float],
@@ -183,19 +183,20 @@ async def search_events_by_creator1(
     }
 
 
-@router.post("/events/search_by_creator/{time}", response_model=SearchEventResultWithCnt)
+@router.get("/events/search_by_creator/{time}",dependencies=[Depends(JWTBearer())], response_model=SearchEventResultWithCnt)
 async def search_own_event_time(
     time:str,
-    creator_id: CreatorId,
-    coord: List[float],
+    current_user: User = Depends(get_current_user),
     event_container=Depends(get_container),
+    bookingContainer=Depends(get_booking_container),
+    db=Depends (get_db),
     page: int=0
 
 ):
-    eventsRes = await search_events_by_creator_past(time,creator_id, coord, event_container, page)
+    eventsRes = await search_events_by_creator_past(time, db,bookingContainer,event_container, page,current_user)
     total_count = eventsRes['cnt']
     events = eventsRes['results']
-    result = [{"id": event["id"], "name": event["event_name"], "description": event["event_description"], "type":event.get("event_type"), "thumbnail":event.get("thumbnail"), "distance":str(event["distance"]) + "km"} for event in events]
+    result = [{"id": event["id"], "name": event["event_name"], "description": event["event_description"], "type":event.get("event_type"), "thumbnail":event.get("thumbnail") ,"booked Users":event.get("booked users")} for event in events]
     return {
         "cnt": total_count,
         "results": result
