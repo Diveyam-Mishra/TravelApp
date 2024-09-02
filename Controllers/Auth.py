@@ -245,15 +245,25 @@ def login_verify(login_data: UserLoginVerify, db: Session) -> SuccessResponse:
     
     return SuccessResponse(message="User logged in successfully", token=token, success=True)
 
-
-def look_up_username(username:str, db: Session, current_user: User=Depends(get_current_user)):
+def look_up_username(username: str, db: Session, current_user: User = Depends(get_current_user)):
     if current_user is None:
         raise HTTPException(status_code=400, detail="User Not Found")
-    db_user = db.query(User).filter(User.username == username.username).first()
-    if not db_user:
-            raise HTTPException(status_code=400, detail="User not found")
-    return db_user
 
+    # Query to get user details along with their avatar URL
+    db_user = (
+        db.query(User, Avatar.fileurl)
+        .join(Avatar, User.id == Avatar.userID)  # Join with Avatar table
+        .filter(User.username == username.username)  # Use the username to filter
+        .first()
+    )
+    
+    if not db_user:
+        raise HTTPException(status_code=400, detail="User not found")
+    
+    user_details, avatar_url = db_user  # Unpack the result tuple
+    
+    # You can return both user details and avatar URL here
+    return {"user": user_details, "avatar_url": avatar_url}
 
 async def add_interest_areas_to_user(userId:str, interestAreas:List[str], user_specific_container):
     query = "SELECT * FROM c where c.userId = @userId"
