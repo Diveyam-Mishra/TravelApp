@@ -193,10 +193,10 @@ async def search_own_event_time(
     page: int=0
 
 ):
-    eventsRes = await search_events_by_creator_past(time, db,bookingContainer,event_container, page,current_user)
+    eventsRes = await search_events_by_creator_past_v1(time, db,bookingContainer,event_container, page,current_user)
     total_count = eventsRes['cnt']
     events = eventsRes['results']
-    result = [{"id": event["id"], "name": event["event_name"], "description": event["event_description"], "type":event.get("event_type"), "thumbnail":event.get("thumbnail") ,"booked Users":event.get("booked users")} for event in events]
+    result = [{"id": event["id"], "name": event["event_name"], "description": event["event_description"], "type":event.get("event_type"), "thumbnail":event.get("thumbnail") ,"booked_users":event.get("booked_users"), "location": event.get("location")} for event in events]
     return {
         "cnt": total_count,
         "results": result

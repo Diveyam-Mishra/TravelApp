@@ -8,6 +8,8 @@ import math
 import asyncio
 from fastapi import Depends
 from fastapi.exceptions import HTTPException
+from Models.Files import Avatar
+from Helpers.calculateAge import calculate_age
 
 def event_distance(lat1, lon1, lat2, lon2):
     lat1, lon1, lat2, lon2 = map(math.radians, [lat1, lon1, lat2, lon2])
@@ -265,9 +267,9 @@ async def search_events_by_creator_past(
     ))
     for event in events:
         try:
-            print(0)
+            # print(0)
             event["booked users"]=await getBookedUsers(event['id'], bookingContainer, current_user, db)
-            print(event)
+            # print(event)
         except Exception as e:
             pass
             
@@ -277,6 +279,117 @@ async def search_events_by_creator_past(
     end_index = start_index + items_per_page
     paginated_events = events[start_index:end_index]
         
+    return {
+        "cnt": total_count,
+        "results": paginated_events
+    }
+
+async def search_events_by_creator_past_v1(
+    time: str,
+    db, bookingContainer,
+    event_container, page,
+    current_user: User
+):
+    current_datetime_iso = datetime.utcnow().isoformat()
+    CreatorId = current_user.id
+    time = time.lower()
+
+    if time != "future":
+        query = """
+        SELECT * FROM eventcontainer e 
+        WHERE e.creator_id = @current_user
+        AND e.start_date > @current_datetime
+        """
+    else:
+        query = """
+        SELECT * FROM eventcontainer e 
+        WHERE e.creator_id = @current_user
+        AND e.start_date <= @current_datetime
+        """
+    
+    params = [
+        {"name": "@current_user", "value": CreatorId},
+        {"name": "@current_datetime", "value": current_datetime_iso}
+    ]
+
+    events = list(event_container.query_items(
+        query=query,
+        parameters=params,
+        enable_cross_partition_query=True
+    ))
+
+    event_ids = [event["id"] for event in events]
+    # print(len(event_ids))
+    if event_ids:
+        event_ids_str = ', '.join([f"'{event_id}'" for event_id in event_ids])
+        print(event_ids_str)
+        booked_users_query = f"""
+        SELECT * FROM c WHERE c.event_id IN ({event_ids_str})
+        """
+        params = [{"name": "@event_ids", "value": event_ids_str}]
+
+        bookingLists = list(bookingContainer.query_items(
+            query=booked_users_query,
+            enable_cross_partition_query=True
+        ))
+        # print(len(bookingLists))
+        # Prepare a dictionary to map event_id to booked users
+        bookings_map = {
+            booking["event_id"]: booking.get("booked_users", [])
+            for booking in bookingLists
+        }
+        # print(bookings_map)
+        
+        # for event in events:
+        #     if bookings_map.get(event['id']) is not None:
+        #         print(bookings_map.get(event['id']), "bn")
+        #         for user in bookings_map.get(event['id']):
+        #             print(user["user_id"], "bvs")
+
+        user_ids = set()
+        for booking_users in bookings_map.values():
+            user_ids.update(user["user_id"] for user in booking_users)
+
+        # print(user_ids,'vv')
+
+        if user_ids:
+            results = (
+                db.query(User, Avatar.fileurl)
+                .join(Avatar, User.id == Avatar.userID)
+                .filter(User.id.in_(user_ids))
+                .all()
+            )
+
+            # print(results)
+
+            user_info = {
+                user.id: {
+                    "username": user.username,
+                    "gender": user.gender,
+                    "age": calculate_age(user.dob),
+                    "Avatar": avatar_url
+                }
+                for user, avatar_url in results
+            }
+
+            # print(user_info.get("abb26c0f-9227-4425-935f-fa98514495b3"), 'csc')
+
+            # Attach booked users' info to corresponding events
+            for event in events:
+                booked_users = bookings_map.get(event["id"], [])
+                event["booked_users"] = [
+                    user_info.get(user["user_id"], {})
+                    for user in booked_users
+                ]
+                # if(event["booked_users"]):
+                #     print(event)
+
+    total_count = len(events)
+    items_per_page = 15
+    start_index = page * items_per_page
+    end_index = start_index + items_per_page
+    paginated_events = events[start_index:end_index]
+
     return {
         "cnt": total_count,
         "results": paginated_events
