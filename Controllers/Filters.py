@@ -10,6 +10,7 @@ from fastapi import Depends
 from fastapi.exceptions import HTTPException
 from Models.Files import Avatar
 from Helpers.calculateAge import calculate_age
+from datetime import timedelta
 
 def event_distance(lat1, lon1, lat2, lon2):
     lat1, lon1, lat2, lon2 = map(math.radians, [lat1, lon1, lat2, lon2])
@@ -243,17 +244,17 @@ async def search_events_by_creator_past(
     CreatorId=current_user.id
     time=time.lower()
     
-    if time!="future":
+    if time=="future":
         query = """
         SELECT * FROM eventcontainer e 
         WHERE e.creator_id = @current_user
-        AND e.start_date > @current_datetime
+        AND e.start_date_and_time > @current_datetime
         """
     else:
         query = """
         SELECT * FROM eventcontainer e 
         WHERE e.creator_id = @current_user
-        AND e.start_date <= @current_datetime
+        AND e.start_date_and_time <= @current_datetime
         """
     params = [
         {"name": "@current_user", "value": CreatorId},
@@ -290,26 +291,37 @@ async def search_events_by_creator_past_v1(
     event_container, page,
     current_user: User
 ):
-    current_datetime_iso = datetime.utcnow().isoformat()
+    utc_now = datetime.utcnow()
+
+    # Define the IST timezone offset
+    ist_offset = timedelta(hours=5, minutes=30)
+
+    # Convert UTC time to IST time
+    ist_now = utc_now + ist_offset
+
+    # Get the IST time in ISO format
+    current_datetime_ist_iso = ist_now.isoformat()
+    # print(current_datetime_ist_iso)
     CreatorId = current_user.id
     time = time.lower()
 
-    if time != "future":
+    if time == "future":
         query = """
         SELECT * FROM eventcontainer e 
         WHERE e.creator_id = @current_user
-        AND e.start_date > @current_datetime
+        AND e.start_date_and_time > @current_datetime
         """
     else:
         query = """
         SELECT * FROM eventcontainer e 
         WHERE e.creator_id = @current_user
-        AND e.start_date <= @current_datetime
+        AND e.start_date_and_time <= @current_datetime
         """
     
+    # print(CreatorId)
     params = [
         {"name": "@current_user", "value": CreatorId},
-        {"name": "@current_datetime", "value": current_datetime_iso}
+        {"name": "@current_datetime", "value": current_datetime_ist_iso}
     ]
 
     events = list(event_container.query_items(
@@ -322,7 +334,7 @@ async def search_events_by_creator_past_v1(
     # print(len(event_ids))
     if event_ids:
         event_ids_str = ', '.join([f"'{event_id}'" for event_id in event_ids])
-        print(event_ids_str)
+        # print(event_ids_str)
         booked_users_query = f"""
         SELECT * FROM c WHERE c.event_id IN ({event_ids_str})
         """

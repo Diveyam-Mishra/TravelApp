@@ -9,7 +9,7 @@ from config import JWTBearer
 from operator import itemgetter
 import json
 from Models.user_models import User
-from Controllers.Auth import get_current_user, add_recent_search, oauth2_scheme,\
+from Controllers.Auth import get_current_user, add_recent_search, oauth2_scheme, \
     get_current_user_optional
 from fastapi.exceptions import HTTPException
 from sqlalchemy.orm import Session
@@ -166,7 +166,7 @@ async def search_events_by_name1(
     }
 
 
-@router.post("/events/search_by_creator/" ,dependencies=[Depends(JWTBearer())],response_model=SearchEventResultWithCnt)
+@router.post("/events/search_by_creator/" , dependencies=[Depends(JWTBearer())], response_model=SearchEventResultWithCnt)
 async def search_events_by_creator1(
     creator_id: CreatorId,
     coord: List[float],
@@ -183,20 +183,38 @@ async def search_events_by_creator1(
     }
 
 
-@router.get("/events/search_by_creator/{time}",dependencies=[Depends(JWTBearer())], response_model=SearchEventResultWithCnt)
+@router.get("/events/search_by_creator/{time}", dependencies=[Depends(JWTBearer())], response_model=SearchEventResultWithCnt)
 async def search_own_event_time(
     time:str,
-    current_user: User = Depends(get_current_user),
+    current_user: User=Depends(get_current_user),
     event_container=Depends(get_container),
     bookingContainer=Depends(get_booking_container),
     db=Depends (get_db),
     page: int=0
 
 ):
-    eventsRes = await search_events_by_creator_past_v1(time, db,bookingContainer,event_container, page,current_user)
+    eventsRes = await search_events_by_creator_past_v1(time, db, bookingContainer, event_container, page, current_user)
     total_count = eventsRes['cnt']
     events = eventsRes['results']
-    result = [{"id": event["id"], "name": event["event_name"], "description": event["event_description"], "type":event.get("event_type"), "thumbnail":event.get("thumbnail") ,"booked_users":event.get("booked_users"), "location": event.get("location")} for event in events]
+    result = [
+        {
+            "id": event["id"],
+            "name": event["event_name"],
+            "description": event["event_description"],
+            "type":event.get("event_type"),
+            "thumbnail":event.get("thumbnail") ,
+            "booked_users":event.get("booked_users"),
+            "location": event.get("location"),
+            "start_date_and_time": event["start_date_and_time"],
+            "end_date_and_time": event["end_date_and_time"],
+            "age_group": event["age_group"],
+            "family_friendly":event["family_friendly"],
+            "price_fees": event["price_fees"],
+            "capacity": event["capacity"],
+            "editor_access":event.get("editor_access")
+        } 
+           for event in events
+        ]
     return {
         "cnt": total_count,
         "results": result
