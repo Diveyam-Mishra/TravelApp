@@ -34,18 +34,7 @@ def delete_user_endpoint( current_user: User=Depends(get_current_user), db: Sess
 def get_user_details(current_user: User=Depends(get_current_user)):
     # The user data is already fetched by get_current_user and assigned to current_user
     # Return user details without sensitive information
-    user_data = {
-        "id": current_user.id,
-        "email": current_user.email,
-        "username": current_user.username,
-        "is_admin": current_user.is_admin,
-        "works_at": current_user.works_at,
-        "contact_no": current_user.contact_no,
-        "dob": current_user.dob,
-        "gender":current_user.gender,
-        "created_at": current_user.created_at
-    }
-    return user_data
+    return current_user.dict()
 
 @router.post("/auth/check-username/", response_model=SuccessResponse)
 async def check_username(username: UserName, db: Session = Depends(get_db)):

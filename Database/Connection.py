@@ -54,7 +54,7 @@ conn_str = f'mssql+pyodbc:///?odbc_connect={params}'
 connection_string = f"DRIVER={Driver};SERVER={Server};DATABASE={Database};UID={Uid};PWD={SQLPwd}"
 connection_url = URL.create("mssql+pyodbc", query={"odbc_connect": connection_string})
 
-connection_url = "sqlite:///./test.db"
+# connection_url = "sqlite:///./test.db"
 
 engine = create_engine(connection_url)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

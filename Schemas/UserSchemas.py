@@ -79,6 +79,18 @@ class NoSQLUser(BaseModel):
     range: Optional[str] = None
     friends: List[str] = []
 
+class UserWithAvatar(BaseModel):
+    id: str
+    email: str
+    username: str
+    is_admin: bool
+    works_at: Optional[str]
+    contact_no: Optional[str]
+    dob: Optional[datetime]
+    gender: Optional[str]
+    created_at: datetime
+    avatar_url: Optional[str] = None
+
 
 class OTPVerification(BaseModel):
     email: str

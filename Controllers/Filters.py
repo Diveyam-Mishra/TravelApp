@@ -256,7 +256,7 @@ async def search_events_by_creator_past(
         AND e.start_date <= @current_datetime
         """
     params = [
-        {"name": "@current_user", "value": "dummy"},
+        {"name": "@current_user", "value": CreatorId},
         {"name": "@current_datetime", "value": current_datetime_iso}
     ]
 
