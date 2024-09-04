@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel,conlist
 from typing import List, Dict, Optional
 from datetime import datetime
 
@@ -189,7 +189,10 @@ class PartialName(BaseModel):
 class CreatorId(BaseModel):
     creator:str
 
-    
+class EventIds(BaseModel):
+    eventids: List[str]
+    max_items: int = 6
+
 class takeString(BaseModel):
     eventId:str
 class strAndint(BaseModel):

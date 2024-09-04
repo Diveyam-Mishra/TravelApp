@@ -399,7 +399,6 @@ async def get_filtered_events(
     
 
 async def advertise_event(event_id: takeString, advertised_events_container, container=Depends(get_container)) -> SuccessResponse:
-    print("ok")
     query = """
     SELECT * FROM eventcontainer e WHERE e.id = @event_id
     """
@@ -408,7 +407,6 @@ async def advertise_event(event_id: takeString, advertised_events_container, con
     ]
     
     items = list(container.query_items(query=query, parameters=params, enable_cross_partition_query=True))
-    print("fine")
     if not items:
         raise HTTPException(status_code=404, detail="Event not found")
     
@@ -417,3 +415,13 @@ async def advertise_event(event_id: takeString, advertised_events_container, con
     advertised_events_container.create_item(advertised_event)
     print("not ok")
     return SuccessResponse(message=f"Event with event_id: {event_id} successfully advertised", success=True)
+
+async def batch_event(event_ids:EventIds, container):
+    query = "SELECT * FROM eventcontainer e WHERE e.id IN ({})".format(
+    ", ".join(f"'{event_id}'" for event_id in event_ids.eventids)
+)
+    events = list(container.query_items(
+        query=query,
+        enable_cross_partition_query=True
+    ))
+    return events
