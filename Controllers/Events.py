@@ -399,7 +399,7 @@ async def get_filtered_events(
     
 
 async def advertise_event(event_id: takeString, advertised_events_container, container=Depends(get_container)) -> SuccessResponse:
-    print("ok")
+    #print("ok")
     query = """
     SELECT * FROM eventcontainer e WHERE e.id = @event_id
     """
@@ -408,12 +408,12 @@ async def advertise_event(event_id: takeString, advertised_events_container, con
     ]
     
     items = list(container.query_items(query=query, parameters=params, enable_cross_partition_query=True))
-    print("fine")
+    #print("fine")
     if not items:
         raise HTTPException(status_code=404, detail="Event not found")
     
     event_to_advertise = items[0] 
     advertised_event = event_to_advertise.copy()
     advertised_events_container.create_item(advertised_event)
-    print("not ok")
+    #print("not ok")
     return SuccessResponse(message=f"Event with event_id: {event_id} successfully advertised", success=True)

@@ -31,7 +31,7 @@ async def payment_redirect(
         data=decoded_json["data"]
     )
 
-    # print(newTransactionDetails)
+    # #print(newTransactionDetails)
 
     res = await CreateTransactionInDB(newTransactionDetails, transactionContainer)
 

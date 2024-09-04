@@ -62,9 +62,9 @@ async def get_events(Preferences: Preferences, event_container=Depends(get_conta
     input_str = (f"Vibe preference: {Preferences.VibePreference}, Location Preference: {Preferences.LocationPreference}, Engagement Level: {Preferences.EngagementLevel}, Interest Areas: {Preferences.InterestAreas}, Budget: {Preferences.Budget}")
 
     list_of_filtered_events = await get_filtered_events(event_container, filters, current_user)
-    print(len(list_of_filtered_events))
+    #print(len(list_of_filtered_events))
     result = [{"id": event["id"], "name": event["event_name"], "description": event["event_description"]} for event in list_of_filtered_events]
-    # print(result)
+    # #print(result)
 
     events = suggest_events(input_str, result, current_user)
 

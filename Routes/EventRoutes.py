@@ -50,7 +50,7 @@ async def create_event(
         geo_tag=GeoTag(latitude=location_lat, longitude=location_long),
         city=location_city
     )
-    # print(location)
+    # #print(location)
     event_data = EventDetails(
         event_name=event_name,
         event_description=event_description,
@@ -118,7 +118,7 @@ async def filter_events(filters: EventFilter, event_container=Depends(get_contai
     if(current_user is None):
         raise HTTPException(status_code=401, detail="Unauthorized")
     events = await get_filtered_events(event_container, filters, current_user=current_user)
-    # print (events)
+    # #print (events)
     result = [{"id": event["id"], "name": event["event_name"], "description": event["event_description"]} for event in events]
     return result
 
@@ -145,7 +145,7 @@ async def add_editor(
 
 @router.post("/event/advertise/", response_model=SuccessResponse)
 async def add_advertisement(eventId: takeString, container=Depends(get_container), advertised_events_container=Depends(get_advertisement_container)) -> SuccessResponse:
-    print("ok")
+    #print("ok")
     return await advertise_event(eventId, advertised_events_container, container)
 
 # SEEDERS
