@@ -37,31 +37,50 @@ JWT_SECRET = settings.JWT_SECRET
 ALGORITHM = settings.ALGORITHM
 
 
-def get_current_user(token: str=Depends(oauth2_scheme), db: Session=Depends(get_db)):
+def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)) -> UserWithAvatar:
     try:
         # Decode the token and verify its signature and expiration
         payload = jwt.decode(token, JWT_SECRET, algorithms=[ALGORITHM])
         user_id = payload.get("user_id")
-        # print(user_id)
+
         if user_id is None:
             raise HTTPException(status_code=401, detail="Invalid token")
         
         # Query the user from the database
-        user = db.query(User).filter(User.id == user_id).first()
-        if user is None:
-            raise HTTPException(status_code=404, detail="User not found")
+        db_user = (
+            db.query(User, Avatar.fileurl)
+            .join(Avatar, User.id == Avatar.userID)  # Join with Avatar table
+            .filter(User.id == user_id)  # Filter by user ID
+            .first()
+        )
+        
+        if not db_user:
+            raise HTTPException(status_code=400, detail="User not found")
+        
+        user_details, avatar_url = db_user  # Unpack the result tuple
+        
+        # Create a UserWithAvatar object to return
+        user_with_avatar = UserWithAvatar(
+            id=user_details.id,
+            email=user_details.email,
+            username=user_details.username,
+            is_admin=user_details.is_admin,
+            works_at=user_details.works_at,
+            contact_no=user_details.contact_no,
+            dob=user_details.dob,
+            gender=user_details.gender,
+            created_at=user_details.created_at,
+            avatar_url=avatar_url  # Include avatar URL
+        )
     
     except ExpiredSignatureError:
-        # Handle token expiration
         raise HTTPException(status_code=401, detail="Token has expired")
     except JWTError:
-        # Handle other JWT errors
         raise HTTPException(status_code=401, detail="Invalid token")
     except Exception as e:
-        # Handle other potential exceptions
         raise HTTPException(status_code=401, detail=f"Token error: {str(e)}")
     
-    return user
+    return user_with_avatar
 
 async def get_current_user_optional(token: str=Depends(oauth2_scheme), db: Session=Depends(get_db)):
     try:
