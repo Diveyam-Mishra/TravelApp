@@ -313,14 +313,17 @@ async def search_events_by_creator_past_v1(
         WHERE e.creator_id = @current_user
         AND e.start_date_and_time > @current_datetime
         """
-    else:
+    elif time=="past":
         query = """
         SELECT * FROM eventcontainer e 
         WHERE e.creator_id = @current_user
         AND e.start_date_and_time <= @current_datetime
         """
-    
-    # #print(CreatorId)
+    else:
+        query = """
+        SELECT * FROM eventcontainer e 
+        WHERE e.creator_id = @current_user"""
+    # print(CreatorId)
     params = [
         {"name": "@current_user", "value": CreatorId},
         {"name": "@current_datetime", "value": current_datetime_ist_iso}

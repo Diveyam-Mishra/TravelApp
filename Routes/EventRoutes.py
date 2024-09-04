@@ -3,7 +3,7 @@ from Schemas.UserSchemas import SuccessResponse, UserId
 from Schemas.EventSchemas import *
 from Database.Connection import *
 from Controllers.Events import create_event, update_event, get_filtered_events, \
-    give_editor_access, get_event_by_id, advertise_event
+    give_editor_access, get_event_by_id, advertise_event,batch_event
 from sqlalchemy.orm import Session
 from config import JWTBearer
 from Controllers.Auth import get_current_user
@@ -148,6 +148,10 @@ async def add_advertisement(eventId: takeString, container=Depends(get_container
     #print("ok")
     return await advertise_event(eventId, advertised_events_container, container)
 
+
+@router.post("/event/batch_api/", dependencies=[Depends(JWTBearer())])
+async def batchApi(event_ids:EventIds,container=Depends(get_container)):
+    return await batch_event(event_ids,container)
 # SEEDERS
 # from Seeders.fakeEvent import seed_events
 # @router.post("/events/seed/", response_model=SuccessResponse)
