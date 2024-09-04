@@ -4,13 +4,14 @@ from typing import List
 from Controllers.AiInteract import generate_questions, suggest_events
 from Controllers.Events import get_filtered_events
 # from Routes.EventRoutes import filter_events
+from Controllers.Auth import get_user_specific_data
 from Models.user_models import User
 from Controllers.Auth import get_current_user
 router = APIRouter()
 from typing import Optional
 from datetime import datetime
 from Schemas.EventSchemas import EventFilter
-from Database.Connection import get_container
+from Database.Connection import get_container,get_user_specific_container
 from sqlalchemy.orm import Session
 from config import JWTBearer
 
@@ -23,14 +24,13 @@ class Preferences(BaseModel):
     VibePreference:str
     LocationPreference: str
     EngagementLevel:str
-    InterestAreas: List[str]
     Budget: str
     date_preference_O: Optional[str] = None
     specific_date_O: Optional[datetime] = None
     time_preference_O: Optional[List[str]] = None
     distance_preference_O: Optional[str] = None
     duration_preference_O: Optional[str] = None
-    event_type_preference:List[str]
+    event_type_preference_O:Optional[List[str]] = None
     user_latitude: float = None
     user_longitude: float = None
     user_city_O: Optional[str] = None
@@ -45,27 +45,28 @@ async def get_questions(params: Params, current_user: User=Depends(get_current_u
 
 
 @router.post("/ai/get_events/",dependencies=[Depends(JWTBearer())])
-async def get_events(Preferences: Preferences, event_container=Depends(get_container), current_user: User=Depends(get_current_user)):
+async def get_events(Preferences: Preferences, event_container=Depends(get_container), current_user: User=Depends(get_current_user),user_specific_container=Depends(get_user_specific_container)):
     if current_user is None:
             raise HTTPException(status_code=400, detail="User Not Found")
+    if not Preferences.event_type_preference_O:
+        userId = current_user.id
+        resp = await get_user_specific_data(userId, user_specific_container)
+        k=resp['interest_areas']
     filters = EventFilter(
         date_preference=Preferences.date_preference_O,
         specific_date=Preferences.specific_date_O,
         time_preference=Preferences.time_preference_O,
         location_preference=Preferences.distance_preference_O,
-        event_type_preference=Preferences.event_type_preference,
+        event_type_preference=Preferences.event_type_preference_O if Preferences.event_type_preference_O else k,
         duration_preference=Preferences.duration_preference_O,
         user_latitude=Preferences.user_latitude,
         user_longitude=Preferences.user_longitude,
         user_city=Preferences.user_city_O
     )
-    input_str = (f"Vibe preference: {Preferences.VibePreference}, Location Preference: {Preferences.LocationPreference}, Engagement Level: {Preferences.EngagementLevel}, Interest Areas: {Preferences.InterestAreas}, Budget: {Preferences.Budget}")
+    input_str = (f"Vibe preference: {Preferences.VibePreference}, Location Preference: {Preferences.LocationPreference}, Engagement Level: {Preferences.EngagementLevel},  Interest Areas: {Preferences.event_type_preference_O if Preferences.event_type_preference_O else k},Budget: {Preferences.Budget}")
 
     list_of_filtered_events = await get_filtered_events(event_container, filters, current_user)
-    print(len(list_of_filtered_events))
     result = [{"id": event["id"], "name": event["event_name"], "description": event["event_description"]} for event in list_of_filtered_events]
-    # print(result)
-
     events = suggest_events(input_str, result, current_user)
 
     return {"eventsSuggested":events}
