@@ -188,7 +188,6 @@ class CreatorId(BaseModel):
 
 class EventIds(BaseModel):
     eventids: List[str]
-    max_items: int = 6
 
 class takeString(BaseModel):
     eventId:str

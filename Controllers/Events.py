@@ -417,6 +417,7 @@ async def advertise_event(event_id: takeString, advertised_events_container, con
     return SuccessResponse(message=f"Event with event_id: {event_id} successfully advertised", success=True)
 
 async def batch_event(event_ids:EventIds, container):
+    event_ids.eventids = event_ids.eventids[:6]
     query = "SELECT * FROM eventcontainer e WHERE e.id IN ({})".format(
     ", ".join(f"'{event_id}'" for event_id in event_ids.eventids)
 )
