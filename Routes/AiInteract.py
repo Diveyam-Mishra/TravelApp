@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException,BackgroundTasks
 from pydantic import BaseModel
 from typing import List
 from Controllers.AiInteract import generate_questions, suggest_events
@@ -25,6 +25,8 @@ class Preferences(BaseModel):
     LocationPreference: str
     EngagementLevel:str
     Budget: str
+    Paragraph_Question_1_O:Optional[str]=None
+    Paragraph_Question_2_O:Optional[str]=None
     date_preference_O: Optional[str] = None
     specific_date_O: Optional[datetime] = None
     time_preference_O: Optional[List[str]] = None
@@ -45,7 +47,7 @@ async def get_questions(params: Params, current_user: User=Depends(get_current_u
 
 
 @router.post("/ai/get_events/",dependencies=[Depends(JWTBearer())])
-async def get_events(Preferences: Preferences, event_container=Depends(get_container), current_user: User=Depends(get_current_user),user_specific_container=Depends(get_user_specific_container)):
+async def get_events(Preferences: Preferences, background_tasks: BackgroundTasks,event_container=Depends(get_container), current_user: User=Depends(get_current_user),user_specific_container=Depends(get_user_specific_container)):
     if current_user is None:
             raise HTTPException(status_code=400, detail="User Not Found")
     if not Preferences.event_type_preference_O:
@@ -64,9 +66,35 @@ async def get_events(Preferences: Preferences, event_container=Depends(get_conta
         user_city=Preferences.user_city_O
     )
     input_str = (f"Vibe preference: {Preferences.VibePreference}, Location Preference: {Preferences.LocationPreference}, Engagement Level: {Preferences.EngagementLevel},  Interest Areas: {Preferences.event_type_preference_O if Preferences.event_type_preference_O else k},Budget: {Preferences.Budget}")
+    # update_needed = False
+    # if Preferences.Paragraph_Question_1_O:
+    #     resp['paragraph_question_1'] = Preferences.Paragraph_Question_1_O
+    #     update_needed = True
 
+    # if Preferences.Paragraph_Question_2_O:
+    #     resp['paragraph_question_2'] = Preferences.Paragraph_Question_2_O
+    #     update_needed = True
+
+    # # Update user-specific container only if necessary
+    # if update_needed:
+    #     user_specific_container.replace_item(item=resp['id'], body=resp)
+    # background_tasks.add_task(update_user_specific_data, user_specific_container, resp, Preferences)
     list_of_filtered_events = await get_filtered_events(event_container, filters, current_user)
     result = [{"id": event["id"], "name": event["event_name"], "description": event["event_description"]} for event in list_of_filtered_events]
     events = suggest_events(input_str, result, current_user)
 
     return {"eventsSuggested":events}
+
+# async def update_user_specific_data(user_specific_container, resp, Preferences: Preferences):
+#     update_needed = False
+#     if Preferences.Paragraph_Question_1_O:
+#         resp['paragraph_question_1'] = Preferences.Paragraph_Question_1_O
+#         update_needed = True
+
+#     if Preferences.Paragraph_Question_2_O:
+#         resp['paragraph_question_2'] = Preferences.Paragraph_Question_2_O
+#         update_needed = True
+
+#     # Update user-specific container only if necessary
+#     if update_needed:
+#         user_specific_container.replace_item(item=resp['id'], body=resp)
