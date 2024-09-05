@@ -159,9 +159,9 @@ async def search_events_by_name1(
             "description": event["event_description"],
             "type": event.get("event_type"),
             "thumbnail": {
-                    "file_name": event.get("thumbnail", {}).get("fileName"),
-                    "file_url": event.get("thumbnail", {}).get("fileUrl"),
-                    "file_type": event.get("thumbnail", {}).get("fileType"),
+                    "file_name": event.get("thumbnail", {}).get("fileName") or event.get("thumbnail", {}).get("file_name"),
+                    "file_url": event.get("thumbnail", {}).get("fileUrl") or event.get("thumbnail", {}).get("file_url"),
+                    "file_type": event.get("thumbnail", {}).get("fileType") or event.get("thumbnail", {}).get("file_type"),
                 } if event.get("thumbnail") else None,
             "distance":str(event["distance"]) + "km"
         } 

@@ -233,7 +233,7 @@ async def bookEventForUser(
         transaction_dict['added_in_event_booking'] = True
 
         transaction_dict['ticketId'] = generate_unique_ticket_id(userId, eventId, transactionId)
-
+        ticketId = transaction_dict['ticketId']
         # Replace transaction item
         transactionContainer.replace_item(item=transaction_dict['id'], body=transaction_dict)
 
@@ -255,7 +255,7 @@ async def bookEventForUser(
         # Add booking data in user-specific container
         await addBookingDataInUserSpecific(userId, eventId, eventContainer, transacationUpd, userSpecificContainer)
         # #print('ok4')
-        return SuccessResponse(message="User booked the event", success=True)
+        return SuccessResponse(message="User booked the event", success=True, ticketId=ticketId)
     
     except Exception as e:
         # Log the exception (you can use logging or any other method)
