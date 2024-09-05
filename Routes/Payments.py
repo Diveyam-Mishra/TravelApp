@@ -68,8 +68,8 @@ async def getAttendedUsersOfEvent(eventId: str, bookingContainer=Depends(get_boo
     return response
 
 
-@router.post("/tickets/send/{ticketNo}", response_model=SuccessResponse, dependencies=[Depends(JWTBearer())])
-async def send_ticket_endpoint(req: ticketData, ticketNo:int=0, current_user=Depends(get_current_user), bookingContainer=Depends(get_booking_container), eventContainer=Depends(get_container), db:Session=Depends(get_db)):
+@router.post("/tickets/send/{ticketId}", response_model=SuccessResponse, dependencies=[Depends(JWTBearer())])
+async def send_ticket_endpoint(req: ticketData, ticketId:str, current_user=Depends(get_current_user), bookingContainer=Depends(get_booking_container), eventContainer=Depends(get_container), db:Session=Depends(get_db)):
     # ticket_data_dict = req.dict()
     if current_user is None:
         raise HTTPException(status_code=401, detail="Unauthorized")
@@ -84,17 +84,20 @@ async def send_ticket_endpoint(req: ticketData, ticketNo:int=0, current_user=Dep
     # Assuming 'data' is already a list within the dictionary
     data_list = status_response_dict.get('data', [])
     # data_list = list(data_list)
-    # print(data_list[ticketNo])
-    booking_data = data_list[ticketNo]
+    ind = 0
+    for i, tickets in enumerate(data_list):
+        if tickets['ticketId'] == ticketId:
+            ind = i
+    booking_data = data_list[ind]
     booking_data_dict = booking_data
-    # print(status_response)
-    newTicketData = ticketData(eventId=ticket_data_dict['eventId'], userId=current_user.id, paid_amount=booking_data_dict['data']['amount'], payment_id=booking_data_dict['transactionId'], members_details=booking_data_dict['members'])
+    # #print(status_response)
+    newTicketData = ticketData(eventId=ticket_data_dict['eventId'], userId_O=current_user.id, paid_amount_O=booking_data_dict['data']['amount'], payment_id_O=booking_data_dict['data']['transactionId'], members_details_O=str(booking_data_dict['members']))
     response = await send_ticket(newTicketData, eventContainer, db)
     return response
 
 
-@router.post("/generate-ticket/{ticketNo}", dependencies=[Depends(JWTBearer())])
-async def generate_ticket(ticket_data: ticketData, ticketNo:int=0, booking_container=Depends(get_booking_container), event_container=Depends(get_container), db:Session=Depends(get_db), current_user=Depends(get_current_user)):
+@router.post("/generate-ticket/{ticketId}", dependencies=[Depends(JWTBearer())])
+async def generate_ticket(ticket_data: ticketData, ticketId:str, booking_container=Depends(get_booking_container), event_container=Depends(get_container), db:Session=Depends(get_db), current_user=Depends(get_current_user)):
 
     if current_user is None:
         raise HTTPException(status_code=401, detail="Unauthorized")
@@ -110,11 +113,18 @@ async def generate_ticket(ticket_data: ticketData, ticketNo:int=0, booking_conta
     # Assuming 'data' is already a list within the dictionary
     data_list = status_response_dict.get('data', [])
     # data_list = list(data_list)
-    # print(data_list[ticketNo])
-    booking_data = data_list[ticketNo]
+    # #print(data_list)
+    ind = 0
+    for i, tickets in enumerate(data_list):
+        if tickets['ticketId'] == ticketId:
+            ind = i
+    booking_data = data_list[ind]
     booking_data_dict = booking_data
-    # print(status_response)
-    newTicketData = ticketData(eventId=ticket_data_dict['eventId'], userId=current_user.id, paid_amount=booking_data_dict['data']['amount'], payment_id=booking_data_dict['transactionId'], members_details=booking_data_dict['members'])
+    # #print(status_response)
+    newTicketData = ticketData(eventId=ticket_data_dict['eventId'], userId_O=current_user.id, paid_amount_O=booking_data_dict['data']['amount'], payment_id_O=booking_data_dict['data']['transactionId'], members_details_O=str(booking_data_dict['members']))
+
+    # #print(newTicketData)
+
     updated_data = await create_ticket_pdf(newTicketData, pdf_path, event_container, db)
     
     # Return the PDF file as a downloadable response

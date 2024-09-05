@@ -38,7 +38,7 @@ async def get_event_of_single_category(category: str, event_container, file_cont
     if not items:
         raise HTTPException(status_code=400, detail="Events not found")
 
-    print(items)
+    #print(items)
 
 
     for event in items:
@@ -54,7 +54,7 @@ async def get_event_of_single_category(category: str, event_container, file_cont
         image_results = list(file_container.query_items(query=image_query, enable_cross_partition_query=True))
         return image_results[0] if image_results else None
     
-    # print(events)
+    # #print(events)
 
     image_futures = [fetch_image(event_id) for event_id in event_ids]
     images = await asyncio.gather(*image_futures)
@@ -75,7 +75,7 @@ async def update_events_with_thumbnails(event_container, file_container):
 
     # List to hold all event updates
     updates = []
-    print("ok")
+    #print("ok")
     async def update_event(event):
         # Fetch the first image associated with the event
         image_query = f"SELECT TOP 1 c.fileName1, c.fileUrl1, c.fileType1 FROM c WHERE c.id = '{event['event_id']}'"
@@ -91,7 +91,7 @@ async def update_events_with_thumbnails(event_container, file_container):
             }
             # Update the event in the database
             await event_container.replace_item(item=event['event_id'], body=event)
-            print("done")
+            #print("done")
 
     # Fetch and update each event
     for event in event_container.query_items(query=query, enable_cross_partition_query=True):
@@ -188,6 +188,8 @@ async def search_events_by_name(
     # Fetch and attach the thumbnail (first image file) for each event
     for event in events:
         event['distance']=event_distance(event['location']['geo_tag']['latitude'],event['location']['geo_tag']['longitude'],coord[0],coord[1])
+    
+    #print(events)
     total_count = len(events)
     items_per_page = 15
     start_index = page * items_per_page
@@ -268,9 +270,9 @@ async def search_events_by_creator_past(
     ))
     for event in events:
         try:
-            # print(0)
+            # #print(0)
             event["booked users"]=await getBookedUsers(event['id'], bookingContainer, current_user, db)
-            # print(event)
+            # #print(event)
         except Exception as e:
             pass
             
@@ -301,7 +303,7 @@ async def search_events_by_creator_past_v1(
 
     # Get the IST time in ISO format
     current_datetime_ist_iso = ist_now.isoformat()
-    # print(current_datetime_ist_iso)
+    # #print(current_datetime_ist_iso)
     CreatorId = current_user.id
     time = time.lower()
 
@@ -334,10 +336,10 @@ async def search_events_by_creator_past_v1(
     ))
 
     event_ids = [event["id"] for event in events]
-    # print(len(event_ids))
+    # #print(len(event_ids))
     if event_ids:
         event_ids_str = ', '.join([f"'{event_id}'" for event_id in event_ids])
-        # print(event_ids_str)
+        # #print(event_ids_str)
         booked_users_query = f"""
         SELECT * FROM c WHERE c.event_id IN ({event_ids_str})
         """
@@ -347,25 +349,25 @@ async def search_events_by_creator_past_v1(
             query=booked_users_query,
             enable_cross_partition_query=True
         ))
-        # print(len(bookingLists))
+        # #print(len(bookingLists))
         # Prepare a dictionary to map event_id to booked users
         bookings_map = {
             booking["event_id"]: booking.get("booked_users", [])
             for booking in bookingLists
         }
-        # print(bookings_map)
+        # #print(bookings_map)
         
         # for event in events:
         #     if bookings_map.get(event['id']) is not None:
-        #         print(bookings_map.get(event['id']), "bn")
+        #         #print(bookings_map.get(event['id']), "bn")
         #         for user in bookings_map.get(event['id']):
-        #             print(user["user_id"], "bvs")
+        #             #print(user["user_id"], "bvs")
 
         user_ids = set()
         for booking_users in bookings_map.values():
             user_ids.update(user["user_id"] for user in booking_users)
 
-        # print(user_ids,'vv')
+        # #print(user_ids,'vv')
 
         if user_ids:
             results = (
@@ -375,7 +377,7 @@ async def search_events_by_creator_past_v1(
                 .all()
             )
 
-            # print(results)
+            # #print(results)
 
             user_info = {
                 user.id: {
@@ -387,7 +389,7 @@ async def search_events_by_creator_past_v1(
                 for user, avatar_url in results
             }
 
-            # print(user_info.get("abb26c0f-9227-4425-935f-fa98514495b3"), 'csc')
+            # #print(user_info.get("abb26c0f-9227-4425-935f-fa98514495b3"), 'csc')
 
             # Attach booked users' info to corresponding events
             for event in events:
@@ -396,8 +398,16 @@ async def search_events_by_creator_past_v1(
                     user_info.get(user["user_id"], {})
                     for user in booked_users
                 ]
+                basePrice = 0
+                if event["price_fees"]:
+                    basePrice = event["price_fees"]
+
+                totalUsers = 0
+                if event["booked_users"]:
+                    totalUsers = len(event["booked_users"])
+                event["total_booking_amount"] = basePrice * totalUsers
                 # if(event["booked_users"]):
-                #     print(event)
+                #     #print(event)
 
     total_count = len(events)
     items_per_page = 15

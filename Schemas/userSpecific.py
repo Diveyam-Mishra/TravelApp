@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List ,Optional
+from typing import List, Optional
 from pydantic import BaseModel
 
 class EventData(BaseModel):
@@ -8,6 +8,10 @@ class EventData(BaseModel):
     paid_amount: float
     payment_date: datetime
     event_date: str  # Storing event_date as an ISO string
+    ticket_id: Optional[str] = None
+
+    class Config:
+        extra = 'allow'
 
     def to_dict(self):
         return {
@@ -15,7 +19,8 @@ class EventData(BaseModel):
             "payment_id": self.payment_id,
             "paid_amount": self.paid_amount,
             "payment_date": self.payment_date.isoformat(),
-            "event_date": self.event_date
+            "event_date": self.event_date,
+            "ticket_id": self.ticket_id
         }
 
 
@@ -25,6 +30,9 @@ class UserSpecific(BaseModel):
     booked_events: List[EventData]
     recent_searches: List[str]
     interest_areas: List[str]
+
+    class Config:
+        extra = 'allow'
 
     def add_search(self, search_term: str):
         # Remove the search term if it's already in the list (to update its position)

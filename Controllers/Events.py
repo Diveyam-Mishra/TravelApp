@@ -413,7 +413,7 @@ async def advertise_event(event_id: takeString, advertised_events_container, con
     event_to_advertise = items[0] 
     advertised_event = event_to_advertise.copy()
     advertised_events_container.create_item(advertised_event)
-    print("not ok")
+    #print("not ok")
     return SuccessResponse(message=f"Event with event_id: {event_id} successfully advertised", success=True)
 
 async def batch_event(event_ids:EventIds, container):

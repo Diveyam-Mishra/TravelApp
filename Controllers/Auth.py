@@ -113,7 +113,7 @@ async def update_user(req: UserUpdate, db: Session, userId:str, current_user:Use
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    # print(userId, current_user.id)
+    # #print(userId, current_user.id)
     if str(current_user.id) != str(userId):
         raise HTTPException(status_code=403, detail="You are not authorized to update this user")
 
@@ -332,7 +332,8 @@ async def add_recent_search(userId, searchItem, user_specific_container):
     return SuccessResponse(message="Added search in recent items", success=True)
     
 
-async def get_user_specific_data(userId: str, user_specific_container):
+async def get_user_specific_data(userId: str, user_specific_container, event_container):
+    # Query to get user-specific data
     query = "SELECT * FROM c WHERE c.userId = @userId"
     params = [{"name": "@userId", "value": userId}]
     
@@ -345,7 +346,56 @@ async def get_user_specific_data(userId: str, user_specific_container):
     if not search:
         raise HTTPException(status_code=404, detail="User-specific data not found")
     
-    return search[0]
+    user_data = search[0]
+    event_map = {}
+
+    # Fetch event details and update booked_events
+    for event in user_data.get('booked_events', []):
+        event_id = event.get('event_id')
+        if event_id:
+            if event_id in event_map:
+                # Use the cached event details
+                event.update(event_map[event_id])
+            else:
+                # Query the eventContainer for event details
+                event_query = "SELECT * FROM c WHERE c.id = @event_id"
+                event_params = [{"name": "@event_id", "value": event_id}]
+                
+                event_details = list(event_container.query_items(
+                    query=event_query,
+                    parameters=event_params,
+                    enable_cross_partition_query=True
+                ))
+                
+                if event_details:
+                    event_info = event_details[0]
+                    event_name = event_info.get('event_name')
+                    description = event_info.get('event_description')
+                    event_type = event_info.get('event_type')
+                    location = event_info.get('location', {})
+                    venue = location.get('venue')
+                    geo_tag = location.get('geo_tag', {})
+                    latitude = geo_tag.get('latitude')
+                    longitude = geo_tag.get('longitude')
+                    city = location.get('city')
+                    thumbnail = event_info.get('thumbnail', {})
+                    fileUrl = thumbnail.get('fileUrl')
+                    # Cache the event details in the map
+                    event_map[event_id] = {
+                        'eventName': event_name,
+                        'description': description,
+                        'type': event_type,
+                        'venue': venue,
+                        'latitude': latitude,
+                        'longitude': longitude,
+                        'city': city,
+                        'thumbnail': fileUrl
+                    }
+                    
+                    # Update the event with the fetched details
+                    event.update(event_map[event_id])
+    # #print(user_data)
+    return user_data
 
 
 def fetch_carousel_images_db(db: Session) -> List[Dict[str, str]]:

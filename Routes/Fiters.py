@@ -29,7 +29,7 @@ async def get_optional_current_user(
     
     # Use the same logic as get_current_user
     user = await get_current_user_optional(token.credentials, db)
-    # print(user)
+    # #print(user)
     return user
 
 
@@ -63,7 +63,7 @@ async def filter_events_v1(
 
     start_index = page * items_per_page
     paginated_events = unique_events_list[start_index:start_index + items_per_page]
-    # print(paginated_events)
+    # #print(paginated_events)
     result = [
         {
             "id": event.get("event_id"),
@@ -106,7 +106,11 @@ async def filter_events(
             "name": event.get("event_name"),
             "description": event.get("event_description"),
             "type": event.get("event_type"),
-            "thumbnail": event.get("thumbnail"),
+            "thumbnail": {
+                    "file_name": event.get("thumbnail", {}).get("fileName"),
+                    "file_url": event.get("thumbnail", {}).get("fileUrl"),
+                    "file_type": event.get("thumbnail", {}).get("fileType"),
+                } if event.get("thumbnail") else None,
             "distance": f"{event.get('distance')} km"
         } for event in sorted_events
     ]
@@ -140,7 +144,7 @@ async def search_events_by_name1(
     page: int=0
 ):
     if current_user is not None:
-        # print(current_user)
+        # #print(current_user)
         await add_recent_search(current_user.id, partial_name.partial_name, user_specific_container)    
 
     eventsRes = await search_events_by_name(partial_name, coord, event_container, file_container, page)
@@ -154,12 +158,16 @@ async def search_events_by_name1(
             "name": event["event_name"],
             "description": event["event_description"],
             "type": event.get("event_type"),
-            "thumbnail": event.get("thumbnail"),
+            "thumbnail": {
+                    "file_name": event.get("thumbnail", {}).get("fileName") or event.get("thumbnail", {}).get("file_name"),
+                    "file_url": event.get("thumbnail", {}).get("fileUrl") or event.get("thumbnail", {}).get("file_url"),
+                    "file_type": event.get("thumbnail", {}).get("fileType") or event.get("thumbnail", {}).get("file_type"),
+                } if event.get("thumbnail") else None,
             "distance":str(event["distance"]) + "km"
         } 
         for event in events
     ]
-    # print(len(result))
+    # #print(len(result))
     return {
         "cnt": total_count,
         "results": result
@@ -211,7 +219,8 @@ async def search_own_event_time(
             "family_friendly":event["family_friendly"],
             "price_fees": event["price_fees"],
             "capacity": event["capacity"],
-            "editor_access":event.get("editor_access")
+            "editor_access":event.get("editor_access"),
+            "total_booking_amount": event.get("total_booking_amount") or 0
         } 
            for event in events
         ]
