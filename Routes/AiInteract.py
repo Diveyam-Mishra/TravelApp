@@ -50,8 +50,8 @@ async def get_questions(params: Params, current_user: User=Depends(get_current_u
 async def get_events(Preferences: Preferences, background_tasks: BackgroundTasks,event_container=Depends(get_container), current_user: User=Depends(get_current_user),user_specific_container=Depends(get_user_specific_container)):
     if current_user is None:
             raise HTTPException(status_code=400, detail="User Not Found")
+    userId = current_user.id
     if not Preferences.event_type_preference_O:
-        userId = current_user.id
         resp = await get_user_specific_data(userId, user_specific_container)
         k=resp['interest_areas']
     filters = EventFilter(
@@ -78,23 +78,28 @@ async def get_events(Preferences: Preferences, background_tasks: BackgroundTasks
     # # Update user-specific container only if necessary
     # if update_needed:
     #     user_specific_container.replace_item(item=resp['id'], body=resp)
-    # background_tasks.add_task(update_user_specific_data, user_specific_container, resp, Preferences)
+    background_tasks.add_task(update_user_specific_data, user_specific_container, userId, Preferences)
     list_of_filtered_events = await get_filtered_events(event_container, filters, current_user)
     result = [{"id": event["id"], "name": event["event_name"], "description": event["event_description"]} for event in list_of_filtered_events]
     events = suggest_events(input_str, result, current_user)
 
     return {"eventsSuggested":events}
 
-# async def update_user_specific_data(user_specific_container, resp, Preferences: Preferences):
-#     update_needed = False
-#     if Preferences.Paragraph_Question_1_O:
-#         resp['paragraph_question_1'] = Preferences.Paragraph_Question_1_O
-#         update_needed = True
-
-#     if Preferences.Paragraph_Question_2_O:
-#         resp['paragraph_question_2'] = Preferences.Paragraph_Question_2_O
-#         update_needed = True
-
-#     # Update user-specific container only if necessary
-#     if update_needed:
-#         user_specific_container.replace_item(item=resp['id'], body=resp)
+async def update_user_specific_data(user_specific_container, userId,Preferences: Preferences):
+    resp = await get_user_specific_data(userId, user_specific_container)
+    update_needed = False
+    print("Yes")
+    if Preferences.Paragraph_Question_1_O:
+        print("Yes")
+        resp['paragraph_question_1'] = Preferences.Paragraph_Question_1_O
+        update_needed = True
+    print("Yes")
+    if Preferences.Paragraph_Question_2_O:
+        print("Yes")
+        resp['paragraph_question_2'] = Preferences.Paragraph_Question_2_O
+        update_needed = True
+    print("Yes")
+    # Update user-specific container only if necessary
+    if update_needed:
+        print("Yes")
+        user_specific_container.replace_item(item=resp['id'], body=resp)
