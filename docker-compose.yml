@@ -1,0 +1,40 @@
+version: '3'
+
+services:
+  web1:
+    image: trickstercell/backend-web:v0.0.2
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "81:80"
+    env_file:
+      - .env
+
+  web2:
+    image: trickstercell/backend-web:v0.0.2
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "82:80"
+    env_file:
+      - .env
+
+  web3:
+    image: trickstercell/backend-web:v0.0.2
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "83:80"
+    env_file:
+      - .env
+
+  nginx:
+    image: nginx:alpine
+    container_name: nginx
+    ports:
+      - 80:80
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf

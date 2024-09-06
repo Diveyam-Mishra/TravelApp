@@ -338,7 +338,7 @@ async def getBookedUsers(eventId: str, bookingContainer, current_user, db):
     # Query the User model to get usernames
     results = (
     db.query(User, Avatar.fileurl)
-    .join(Avatar, User.id == Avatar.userID)  # Join condition
+    .outerjoin(Avatar, User.id == Avatar.userID)  # Join condition
     .filter(User.id.in_(user_ids))  # Filter users based on user_ids list
     .all())
     # Return a list of usernames

@@ -43,13 +43,14 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
         payload = jwt.decode(token, JWT_SECRET, algorithms=[ALGORITHM])
         user_id = payload.get("user_id")
 
+
         if user_id is None:
             raise HTTPException(status_code=401, detail="Invalid token")
         
         # Query the user from the database
         db_user = (
             db.query(User, Avatar.fileurl)
-            .join(Avatar, User.id == Avatar.userID)  # Join with Avatar table
+            .outerjoin(Avatar, User.id == Avatar.userID)  # Use outerjoin for a left join
             .filter(User.id == user_id)  # Filter by user ID
             .first()
         )
@@ -271,7 +272,7 @@ def look_up_username(username: str, db: Session, current_user: User = Depends(ge
     # Query to get user details along with their avatar URL
     db_user = (
         db.query(User, Avatar.fileurl)
-        .join(Avatar, User.id == Avatar.userID)  # Join with Avatar table
+        .outerjoin(Avatar, User.id == Avatar.userID)  # Join with Avatar table
         .filter(User.username == username.username)  # Use the username to filter
         .first()
     )

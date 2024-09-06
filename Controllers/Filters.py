@@ -372,7 +372,7 @@ async def search_events_by_creator_past_v1(
         if user_ids:
             results = (
                 db.query(User, Avatar.fileurl)
-                .join(Avatar, User.id == Avatar.userID)
+                .outerjoin(Avatar, User.id == Avatar.userID)
                 .filter(User.id.in_(user_ids))
                 .all()
             )
