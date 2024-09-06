@@ -479,7 +479,7 @@ email_client = EmailClient.from_connection_string(connectionString)
 
 
 async def send_ticket(ticket_data: Dict[str, str], eventContainer, db) -> SuccessResponse:
-
+    print("Yes")
     # Generate the PDF
     with NamedTemporaryFile(delete=False, suffix=".pdf") as temp_file:
         pdf_path = temp_file.name
@@ -487,12 +487,12 @@ async def send_ticket(ticket_data: Dict[str, str], eventContainer, db) -> Succes
 
     ticket_data_dict = updated_ticket_data.dict()
     # Send the email with the PDF attachment
-    # print(ticket_data_dict)
+    print(ticket_data_dict)
     send_email_with_attachment(ticket_data_dict['email'], pdf_path)
-
+    print ("Yes")
     # Clean up: Remove the temporary file
     os.remove(pdf_path)
-
+    print("Yes")
     return SuccessResponse(message="Ticket sent to your registered email id", success=True)
 
 

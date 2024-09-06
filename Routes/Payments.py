@@ -15,6 +15,33 @@ import os
 
 router = APIRouter()
 
+async def send_ticket_background(
+    ticket_data: dict[str],
+    ticketNo:int,
+    userId:str,
+    bookingContainer,
+    eventContainer,
+    db: Session
+):  
+    status_response = await getUserBookingStatus(ticket_data['eventId'], userId, bookingContainer, eventContainer)
+    print(status_response)
+    if not status_response.success: 
+        return SuccessResponse(message="User has not booked the event", success=False) 
+
+    status_response = status_response.dict()
+    print("Yes")
+    # Assuming 'data' is already a list within the dictionary
+    data_list = status_response.get('data', [])
+    # data_list = list(data_list)
+    # print(data_list[ticketNo])
+    booking_data = data_list[ticketNo]
+    booking_data_dict = booking_data
+    # print(status_response)
+    newTicketData = ticketData(eventId=ticket_data['eventId'], userId=userId, paid_amount=booking_data_dict['data']['amount'], payment_id=booking_data_dict['transactionId'], members_details=booking_data_dict['members'])
+    print("Yes")
+    response = await send_ticket(newTicketData, eventContainer, db)
+    # You might want to log the response or handle it in some way
+    print(f"Ticket sent: {response}")
 
 @router.get("/bookingStatus/{eventId}/", dependencies=[Depends(JWTBearer())], response_model=SuccessResponse)
 async def checkUserBookingStatus(eventId: str, bookingContainer=Depends(get_booking_container),
@@ -26,15 +53,30 @@ eventContainer=Depends(get_container), current_user:User=Depends(get_current_use
 
 
 @router.post("/bookEvent/{eventId}/", dependencies=[Depends(JWTBearer())], response_model=SuccessResponse)
-async def newBooking(eventId: str, merchantTransactionId: str=Body(...), members:int=Body(...), bookingContainer=Depends(get_booking_container), eventContainer=Depends(get_container), current_user: User=Depends(get_current_user), userSpecificContainer=Depends(get_user_specific_container), transactionContainer=Depends(get_successful_transaction_container)):
+async def newBooking(eventId: str, background_tasks: BackgroundTasks, merchantTransactionId: str=Body(...), members:int=Body(...), ticketNo: int = 0, bookingContainer=Depends(get_booking_container), eventContainer=Depends(get_container), current_user: User=Depends(get_current_user), userSpecificContainer=Depends(get_user_specific_container), transactionContainer=Depends(get_successful_transaction_container),db:Session=Depends(get_db)):
 
     if current_user is None:
         raise HTTPException(status_code=401, detail="Unauthorized")
+    booking_response = await bookEventForUser(
+        eventId, current_user.id, bookingContainer, eventContainer,
+        merchantTransactionId, userSpecificContainer, transactionContainer, members
+    )
 
-    # if current_user.id != str(current_user.id):
-    #     raise HTTPException(status_code=401, detail="You are not authorized to book an event for another user")
+    # if booking_response.success:
+    #     newTicketData = {
+    #     "eventId": eventId,
+    #     "userId_O": current_user.id 
+    # }
+    #     # try:
+    #     background_tasks.add_task(send_ticket_background, newTicketData, current_user.id,ticketNo,bookingContainer,eventContainer,db)
+    # # except Exception as e:
+    # #     pass
 
-    return await bookEventForUser(eventId, current_user.id, bookingContainer, eventContainer, merchantTransactionId, userSpecificContainer, transactionContainer, members)
+    
+    # # if current_user.id != str(current_user.id):
+    # #     raise HTTPException(status_code=401, detail="You are not authorized to book an event for another user")
+    
+    return booking_response
 
 
 @router.put("/addAttendee/{eventId}/", dependencies=[Depends(JWTBearer())], response_model=SuccessResponse, tags=["Will not work"])
