@@ -18,11 +18,12 @@ from config import settings, connectionString
 import os
 from sqlalchemy.orm import joinedload
 from Helpers.QRCode import generate_qr_code
-from typing import Dict
+from typing import Dict, Optional
 from azure.core.exceptions import HttpResponseError
 import base64
 import hashlib
 from Helpers.calculateAge import calculate_age
+
 
 async def getUserBookingStatus(eventId: str, userId: str, bookingContainer, eventContainer):
     event_query = "SELECT * FROM c WHERE c.id = @eventId"
@@ -74,7 +75,7 @@ async def getUserBookingStatus(eventId: str, userId: str, bookingContainer, even
             # Convert user_booking_data to UserBookings instance
             user_bookings = UserBookings(**user_booking_data.to_dict())
 
-            # print(user_bookings)
+            # #print(user_bookings)
 
             # Convert each booking in user_bookings to PaymentInformation instance
             try:
@@ -90,13 +91,13 @@ async def getUserBookingStatus(eventId: str, userId: str, bookingContainer, even
     except TypeError as e:
         raise HTTPException(status_code=500, detail=f"Error parsing booking lists: {str(e)}")
 
-    # Debug: Print out booked_users for inspection
-    # print(f"Booked Users: {booked_users}")
-    # print(f"User ID to Check: {userId}")
+    # Debug: #print out booked_users for inspection
+    # #print(f"Booked Users: {booked_users}")
+    # #print(f"User ID to Check: {userId}")
 
     # Check if the userId exists in the booked_users list
     user_booking = next((user for user in booked_users if user.user_id == str(userId)), None)
-    # print(user_booking.bookings.to_dict())
+    # #print(user_booking.bookings.to_dict())
     if not user_booking:
         return SuccessResponse(message="User has not booked the event", success=False)
     else:
@@ -138,13 +139,17 @@ async def addBookingDataInUserSpecific(
         user_specific = UserSpecific(**search[0])
 
     event_time = event[0]['start_date_and_time']  # Assuming you want to use the first event found
+    # #print(paymentDetails)
+
     newUserBookingData = EventData(
         event_id=eventId,
         payment_id=paymentDetails.transactionId,
         paid_amount=paymentDetails.data['amount'],
         payment_date=paymentDetails.paymentDate,
-        event_date=event_time
+        event_date=event_time,
+        ticket_id=paymentDetails.ticketId
     )
+
 
     user_specific.booked_events.append(newUserBookingData)
 
@@ -155,6 +160,20 @@ async def addBookingDataInUserSpecific(
     userSpecificContainer.upsert_item(user_specific_data)
 
     return SuccessResponse(message="Booking data added", success=True)
+
+
+def generate_unique_ticket_id(user_id: str, event_id: str, merchantTransactionNo: str) -> str:
+    # Create a combined string of user_id and event_id
+    combined_string = f"{user_id}_{event_id}_{merchantTransactionNo}"
+    
+    # Generate a SHA-256 hash of the combined string
+    hash_object = hashlib.sha256(combined_string.encode())
+    hash_hex = hash_object.hexdigest()
+    
+    # Shorten the hash to a desired length for the ticket ID
+    ticket_id = hash_hex[:16]  # For example, take the first 16 characters
+    
+    return ticket_id
 
 
 async def bookEventForUser(
@@ -176,6 +195,11 @@ async def bookEventForUser(
         if not eventList:
             return SuccessResponse(message="Event does not exist", success=False)
         
+        event=eventList[0]
+        
+        if 'capacity' not in event or event['capacity'] < members:
+            return SuccessResponse(message="Not enough capacity available for this event", success=False)
+        
         # Check if the transaction exists
         transaction_query = "SELECT * FROM c WHERE c.transactionId = @transactionId"
         params = [{"name": "@transactionId", "value": transactionId}]
@@ -193,6 +217,7 @@ async def bookEventForUser(
         # Check booking list for the event
         booking_event_query = "SELECT * FROM c WHERE c.id = @eventId"
         params = [{"name": "@eventId", "value": eventId}]
+
         bookingLists = list(bookingContainer.query_items(query=booking_event_query, parameters=params, enable_cross_partition_query=True))
 
         if not bookingLists:
@@ -212,6 +237,8 @@ async def bookEventForUser(
         transaction_dict['members'] = members
         transaction_dict['added_in_event_booking'] = True
 
+        transaction_dict['ticketId'] = generate_unique_ticket_id(userId, eventId, transactionId)
+        ticketId = transaction_dict['ticketId']
         # Replace transaction item
         transactionContainer.replace_item(item=transaction_dict['id'], body=transaction_dict)
 
@@ -219,22 +246,26 @@ async def bookEventForUser(
         del transaction_dict["data"]["merchantId"]
         del transaction_dict["data"]["merchantTransactionId"]
 
-        # print("ok")
+        # #print("ok")
         # Update booking list with user details
         booking_list_item.add_booking_by_user_id(userId, PaymentInformation(**transaction_dict))
 
-        # print('ok2')
-        print(booking_list_item.id)
+        transacationUpd = PaymentInformation(**transaction_dict)
+
+        # #print('ok2')
+        # #print(booking_list_item.id)
         bookingContainer.replace_item(item=booking_list_item.id, body=booking_list_item.to_dict())
-        # print('ok3')
+        event['capacity'] -= members 
+        eventContainer.replace_item(item=event['id'], body=event)
+        
         # Add booking data in user-specific container
-        await addBookingDataInUserSpecific(userId, eventId, eventContainer, transaction, userSpecificContainer)
-        # print('ok4')
-        return SuccessResponse(message="User booked the event", success=True)
+        await addBookingDataInUserSpecific(userId, eventId, eventContainer, transacationUpd, userSpecificContainer)
+        # #print('ok4')
+        return SuccessResponse(message="User booked the event", success=True, ticketId=ticketId)
     
     except Exception as e:
         # Log the exception (you can use logging or any other method)
-        print(f"An error occurred: {str(e)}")
+        #print(f"An error occurred: {str(e)}")
 
         # Return a generic error response
         return SuccessResponse(message="An error occurred while booking the event", success=False)
@@ -309,12 +340,11 @@ async def getBookedUsers(eventId: str, bookingContainer, current_user, db):
     # Convert booked_users to PaymentInformation models
     booked_users = booking_lists.get("booked_users", [])
     user_ids = [user["user_id"] for user in booked_users]
-    
 
     # Query the User model to get usernames
     results = (
     db.query(User, Avatar.fileurl)
-    .join(Avatar, User.id == Avatar.userID)  # Join condition
+    .outerjoin(Avatar, User.id == Avatar.userID)  # Join condition
     .filter(User.id.in_(user_ids))  # Filter users based on user_ids list
     .all())
     # Return a list of usernames
@@ -323,7 +353,7 @@ async def getBookedUsers(eventId: str, bookingContainer, current_user, db):
             {
                 "username": user.username,
                 "gender": user.gender,
-                "age": calculate_age(user.dob) ,# Convert date to ISO format if not None
+                "age": calculate_age(user.dob) ,  # Convert date to ISO format if not None
                 "Avatar": avatar_url  # Corrected to fetch the avatar URL
             }
             for user, avatar_url in results  # Destructure the tuple to access user and avatar_url
@@ -371,9 +401,10 @@ options = {
     "margin-right": "0mm",  # Use hyphen and specify units
     "margin-top":"0mm",
     "margin-bottom":"0mm",
-    "page-height":"295mm",
+    "page-height":"290mm",
     "page-width":"215mm"
 }
+
 
 def generate_ticket_id(user_id: str, event_id: str) -> str:
     # Create a combined string of user_id and event_id
@@ -388,8 +419,10 @@ def generate_ticket_id(user_id: str, event_id: str) -> str:
     
     return ticket_id
 
+
 async def create_ticket_pdf(ticket_data: ticketData, output_path: str, eventContainer, db):
     ticket_data_dict = ticket_data.dict()
+    #print(ticket_data_dict)
    
     # Ensure ticket_data is an instance of ticketData and convert it to a dictionary
     if not isinstance(ticket_data, ticketData):
@@ -401,39 +434,38 @@ async def create_ticket_pdf(ticket_data: ticketData, output_path: str, eventCont
     qr_data = {
         "qr": "eventBooking",
         "event_id": ticket_data_dict['eventId'],  # Use relevant data for event_id
-        "user_id": ticket_data_dict['userId']  # Use relevant data for user_id if available
+        "user_id": ticket_data_dict['userId_O']  # Use relevant data for user_id if available
     }
     
-    event_query ="""
+    event_query = """
     SELECT * FROM eventcontainer e WHERE e.id = @id
     """
     params = [{"name": "@id", "value": ticket_data_dict['eventId']}]
     items = list(eventContainer.query_items(query=event_query, parameters=params, enable_cross_partition_query=True))
     
     existing_event = items[0]
-    ticket_data_dict['event_name']=existing_event['event_name']
+    ticket_data_dict['event_name_O'] = existing_event['event_name']
 
-    iso_string=existing_event['start_date_and_time']
+    iso_string = existing_event['start_date_and_time']
     event_datetime = datetime.fromisoformat(iso_string.replace('Z', '+00:00'))
-    date_format = '%Y-%m-%d'       # Format: '2024-08-20'
-    time_format = '%H:%M:%S'       # Format: '15:03:19'
-    ticket_data_dict['event_date']=str(event_datetime.strftime(date_format))
-    ticket_data_dict['event_time']=str(event_datetime.strftime(time_format))
-    ticket_data_dict['event_venue']=existing_event['location']['venue']
+    date_format = '%Y-%m-%d'  # Format: '2024-08-20'
+    time_format = '%H:%M:%S'  # Format: '15:03:19'
+    ticket_data_dict['event_date_O'] = str(event_datetime.strftime(date_format))
+    ticket_data_dict['event_time_O'] = str(event_datetime.strftime(time_format))
+    ticket_data_dict['event_venue_O'] = existing_event['location']['venue']
 
-    ticket_data_dict['ticketId'] = generate_ticket_id(ticket_data_dict['userId'], ticket_data_dict['eventId'])
+    ticket_data_dict['ticketId_O'] = generate_unique_ticket_id(ticket_data_dict['userId_O'], ticket_data_dict['eventId'], ticket_data_dict['payment_id_O'])
 
-    ticket_data_dict['organizer']=existing_event['host_information']
+    ticket_data_dict['organizer_O'] = existing_event['host_information']
 
-    user = db.query(User).filter(User.id == ticket_data_dict['userId']).first()
+    user = db.query(User).filter(User.id == ticket_data_dict['userId_O']).first()
     if user is None:
-        raise HTTPException(status_code=400,detail="User Not found")
+        raise HTTPException(status_code=400, detail="User Not found")
     
-    ticket_data_dict['email'] = user.email
-    ticket_data_dict['UserName'] = user.username
+    ticket_data_dict['email_O'] = user.email
+    ticket_data_dict['UserName_O'] = user.username
 
-
-    updated_ticket_data= ticketData(**ticket_data_dict)
+    updated_ticket_data = ticketData(**ticket_data_dict)
 
     # Generate the QR code
     qr_code_path = str(Path(TEMPLATE_DIR) / "qr_code.png")
@@ -480,14 +512,19 @@ async def send_ticket(ticket_data: Dict[str, str], eventContainer, db) -> Succes
 
     ticket_data_dict = updated_ticket_data.dict()
     # Send the email with the PDF attachment
-    # print(ticket_data_dict)
-    send_email_with_attachment(ticket_data_dict['email'], pdf_path)
+    # #print(ticket_data_dict)
+    try:
+        send_email_with_attachment(ticket_data_dict['email_O'], pdf_path)
 
-    # Clean up: Remove the temporary file
-    os.remove(pdf_path)
+        # Clean up: Remove the temporary file
+        os.remove(pdf_path)
 
-    return SuccessResponse(message="Ticket sent to your registered email id", success=True)
+        return SuccessResponse(message="Ticket sent to your registered email id", success=True)
 
+    except Exception as e:
+        #print(f"Error sending email: {e}")
+        os.remove(pdf_path)
+        return SuccessResponse(message="Some error occured", success=False)
 
 def send_email_with_attachment(email: str, attachment_path: str):
     subject = "Your Ticket Confirmation"

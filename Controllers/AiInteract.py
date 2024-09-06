@@ -66,7 +66,7 @@ def suggest_events(input: str, events: list, current_user: User=Depends(get_curr
             "role": "assistant",
             "content": """
                 You will be given certain characteristics of some user, like the vibe preference, location preference, engagement level, interest areas, and budget.
-                Based on those choices/preferences, pick at most 5 events from the list of events provided in the input that most closely (not necessarily accurate) match these characteristics.
+                Based on those choices/preferences, pick at most 6 events from the list of events provided in the input that most closely (not necessarily accurate) match these characteristics.
                 ONLY return an array consisting of the event IDs, like [a, b, c].
                 Act like a python script to return only the list of string with the ids of events.
             """

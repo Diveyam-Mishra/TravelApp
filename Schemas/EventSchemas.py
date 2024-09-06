@@ -161,9 +161,6 @@ class ImageDetails(BaseModel):
     file_url: Optional[str] = None  # This will be base64 encoded data
     file_type: Optional[str] = None
 
-    class Config:
-        extra = 'allow'
-
 
 class SearchEventResult(BaseModel):
     id:str
@@ -191,7 +188,6 @@ class CreatorId(BaseModel):
 
 class EventIds(BaseModel):
     eventids: List[str]
-    max_items: int = 6
 
 class takeString(BaseModel):
     eventId:str

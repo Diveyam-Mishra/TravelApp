@@ -11,6 +11,7 @@ class PaymentInformation(BaseModel):
     members: Optional[int] = None
     addedInEventBooking: Optional[bool] = False
     id:str
+    ticketId: Optional[str] = None
 
     def to_dict(self):
         return {
@@ -19,7 +20,8 @@ class PaymentInformation(BaseModel):
             "data": self.data,
             "payment_date": self.paymentDate,
             "members": self.members,
-            "added_in_event_booking": self.addedInEventBooking
+            "added_in_event_booking": self.addedInEventBooking,
+            "ticketId": self.ticketId
         }
 
 
@@ -71,7 +73,7 @@ class PaymentLists(BaseModel):
 
     def add_booking_by_user_id(self, userId: str, booking_details: PaymentInformation):
         # Find the user booking by userId
-        # print('reached')
+        # #print('reached')
         user_booking = next((user for user in self.booked_users if user.user_id == userId), None)
         
         if user_booking:

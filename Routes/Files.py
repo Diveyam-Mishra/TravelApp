@@ -95,7 +95,7 @@ async def get_event_files(
 ):
     if current_user is None:
         raise HTTPException(status_code=401, detail="Unauthorized")
-    # print(current_user)
+    # #print(current_user)
     return await fetch_event_files(eventId, container)
 
 
@@ -106,9 +106,9 @@ async def get_event_files(
 #     files: List[UploadFile]=File(...),
 #     db: Session=Depends(get_db)
 # ):
-#     # print(f"userID: {userID}")
-#     # print(f"email: {email}")
-#     # print(f"files: {[file.filename for file in files]}")
+#     # #print(f"userID: {userID}")
+#     # #print(f"email: {email}")
+#     # #print(f"files: {[file.filename for file in files]}")
     
 #     if len(files) > 5:
 #         raise HTTPException(status_code=400, detail="Maximum 5 files can be uploaded at once")

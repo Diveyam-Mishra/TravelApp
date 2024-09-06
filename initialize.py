@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from Routes.OrganizationRoutes import router as organization_router
 from Routes.Auth import router as auth_router
 # from Controllers.Auth import (settings, engine)
-from Database.Connection import engine
+from Database.Connection import engine, Base
 from config import settings
 from Routes.forgot_password import router as forgot_password
 from Routes.EventRoutes import router as events
@@ -44,20 +44,9 @@ app.include_router(FilterRouter, tags=["Filters"])
 app.include_router(PaymentRouter, tags=["Payments"])
 app.include_router(Webhook, tags=["Webhook"])
 
-# MongoDB setup
-client = motor.motor_asyncio.AsyncIOMotorClient(settings.mongoURI)
-database = client.TrabiiBackendTest
-collection = database.users
-
-# Base = declarative_base()
-
-# Password hashing
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
 
 @app.on_event("startup")
 async def startup_event():
-    from Database.Connection import Base
     Base.metadata.create_all(bind=engine)
 
     metadata = MetaData()
