@@ -195,6 +195,11 @@ async def bookEventForUser(
         if not eventList:
             return SuccessResponse(message="Event does not exist", success=False)
         
+        event=eventList[0]
+        
+        if 'capacity' not in event or event['capacity'] < members:
+            return SuccessResponse(message="Not enough capacity available for this event", success=False)
+        
         # Check if the transaction exists
         transaction_query = "SELECT * FROM c WHERE c.transactionId = @transactionId"
         params = [{"name": "@transactionId", "value": transactionId}]
@@ -250,8 +255,9 @@ async def bookEventForUser(
         # #print('ok2')
         # #print(booking_list_item.id)
         bookingContainer.replace_item(item=booking_list_item.id, body=booking_list_item.to_dict())
-        # #print('ok3')
-        # #print(transacationUpd)
+        event['capacity'] -= members 
+        eventContainer.replace_item(item=event['id'], body=event)
+        
         # Add booking data in user-specific container
         await addBookingDataInUserSpecific(userId, eventId, eventContainer, transacationUpd, userSpecificContainer)
         # #print('ok4')
