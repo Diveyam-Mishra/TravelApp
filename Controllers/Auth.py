@@ -343,7 +343,7 @@ async def get_user_specific_data(userId: str, user_specific_container):
     ))
     
     if not search:
-        raise HTTPException(status_code=404, detail="User-specific data not found")
+        return {}
     
     return search[0]
 

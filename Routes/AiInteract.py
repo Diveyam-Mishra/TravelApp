@@ -51,7 +51,10 @@ async def get_events(Preferences: Preferences, event_container=Depends(get_conta
     if not Preferences.event_type_preference_O:
         userId = current_user.id
         resp = await get_user_specific_data(userId, user_specific_container)
-        k=resp['interest_areas']
+        if resp:     
+            k=resp['interest_areas']
+        else:
+             k=[]
     filters = EventFilter(
         date_preference=Preferences.date_preference_O,
         specific_date=Preferences.specific_date_O,
