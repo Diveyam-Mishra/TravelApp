@@ -2,6 +2,7 @@ from Controllers.Events import get_event_by_id
 from fastapi import HTTPException
 from Schemas.PaymentSchemas import PaymentInformation, PaymentLists, \
     AttendedInformation, ticketData, UserBookings
+from azure.cosmos import exceptions
 from Schemas.EventSchemas import SuccessResponse
 from Schemas.userSpecific import EventData, UserSpecific
 from uuid import uuid4
@@ -566,3 +567,80 @@ def send_email_with_attachment(email: str, attachment_path: str):
     except HttpResponseError as e:
         # Handle the error by logging or raising an HTTP exception
         raise HTTPException(status_code=500, detail=f"Failed to send email: {e.message}")
+
+# async def ticket_information(ticketId: str, eventBooking,event_container,file_container):
+#     query = """
+#     SELECT 
+#         c.event_id,
+#         booked_user.bookings
+#     FROM 
+#         c 
+#     JOIN 
+#         booked_user IN c.booked_users
+#     WHERE 
+#         ARRAY_CONTAINS(booked_user.bookings, {"ticketId": @ticketId}, true)
+#     """
+#     parameters = [
+#         {"name": "@ticketId", "value": ticketId}
+#     ]
+#     try:
+#         items = list(eventBooking.query_items(
+#             query=query,
+#             parameters=parameters,
+#             enable_cross_partition_query=True 
+#         ))
+#         print(items)
+#         results=[]
+#         for x in range(len(items)):
+#             try:
+#                 TicketInfo=items[x]
+#                 eventId=TicketInfo['event_id']
+#                 event_result=await get_event_by_id(eventId,event_container,file_container,0.0,0.0)
+#                 print(event_result)
+#                 results.append({TicketInfo:event_result})
+#             except Exception as e:
+#                 print(1)
+#                 pass
+#         print(results)
+#         return results
+#     except exceptions.CosmosHttpResponseError as e:
+#         return (f"Wait while we update the Ticket {str(e)}")
+async def ticket_information(ticketId: str, eventBooking, event_container, file_container):
+    query = """
+    SELECT 
+        c.event_id,
+        booked_user.bookings
+    FROM 
+        c 
+    JOIN 
+        booked_user IN c.booked_users
+    WHERE 
+        ARRAY_CONTAINS(booked_user.bookings, {"ticketId": @ticketId}, true)
+    """
+    parameters = [
+        {"name": "@ticketId", "value": ticketId}
+    ]
+    
+    try:
+        # Execute the query to find bookings that contain the specified ticketId
+        items = list(eventBooking.query_items(
+            query=query,
+            parameters=parameters,
+            enable_cross_partition_query=True 
+        ))
+        results = []
+        for item in items:
+            try:
+                event_id = item['event_id']
+                event_result = await get_event_by_id(event_id, event_container, file_container, 0.0, 0.0)
+                ticket_info = {
+                    'ticket_id': ticketId,
+                    'event_details': event_result
+                }
+                results.append(ticket_info)
+            except Exception as e:
+                continue
+        return results
+
+    except exceptions.CosmosHttpResponseError as e:
+        return (f"Wait while we update the Ticket {str(e)}")

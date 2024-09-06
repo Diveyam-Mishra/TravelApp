@@ -3,12 +3,12 @@ from fastapi.responses import FileResponse
 from config import JWTBearer
 from Schemas.EventSchemas import SuccessResponse
 from Database.Connection import get_booking_container, get_container, get_db, \
-    get_user_specific_container, get_successful_transaction_container
+    get_user_specific_container, get_successful_transaction_container,get_file_container
 from Models.user_models import User
 from Controllers.Auth import get_current_user
 from Controllers.Payments import getUserBookingStatus, bookEventForUser, addAttendee, getBookedUsers, \
     getAttendedUsers, create_ticket_pdf, \
-    send_email_with_attachment, send_ticket
+    send_email_with_attachment, send_ticket,ticket_information
 from Schemas.PaymentSchemas import PaymentInformation, ticketData
 from sqlalchemy.orm import Session
 import os
@@ -129,3 +129,12 @@ async def generate_ticket(ticket_data: ticketData, ticketId:str, booking_contain
     
     # Return the PDF file as a downloadable response
     return FileResponse(path=pdf_path, filename="ticket.pdf", media_type='application/pdf')
+
+@router.get("/Ticket_Info/{ticketID}",dependencies=[Depends(JWTBearer())])
+async def Ticket_Information(ticketId:str, booking_container=Depends(get_booking_container), event_container=Depends(get_container), file_Container=Depends(get_file_container), current_user=Depends(get_current_user)):
+    if current_user is None:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    k=await ticket_information(ticketId,booking_container,event_container,file_Container)
+    print(2)
+    print(k)
+    return k
