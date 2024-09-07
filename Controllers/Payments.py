@@ -281,13 +281,13 @@ async def addAttendee(ticketId: str, userId: str, bookingContainer, eventContain
     
     booking_record = booking_records[0]
 
-    # creator = booking_record['event_details']['creator_id']
+    creator = booking_record['event_details']['creator_id']
     eventId = booking_record['event_details']['id']
     transactionId = booking_record['Transaction']['booking']['transactionId']
     members = (str)(booking_record['Transaction']['booking']['members'])
 
-    # if creator != userId:
-    #     raise HTTPException(status_code=401, detail=f"You are not the creator of the booked event")
+    if creator != userId:
+        raise HTTPException(status_code=401, detail=f"You are not the creator of the booked event")
 
     booking_event_query = "SELECT * FROM c WHERE c.id = @eventId"
     params = [{"name": "@eventId", "value": eventId}]
