@@ -44,12 +44,16 @@ class UserBookings(BaseModel):
 
 class AttendedInformation(BaseModel):
     user_id: str
-    attended_at: datetime  
+    transactionId : str
+    ticketId: str
+    members: str  
 
     def to_dict(self):
         return {
             "user_id": self.user_id,
-            "attended_at": self.attended_at.isoformat()  # Convert datetime to ISO 8601 string
+            "transactionId": self.transactionId,
+            "ticketId": self.ticketId,
+            "members": self.members
         }
 
 
@@ -89,6 +93,15 @@ class PaymentLists(BaseModel):
         for user in self.booked_users:
             if user.user_id == userId:
                 return user.get_bookings()
+        return []
+    
+    def get_bookings_by_user_id_n_transaction_id(self, userId: str, transactionId: str) -> PaymentInformation:
+        for user in self.booked_users:
+            if user.user_id == userId:
+                booking = user.get_bookings()
+                for booking_details in booking:
+                    if booking_details.transactionId == transactionId:
+                        return booking_details
         return []
         
 
