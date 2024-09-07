@@ -398,7 +398,8 @@ options = {
     "margin-top":"0mm",
     "margin-bottom":"0mm",
     "page-height":"290mm",
-    "page-width":"215mm"
+    "page-width":"215mm",
+    "dpi":"300"
 }
 
 
