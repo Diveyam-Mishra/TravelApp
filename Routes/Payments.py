@@ -37,13 +37,13 @@ async def newBooking(eventId: str, merchantTransactionId: str=Body(...), members
     return await bookEventForUser(eventId, current_user.id, bookingContainer, eventContainer, merchantTransactionId, userSpecificContainer, transactionContainer, members)
 
 
-@router.put("/addAttendee/{eventId}/", dependencies=[Depends(JWTBearer())], response_model=SuccessResponse, tags=["Will not work"])
-async def addAttendeeToEvent(eventId: str, bookingContainer=Depends(get_booking_container),
-                              eventContainer=Depends(get_container), current_user: User=Depends(get_current_user)):
+@router.put("/addAttendee/{ticketId}/", dependencies=[Depends(JWTBearer())], response_model=SuccessResponse, tags=["Will not work"])
+async def addAttendeeToEvent(ticketId: str, bookingContainer=Depends(get_booking_container),
+                              eventContainer=Depends(get_container), fileContainer=Depends(get_file_container), current_user: User=Depends(get_current_user)):
     if current_user is None:
         raise HTTPException(status_code=401, detail="Unauthorized")
 
-    response = await addAttendee(eventId, current_user.id, bookingContainer, eventContainer)
+    response = await addAttendee(ticketId, current_user.id, bookingContainer, eventContainer, fileContainer)
 
     return response
 
@@ -135,6 +135,8 @@ async def Ticket_Information(ticketId:str, booking_container=Depends(get_booking
     if current_user is None:
         raise HTTPException(status_code=401, detail="Unauthorized")
     k=await ticket_information(ticketId,booking_container,event_container,file_Container)
-    print(2)
-    print(k)
     return k
+    if k[0]['event_details']['creator_id']==current_user.id:
+        return k
+    else:
+        return ("You are not the Creator of this Event. Information is only For the Creator ")

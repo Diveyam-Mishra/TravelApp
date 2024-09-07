@@ -12,7 +12,8 @@ class PaymentInformation(BaseModel):
     addedInEventBooking: Optional[bool] = False
     id:str
     ticketId: Optional[str] = None
-
+    userId: Optional[str] = None
+    attended: Optional[bool] = False
     def to_dict(self):
         return {
             "id":self.id,
@@ -21,7 +22,9 @@ class PaymentInformation(BaseModel):
             "payment_date": self.paymentDate,
             "members": self.members,
             "added_in_event_booking": self.addedInEventBooking,
-            "ticketId": self.ticketId
+            "ticketId": self.ticketId,
+            "userId": self.userId,
+            "attended": self.attended
         }
 
 
@@ -96,14 +99,41 @@ class PaymentLists(BaseModel):
         return []
     
     def get_bookings_by_user_id_n_transaction_id(self, userId: str, transactionId: str) -> PaymentInformation:
-        for user in self.booked_users:
-            if user.user_id == userId:
-                booking = user.get_bookings()
-                for booking_details in booking:
-                    if booking_details.transactionId == transactionId:
-                        return booking_details
-        return []
+        # Find the user first
+        user_booking = next((user for user in self.booked_users if user.user_id == userId), None)
         
+        if user_booking:
+            # If the user is found, find the specific booking
+            return next((booking for booking in user_booking.get_bookings() if booking.transactionId == transactionId), None)
+        
+        return None
+
+    def add_attendee_information(self, attendee_info: AttendedInformation):
+        # Check if the attendee already exists based on user_id
+        existing_attendee = next((attendee for attendee in self.attended_users if attendee.user_id == attendee_info.user_id), None)
+        
+        if existing_attendee:
+            # If attendee exists, update the information
+            existing_attendee.transactionId = attendee_info.transactionId
+            existing_attendee.ticketId = attendee_info.ticketId
+            existing_attendee.members = attendee_info.members
+        else:
+            # If attendee does not exist, add to the list
+            self.attended_users.append(attendee_info)
+
+    def mark_attended_by_ticket_id(self, ticketId: str):
+        for user in self.booked_users:
+            booking = next((b for b in user.bookings if b.ticketId == ticketId), None)
+            if booking:
+                booking.attended = True
+    
+    def is_attended_by_ticket_id(self, ticketId: str) -> bool:
+        for user in self.booked_users:
+            booking = next((b for b in user.bookings if b.ticketId == ticketId), None)
+            if booking:
+                return booking.attended  # Return the status of the attended field
+        return False  # Ticket ID not found, or attended is False
+                
 
 class ticketData(BaseModel):
     email_O: Optional[str] = None
