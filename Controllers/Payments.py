@@ -630,18 +630,30 @@ async def ticket_information(ticketId: str, eventBooking, event_container, file_
         ))
         results = []
         for item in items:
-            try:
-                event_id = item['event_id']
-                event_result = await get_event_by_id(event_id, event_container, file_container, 0.0, 0.0)
-                event_result1 = {key: value for key, value in event_result.items() if key not in ['_rid', '_self', '_etag', '_attachments', '_ts','distance','images']}
-                ticket_info = {
-                    'ticket_id': ticketId,
-                    'Transaction':item,
-                    'event_details': event_result1
-                }
-                results.append(ticket_info)
-            except Exception as e:
-                continue
+            event_id = item['event_id']
+            # Filter bookings to find the one with the specified ticketId
+            matching_booking = next(
+                (booking for booking in item['bookings'] if booking['ticketId'] == ticketId),
+                None
+            )
+            if matching_booking:
+                try:
+                    event_result = await get_event_by_id(event_id, event_container, file_container, 0.0, 0.0)
+                    # Remove unnecessary fields from event result
+                    event_result1 = {key: value for key, value in event_result.items() if key not in ['_rid', '_self', '_etag', '_attachments', '_ts','distance','images']}
+                    # Create ticket information dictionary
+                    ticket_info = {
+                        'ticket_id': ticketId,
+                        'Transaction': {
+                            'event_id': event_id,
+                            'booking': matching_booking  # Only the matched booking
+                        },
+                        'event_details': event_result1
+                    }
+                    results.append(ticket_info)
+                except Exception as e:
+                    continue
+        
         return results
 
     except exceptions.CosmosHttpResponseError as e:
