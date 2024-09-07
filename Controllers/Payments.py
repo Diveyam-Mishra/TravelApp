@@ -637,7 +637,7 @@ async def ticket_information(ticketId: str, eventBooking, event_container, file_
                 try:
                     event_result = await get_event_by_id(event_id, event_container, file_container, 0.0, 0.0)
                     # Remove unnecessary fields from event result
-                    event_result1 = {key: value for key, value in event_result.items() if key not in ['_rid', '_self', '_etag', '_attachments', '_ts', 'distance', 'images']}
+                    event_result1 = {key: value for key, value in event_result.items() if key not in ['_rid', '_self', '_etag', '_attachments', '_ts','distance','images']}
                     # Create ticket information dictionary
                     ticket_info = {
                         'ticket_id': ticketId,

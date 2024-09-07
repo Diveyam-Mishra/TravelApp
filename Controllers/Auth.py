@@ -345,7 +345,15 @@ async def get_user_specific_data(userId: str, user_specific_container, event_con
     ))
     
     if not search:
-        return {}
+        user_specific=UserSpecific(
+            id=userId,
+            userId=userId,
+            booked_events=[],
+            recent_searches=[],
+            interest_areas=[]
+        )
+        user_specific_container.create_item(user_specific.to_dict())
+        return user_specific
     
     user_data = search[0]
     event_map = {}
