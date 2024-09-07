@@ -633,9 +633,11 @@ async def ticket_information(ticketId: str, eventBooking, event_container, file_
             try:
                 event_id = item['event_id']
                 event_result = await get_event_by_id(event_id, event_container, file_container, 0.0, 0.0)
+                event_result1 = {key: value for key, value in event_result.items() if key not in ['_rid', '_self', '_etag', '_attachments', '_ts','distance','images']}
                 ticket_info = {
                     'ticket_id': ticketId,
-                    'event_details': event_result
+                    'Transaction':item,
+                    'event_details': event_result1
                 }
                 results.append(ticket_info)
             except Exception as e:

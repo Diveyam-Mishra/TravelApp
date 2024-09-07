@@ -136,8 +136,6 @@ async def Ticket_Information(ticketId:str, booking_container=Depends(get_booking
         raise HTTPException(status_code=401, detail="Unauthorized")
     k=await ticket_information(ticketId,booking_container,event_container,file_Container)
     if k[0]['event_details']['creator_id']==current_user.id:
-        print(2)
-        print(k)
         return k
     else:
         return ("You are not the Creator of this Event. Information is only For the Creator ")
