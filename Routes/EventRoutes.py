@@ -150,8 +150,8 @@ async def add_advertisement(eventId: takeString, container=Depends(get_container
 
 
 @router.post("/event/batch_api/", dependencies=[Depends(JWTBearer())])
-async def batchApi(event_ids:EventIds,container=Depends(get_container)):
-    return await batch_event(event_ids,container)
+async def batchApi(event_ids:EventIds,coord:GeoTag,container=Depends(get_container)):
+    return await batch_event(event_ids,coord,container)
 # SEEDERS
 # from Seeders.fakeEvent import seed_events
 # @router.post("/events/seed/", response_model=SuccessResponse)

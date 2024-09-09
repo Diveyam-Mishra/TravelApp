@@ -416,7 +416,7 @@ async def advertise_event(event_id: takeString, advertised_events_container, con
     #print("not ok")
     return SuccessResponse(message=f"Event with event_id: {event_id} successfully advertised", success=True)
 
-async def batch_event(event_ids:EventIds, container):
+async def batch_event(event_ids:EventIds, coord:GeoTag,container):
     event_ids.eventids = event_ids.eventids[:6]
     query = "SELECT * FROM eventcontainer e WHERE e.id IN ({})".format(
     ", ".join(f"'{event_id}'" for event_id in event_ids.eventids)
@@ -425,4 +425,14 @@ async def batch_event(event_ids:EventIds, container):
         query=query,
         enable_cross_partition_query=True
     ))
+    for item in events:
+        event_lat = item['location']['geo_tag']['latitude']
+        event_lon = item['location']['geo_tag']['longitude']
+        user_lat = coord.latitude
+        user_lon = coord.longitude
+        distance = haversine(user_lat, user_lon, event_lat, event_lon)
+        item['distance']=distance
+        keys_to_remove = ["creator_id","host_information","duration","remaining_capacity", "creator_id", "editor_access","_rid", "_self", "_etag", "_attachments", "_ts"]
+        for key in keys_to_remove:
+            item.pop(key, None)
     return events
