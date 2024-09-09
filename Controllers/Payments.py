@@ -151,7 +151,6 @@ async def addBookingDataInUserSpecific(
         ticket_id=paymentDetails.ticketId
     )
 
-
     user_specific.booked_events.append(newUserBookingData)
 
     # Convert user_specific back to dictionary format for storage
@@ -196,7 +195,7 @@ async def bookEventForUser(
         if not eventList:
             return SuccessResponse(message="Event does not exist", success=False)
         
-        event=eventList[0]
+        event = eventList[0]
         
         if 'capacity' not in event or event['capacity'] < members:
             return SuccessResponse(message="Not enough capacity available for this event", success=False)
@@ -239,6 +238,7 @@ async def bookEventForUser(
         transaction_dict['added_in_event_booking'] = True
 
         transaction_dict['ticketId'] = generate_unique_ticket_id(userId, eventId, transactionId)
+        transaction_dict['userId'] = userId
         ticketId = transaction_dict['ticketId']
         # Replace transaction item
         transactionContainer.replace_item(item=transaction_dict['id'], body=transaction_dict)
@@ -266,55 +266,50 @@ async def bookEventForUser(
     
     except Exception as e:
         # Log the exception (you can use logging or any other method)
-        #print(f"An error occurred: {str(e)}")
+        # print(f"An error occurred: {str(e)}")
 
         # Return a generic error response
         return SuccessResponse(message="An error occurred while booking the event", success=False)
     
 
-async def addAttendee(eventId: str, userId: str, bookingContainer, eventContainer):
+async def addAttendee(ticketId: str, userId: str, bookingContainer, eventContainer, fileContainer):
     # Check if the user has booked the event
-    status_response = await getUserBookingStatus(eventId, userId, bookingContainer, eventContainer)
-    
-    if not status_response.success:
-        # User has not booked the event, cannot add to attended_users
-        return SuccessResponse(message="User has not booked the event", success=False)
+    booking_records = await ticket_information(ticketId, bookingContainer, eventContainer, fileContainer)
 
-    # Fetch the current booking details
-    booking_event_query = "SELECT * FROM c WHERE c.event_id = @eventId"
+    if not booking_records:
+        return SuccessResponse(message="User has not booked the event", success=False)
+    
+    booking_record = booking_records[0]
+
+    creator = booking_record['event_details']['creator_id']
+    eventId = booking_record['event_details']['id']
+    transactionId = booking_record['Transaction']['booking']['transactionId']
+    members = (str)(booking_record['Transaction']['booking']['members'])
+
+    if creator != userId:
+        raise HTTPException(status_code=401, detail=f"You are not the creator of the booked event")
+
+    booking_event_query = "SELECT * FROM c WHERE c.id = @eventId"
     params = [{"name": "@eventId", "value": eventId}]
 
-    bookingLists = list(bookingContainer.query_items(
-        query=booking_event_query,
-        parameters=params,
-        enable_cross_partition_query=True
-    ))
+    bookingLists = list(bookingContainer.query_items(query=booking_event_query, parameters=params, enable_cross_partition_query=True))
 
     if not bookingLists:
-        raise HTTPException(status_code=404, detail="Booking record not found")
-
-    booking_lists = bookingLists[0]
-
-    # Create a new AttendedInformation instance
-    attended_info = AttendedInformation(
-        user_id=userId,
-        attended_at=datetime.utcnow()  # Set to current UTC time
-    )
-
-    # Add the new AttendedInformation to the attended_users list
-    attended_users = [AttendedInformation(**user) for user in booking_lists.get("attended_users", [])]
+        return SuccessResponse(message="Event Booking record not found", success=False)
     
-    if any(user.user_id == userId for user in attended_users):
-        # User is already in the attended_users list, throw an error
-        raise HTTPException(status_code=400, detail="User is already in the attended users list")
+    booking_list_item = PaymentLists(**bookingLists[0])
 
-    attended_users.append(attended_info)
-    
-    # Update the booking list with the new attended_users
-    booking_lists["attended_users"] = [user.to_dict() for user in attended_users]
+    attendedStatus = booking_list_item.is_attended_by_ticket_id(ticketId)
 
-    # Replace the existing item in the database with the updated one
-    bookingContainer.replace_item(item=booking_lists['id'], body=booking_lists)
+    if attendedStatus:
+        return SuccessResponse(message="User has already attended the event", success=False)
+
+    newAttendeeInfo = AttendedInformation(user_id=userId, transactionId=transactionId, ticketId=ticketId, members=members)
+
+    booking_list_item.add_attendee_information(newAttendeeInfo)
+    booking_list_item.mark_attended_by_ticket_id(ticketId)
+    bookingContainer.replace_item(item=booking_list_item.id, body=booking_list_item.to_dict())
+
 
     return SuccessResponse(message="User successfully added to attended users", success=True)
 
@@ -403,7 +398,8 @@ options = {
     "margin-top":"0mm",
     "margin-bottom":"0mm",
     "page-height":"290mm",
-    "page-width":"215mm"
+    "page-width":"215mm",
+    "dpi":"300"
 }
 
 
@@ -423,7 +419,7 @@ def generate_ticket_id(user_id: str, event_id: str) -> str:
 
 async def create_ticket_pdf(ticket_data: ticketData, output_path: str, eventContainer, db):
     ticket_data_dict = ticket_data.dict()
-    #print(ticket_data_dict)
+    # print(ticket_data_dict)
    
     # Ensure ticket_data is an instance of ticketData and convert it to a dictionary
     if not isinstance(ticket_data, ticketData):
@@ -523,9 +519,10 @@ async def send_ticket(ticket_data: Dict[str, str], eventContainer, db) -> Succes
         return SuccessResponse(message="Ticket sent to your registered email id", success=True)
 
     except Exception as e:
-        #print(f"Error sending email: {e}")
+        # print(f"Error sending email: {e}")
         os.remove(pdf_path)
         return SuccessResponse(message="Some error occured", success=False)
+
 
 def send_email_with_attachment(email: str, attachment_path: str):
     subject = "Your Ticket Confirmation"
@@ -567,6 +564,7 @@ def send_email_with_attachment(email: str, attachment_path: str):
     except HttpResponseError as e:
         # Handle the error by logging or raising an HTTP exception
         raise HTTPException(status_code=500, detail=f"Failed to send email: {e.message}")
+
 
 # async def ticket_information(ticketId: str, eventBooking,event_container,file_container):
 #     query = """
