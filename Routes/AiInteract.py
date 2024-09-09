@@ -52,11 +52,11 @@ async def get_events(Preferences: Preferences, background_tasks: BackgroundTasks
             raise HTTPException(status_code=400, detail="User Not Found")
     userId = current_user.id
     if not Preferences.event_type_preference_O:
-        resp = await get_user_specific_data(userId, user_specific_container)
+        resp = await get_user_specific_data(userId, user_specific_container, event_container)
         if resp:     
             k=resp['interest_areas']
         else:
-             k=[]
+            k=[]
     filters = EventFilter(
         date_preference=Preferences.date_preference_O,
         specific_date=Preferences.specific_date_O,
@@ -68,6 +68,17 @@ async def get_events(Preferences: Preferences, background_tasks: BackgroundTasks
         user_longitude=Preferences.user_longitude,
         user_city=Preferences.user_city_O
     )
+    if Preferences.date_preference_O == "Today" or Preferences.date_preference_O == "Tomorrow" or Preferences.date_preference_O == "This week":
+        filters.specific_date = None
+    elif Preferences.date_preference_O=="Anytime":
+        filters.specific_date = None
+        filters.date_preference = None
+    else:
+        filters.specific_date = filters.date_preference
+        filters.date_preference = "Specific Date"
+
+    # print(filters)
+
     input_str = (f"Vibe preference: {Preferences.VibePreference}, Location Preference: {Preferences.LocationPreference}, Engagement Level: {Preferences.EngagementLevel},  Interest Areas: {Preferences.event_type_preference_O if Preferences.event_type_preference_O else k},Budget: {Preferences.Budget}")
     # update_needed = False
     # if Preferences.Paragraph_Question_1_O:
@@ -81,30 +92,33 @@ async def get_events(Preferences: Preferences, background_tasks: BackgroundTasks
     # # Update user-specific container only if necessary
     # if update_needed:
     #     user_specific_container.replace_item(item=resp['id'], body=resp)
-    background_tasks.add_task(update_user_specific_data, user_specific_container, userId, Preferences)
+    background_tasks.add_task(update_user_specific_data, user_specific_container, event_container, userId, Preferences)
     list_of_filtered_events = await get_filtered_events(event_container, filters, current_user)
     result = [{"id": event["id"], "name": event["event_name"], "description": event["event_description"]} for event in list_of_filtered_events]
     # #print(result)
-
+    if len(result) > 100:
+        result = result[:100]
+    # print(len(result))
     events = suggest_events(input_str, result, current_user)
+
 
     return {"eventsSuggested":events}
 
-async def update_user_specific_data(user_specific_container, userId,Preferences: Preferences):
-    resp = await get_user_specific_data(userId, user_specific_container)
+async def update_user_specific_data(user_specific_container, event_container, userId,Preferences: Preferences):
+    resp = await get_user_specific_data(userId, user_specific_container, event_container)
     update_needed = False
-    print("Yes")
+    # print("Yes")
     if Preferences.Paragraph_Question_1_O:
-        print("Yes")
+        # print("Yes")
         resp['paragraph_question_1'] = Preferences.Paragraph_Question_1_O
         update_needed = True
-    print("Yes")
+    # print("Yes")
     if Preferences.Paragraph_Question_2_O:
-        print("Yes")
+        # print("Yes")
         resp['paragraph_question_2'] = Preferences.Paragraph_Question_2_O
         update_needed = True
-    print("Yes")
+    # print("Yes")
     # Update user-specific container only if necessary
     if update_needed:
-        print("Yes")
+        # print("Yes")
         user_specific_container.replace_item(item=resp['id'], body=resp)

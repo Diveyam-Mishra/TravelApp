@@ -316,7 +316,10 @@ async def get_filtered_events(
 
     # Initialize the query with a base filter for valid events
     query = "SELECT * FROM event_container e WHERE IS_STRING(e.start_date_and_time)"
+    now = datetime.now().isoformat()
+    query += " AND e.start_date_and_time > @now"
     params = []
+    params.append({"name": "@now", "value": now})
 
     if filters.date_preference:
         today = datetime.today().date()
@@ -342,13 +345,20 @@ async def get_filtered_events(
             params.append({"name": "@start_of_week", "value": start_of_week.isoformat()})
             params.append({"name": "@end_of_week", "value": end_of_week.isoformat()})
         elif filters.date_preference == "Specific Date" and filters.specific_date:
-            query += (
-                " AND STARTSWITH(e.start_date_and_time, @date)"
-            )
+            if filters.specific_date.endswith('Z'):
+                # Remove the 'Z' and convert the string to a datetime object
+                filters.specific_date = datetime.fromisoformat(filters.specific_date[:-1])
+            else:
+                # Convert to datetime if it doesn't end with 'Z'
+                filters.specific_date = datetime.fromisoformat(filters.specific_date)
+
+            # Construct the query and parameters
+            query += " AND STARTSWITH(e.start_date_and_time, @date)"
             params.append({"name": "@date", "value": filters.specific_date.isoformat()})
 
     # Apply event type filter
-    if filters.event_type_preference:
+    if filters.event_type_preference and len(filters.event_type_preference)>0:
+        print(filters.event_type_preference)
         type_filters = []
         for i, event_type in enumerate(filters.event_type_preference):
             type_filters.append(f"ARRAY_CONTAINS(e.event_type, @event_type{i})")
@@ -372,6 +382,8 @@ async def get_filtered_events(
             query += " AND (" + " OR ".join(time_conditions) + ")"
 
     # Query the event container
+
+    # print(query)
     items = event_container.query_items(query=query, parameters=params, enable_cross_partition_query=True)
 
     filtered_events = []
