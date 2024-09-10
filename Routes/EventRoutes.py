@@ -151,7 +151,25 @@ async def add_advertisement(eventId: takeString, container=Depends(get_container
 
 @router.post("/event/batch_api/", dependencies=[Depends(JWTBearer())])
 async def batchApi(coord:GeoTag, event_ids:List[str]=Body(...), container=Depends(get_container)):
-    return await batch_event(event_ids, coord, container)
+    resp = await batch_event(event_ids, coord, container)
+    result = [
+        {
+            "id": event.get("id"),
+            "name": event.get("event_name"),
+            "description": event.get("event_description"),
+            "type": event.get("event_type"),
+            "thumbnail": {
+                    "file_name": event.get("thumbnail", {}).get("fileName"),
+                    "file_url": event.get("thumbnail", {}).get("fileUrl"),
+                    "file_type": event.get("thumbnail", {}).get("fileType"),
+                } if event.get("thumbnail") else None,
+            "distance": f"{event.get('distance')} km"
+        } for event in resp
+    ]
+
+    return result
+
+
 # SEEDERS
 # from Seeders.fakeEvent import seed_events
 # @router.post("/events/seed/", response_model=SuccessResponse)
