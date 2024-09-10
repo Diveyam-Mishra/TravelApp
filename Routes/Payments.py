@@ -39,11 +39,11 @@ async def newBooking(eventId: str, merchantTransactionId: str=Body(...), members
 
 @router.put("/addAttendee/{ticketId}/", dependencies=[Depends(JWTBearer())], response_model=SuccessResponse, tags=["Will not work"])
 async def addAttendeeToEvent(ticketId: str, bookingContainer=Depends(get_booking_container),
-                              eventContainer=Depends(get_container), fileContainer=Depends(get_file_container), current_user: User=Depends(get_current_user)):
+                              eventContainer=Depends(get_container), fileContainer=Depends(get_file_container), current_user: User=Depends(get_current_user),db=Depends(get_db)):
     if current_user is None:
         raise HTTPException(status_code=401, detail="Unauthorized")
 
-    response = await addAttendee(ticketId, current_user.id, bookingContainer, eventContainer, fileContainer)
+    response = await addAttendee(ticketId, current_user.id, bookingContainer, eventContainer, fileContainer,db)
 
     return response
 
