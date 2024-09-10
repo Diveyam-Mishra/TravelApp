@@ -3,7 +3,7 @@ from Schemas.UserSchemas import SuccessResponse, UserId
 from Schemas.EventSchemas import *
 from Database.Connection import *
 from Controllers.Events import create_event, update_event, get_filtered_events, \
-    give_editor_access, get_event_by_id, advertise_event,batch_event
+    give_editor_access, get_event_by_id, advertise_event, batch_event
 from sqlalchemy.orm import Session
 from config import JWTBearer
 from Controllers.Auth import get_current_user
@@ -145,13 +145,31 @@ async def add_editor(
 
 @router.post("/event/advertise/", response_model=SuccessResponse)
 async def add_advertisement(eventId: takeString, container=Depends(get_container), advertised_events_container=Depends(get_advertisement_container)) -> SuccessResponse:
-    #print("ok")
+    # print("ok")
     return await advertise_event(eventId, advertised_events_container, container)
 
 
 @router.post("/event/batch_api/", dependencies=[Depends(JWTBearer())])
-async def batchApi(event_ids:EventIds,coord:GeoTag,container=Depends(get_container)):
-    return await batch_event(event_ids,coord,container)
+async def batchApi(coord:GeoTag, event_ids:List[str]=Body(...), container=Depends(get_container)):
+    resp = await batch_event(event_ids, coord, container)
+    result = [
+        {
+            "id": event.get("id"),
+            "name": event.get("event_name"),
+            "description": event.get("event_description"),
+            "type": event.get("event_type"),
+            "thumbnail": {
+                    "file_name": event.get("thumbnail", {}).get("fileName"),
+                    "file_url": event.get("thumbnail", {}).get("fileUrl"),
+                    "file_type": event.get("thumbnail", {}).get("fileType"),
+                } if event.get("thumbnail") else None,
+            "distance": f"{event.get('distance')} km"
+        } for event in resp
+    ]
+
+    return result
+
+
 # SEEDERS
 # from Seeders.fakeEvent import seed_events
 # @router.post("/events/seed/", response_model=SuccessResponse)
@@ -167,7 +185,6 @@ async def batchApi(event_ids:EventIds,coord:GeoTag,container=Depends(get_contain
 #         raise e
 #     except Exception as e:
 #         raise HTTPException(status_code=500, detail="Failed to seed events")
-
 
 # @router.get("/fix/events")
 # async def fix(event_container= Depends(get_container), file_container= Depends(get_file_container)):

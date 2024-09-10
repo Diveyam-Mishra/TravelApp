@@ -428,10 +428,10 @@ async def advertise_event(event_id: takeString, advertised_events_container, con
     #print("not ok")
     return SuccessResponse(message=f"Event with event_id: {event_id} successfully advertised", success=True)
 
-async def batch_event(event_ids:EventIds, coord:GeoTag,container):
-    event_ids.eventids = event_ids.eventids[:6]
+async def batch_event(event_ids:List[str], coord:GeoTag,container):
+    event_ids = event_ids[:6]
     query = "SELECT * FROM eventcontainer e WHERE e.id IN ({})".format(
-    ", ".join(f"'{event_id}'" for event_id in event_ids.eventids)
+    ", ".join(f"'{event_id}'" for event_id in event_ids)
 )
     events = list(container.query_items(
         query=query,
