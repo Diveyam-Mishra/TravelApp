@@ -280,7 +280,7 @@ async def addAttendee(ticketId: str, userId: str, bookingContainer, eventContain
         return SuccessResponse(message="User has not booked the event", success=False)
     
     booking_record = booking_records[0]
-    print(booking_record)
+    # print(booking_record)
     creator = booking_record['event_details']['creator_id']
     eventId = booking_record['event_details']['id']
     transactionId = booking_record['Transaction']['booking']['transactionId']
