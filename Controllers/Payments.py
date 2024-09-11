@@ -272,7 +272,7 @@ async def bookEventForUser(
         return SuccessResponse(message="An error occurred while booking the event", success=False)
     
 
-async def addAttendee(ticketId: str, userId: str, bookingContainer, eventContainer, fileContainer):
+async def addAttendee(ticketId: str, userId: str, bookingContainer, eventContainer, fileContainer,db):
     # Check if the user has booked the event
     booking_records = await ticket_information(ticketId, bookingContainer, eventContainer, fileContainer)
 
@@ -285,6 +285,12 @@ async def addAttendee(ticketId: str, userId: str, bookingContainer, eventContain
     eventId = booking_record['event_details']['id']
     transactionId = booking_record['Transaction']['booking']['transactionId']
     members = (str)(booking_record['Transaction']['booking']['members'])
+    k=db.query(User).filter(User.id == booking_record['Transaction']['booking']['userId']).first()
+    username=k.username
+    start_date_and_time = booking_record['event_details']['start_date_and_time']
+    end_date_and_time = booking_record['event_details']['end_date_and_time']
+    event_name=booking_record['event_details']['event_name']
+    location = booking_record['event_details']['location']
 
     if creator != userId:
         raise HTTPException(status_code=401, detail=f"You are not the creator of the booked event")
@@ -311,7 +317,8 @@ async def addAttendee(ticketId: str, userId: str, bookingContainer, eventContain
     bookingContainer.replace_item(item=booking_list_item.id, body=booking_list_item.to_dict())
 
 
-    return SuccessResponse(message="User successfully added to attended users", success=True)
+    return SuccessResponse(message="User successfully added to attended users ",event_name=event_name ,username=username,location=location,
+                           start_date_and_time=start_date_and_time,end_date_and_time=end_date_and_time ,members=members,success=True)
 
 
 async def getBookedUsers(eventId: str, bookingContainer, current_user, db):

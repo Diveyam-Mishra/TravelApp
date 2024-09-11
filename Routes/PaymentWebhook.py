@@ -7,6 +7,9 @@ from Schemas.EventSchemas import SuccessResponse
 from Database.Connection import get_booking_container,\
     get_successful_transaction_container
 from Controllers.PaymentWebhook import CreateTransactionInDB
+from Controllers.Auth import get_current_user
+from fastapi.exceptions import HTTPException
+from config import JWTBearer
 
 
 router = APIRouter()
@@ -36,9 +39,47 @@ async def payment_redirect(
     res = await CreateTransactionInDB(newTransactionDetails, transactionContainer)
 
     return res
+
+from cryptography.hazmat.primitives.asymmetric import rsa, padding
+from cryptography.hazmat.primitives import serialization, hashes
+from cryptography.hazmat.backends import default_backend
+
+def load_public_key(filepath):
+    with open(filepath, "rb") as key_file:
+        public_key = serialization.load_pem_public_key(
+            key_file.read(),
+            backend=default_backend()
+        )
+    return public_key
+
+
+@router.get("/encoded-data", dependencies=[Depends(JWTBearer())])
+async def fetch_encoded_data(
+    current_user = Depends(get_current_user)
+):
+    if current_user is None:
+        raise HTTPException(status_code=401, detail="Unauthorized")
     
+    # The data to be encrypted
+    data = "abc"
     
-
-
-
-
+    # Convert data to bytes
+    data_bytes = data.encode('utf-8')
+    
+    # Load the public key
+    public_key = load_public_key("./Secure/public_key.pem")
+    
+    # Encrypt the data
+    encrypted_data = public_key.encrypt(
+        data_bytes,
+        padding.OAEP(
+            mgf=padding.MGF1(algorithm=hashes.SHA256()),
+            algorithm=hashes.SHA256(),
+            label=None
+        )
+    )
+    
+    # Encode the encrypted data in base64 to send as a string
+    encrypted_data_base64 = base64.b64encode(encrypted_data).decode('utf-8')
+    
+    return {"encoded_data": encrypted_data_base64}
