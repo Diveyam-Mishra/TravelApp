@@ -433,13 +433,12 @@ async def create_ticket_pdf(ticket_data: ticketData, output_path: str, eventCont
         raise TypeError("ticket_data must be an instance of ticketData")
     
     # Convert ticket_data to a dictionary
-
+    ticketId = generate_unique_ticket_id(ticket_data_dict['userId_O'], ticket_data_dict['eventId'], ticket_data_dict['payment_id_O'])
     # Prepare QR code data
     qr_data = {
-        "qr": "eventBooking",
-        "event_id": ticket_data_dict['eventId'],  # Use relevant data for event_id
-        "user_id": ticket_data_dict['userId_O']  # Use relevant data for user_id if available
-    }
+        "id": "trabii.com",
+        "ticket_id": ticketId
+       }
     
     event_query = """
     SELECT * FROM eventcontainer e WHERE e.id = @id
@@ -458,7 +457,7 @@ async def create_ticket_pdf(ticket_data: ticketData, output_path: str, eventCont
     ticket_data_dict['event_time_O'] = str(event_datetime.strftime(time_format))
     ticket_data_dict['event_venue_O'] = existing_event['location']['venue']
 
-    ticket_data_dict['ticketId_O'] = generate_unique_ticket_id(ticket_data_dict['userId_O'], ticket_data_dict['eventId'], ticket_data_dict['payment_id_O'])
+    ticket_data_dict['ticketId_O'] = ticketId
 
     ticket_data_dict['organizer_O'] = existing_event['host_information']
 
