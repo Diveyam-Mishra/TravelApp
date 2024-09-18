@@ -89,20 +89,34 @@ async def avatar_upload(
             raise HTTPException(status_code=400, detail="Invalid file extension. Only image files are allowed")
 
         # Process file details
-        file_name = f"{current_user.id}_avatar.{ext}"
-        
-        # Upload the file to Azure Blob Storage
+        existing_avatar = db.query(Avatar).filter(Avatar.userID == current_user.id).first()
+
+        if existing_avatar:
+            # Delete existing avatar blob from Azure Blob Storage
+            existing_blob_client = blob_service_client.get_blob_client(container=avatar_container_name, blob=existing_avatar.filename)
+            try:
+                existing_blob_client.delete_blob()  # Remove the existing blob
+            except Exception as e:
+                raise HTTPException(status_code=500, detail="Error deleting existing avatar")
+
+            # Toggle between 0 and 1 for the new filename
+            last_digit = existing_avatar.filename.split('_')[-1][0]  # Get the last digit (either 0 or 1)
+            new_digit = '1' if last_digit == '0' else '0'  # Switch between '0' and '1'
+        else:
+            new_digit = '0'  # Default to '0' if no existing avatar
+
+        # Generate a new file name with the toggled digit
+        file_name = f"{current_user.id}_avatar_{new_digit}.{ext}"
+
+        # Upload the new file to Azure Blob Storage
         blob_client = blob_service_client.get_blob_client(container=avatar_container_name, blob=file_name)
         blob_client.upload_blob(file_data, overwrite=True)
 
         # Generate the URL of the uploaded file
         file_url = blob_client.url
 
-        # Check for existing avatar
-        existing_avatar = db.query(Avatar).filter(Avatar.userID == current_user.id).first()
-
         if not existing_avatar:
-            # Create new avatar record if none exists
+            # Create a new avatar record if none exists
             avatar = Avatar(
                 filename=file_name,
                 fileurl=file_url,  # Store URL instead of file data
@@ -111,7 +125,7 @@ async def avatar_upload(
             )
             db.add(avatar)
         else:
-            # Update existing avatar record
+            # Update the existing avatar record
             existing_avatar.filename = file_name
             existing_avatar.fileurl = file_url  # Update URL
             existing_avatar.filetype = file_type
@@ -146,7 +160,7 @@ async def create_event_and_upload_files(
     current_user: User,
     event_container,
     file_container,
-    blob_service_client , redis
+    blob_service_client
 ) -> SuccessResponse:
     # Prepare the query to check if the event already exists
     query = """
@@ -201,12 +215,6 @@ async def create_event_and_upload_files(
             "city": event_data.location.city
         }
     })
-
-    
-
-    for category in event_data.event_type:
-        cache_key = f"events:{category}"
-        redis.delete(cache_key)
 
     # Handle file uploads
     if files:
