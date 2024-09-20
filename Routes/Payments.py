@@ -92,7 +92,7 @@ async def send_ticket_endpoint(req: ticketData, ticketId:str, current_user=Depen
     booking_data_dict = booking_data
     # #print(status_response)
     newTicketData = ticketData(eventId=ticket_data_dict['eventId'], userId_O=current_user.id, paid_amount_O=booking_data_dict['data']['amount'], payment_id_O=booking_data_dict['data']['transactionId'], members_details_O=str(booking_data_dict['members']))
-    response = await send_ticket(newTicketData, eventContainer, db)
+    response = await send_ticket(newTicketData, eventContainer, db, ticketId)
     return response
 
 
@@ -125,7 +125,7 @@ async def generate_ticket(ticket_data: ticketData, ticketId:str, booking_contain
 
     # #print(newTicketData)
 
-    updated_data = await create_ticket_pdf(newTicketData, pdf_path, event_container, db)
+    updated_data = await create_ticket_pdf(newTicketData, pdf_path, event_container, db, ticketId)
     
     # Return the PDF file as a downloadable response
     return FileResponse(path=pdf_path, filename="ticket.pdf", media_type='application/pdf')

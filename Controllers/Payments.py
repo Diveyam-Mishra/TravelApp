@@ -424,7 +424,7 @@ def generate_ticket_id(user_id: str, event_id: str) -> str:
     return ticket_id
 
 
-async def create_ticket_pdf(ticket_data: ticketData, output_path: str, eventContainer, db):
+async def create_ticket_pdf(ticket_data: ticketData, output_path: str, eventContainer, db, ticketId: str):
     ticket_data_dict = ticket_data.dict()
     # print(ticket_data_dict)
    
@@ -433,7 +433,7 @@ async def create_ticket_pdf(ticket_data: ticketData, output_path: str, eventCont
         raise TypeError("ticket_data must be an instance of ticketData")
     
     # Convert ticket_data to a dictionary
-    ticketId = generate_unique_ticket_id(ticket_data_dict['userId_O'], ticket_data_dict['eventId'], ticket_data_dict['payment_id_O'])
+    
     # Prepare QR code data
     qr_data = {
         "id": "trabii.com",
@@ -506,12 +506,12 @@ sender_email = settings.sender_email
 email_client = EmailClient.from_connection_string(connectionString)
 
 
-async def send_ticket(ticket_data: Dict[str, str], eventContainer, db) -> SuccessResponse:
+async def send_ticket(ticket_data: Dict[str, str], eventContainer, db, ticketId: str) -> SuccessResponse:
 
     # Generate the PDF
     with NamedTemporaryFile(delete=False, suffix=".pdf") as temp_file:
         pdf_path = temp_file.name
-        updated_ticket_data = await create_ticket_pdf(ticket_data, pdf_path, eventContainer, db)
+        updated_ticket_data = await create_ticket_pdf(ticket_data, pdf_path, eventContainer, db, ticketId)
 
     ticket_data_dict = updated_ticket_data.dict()
     # Send the email with the PDF attachment
