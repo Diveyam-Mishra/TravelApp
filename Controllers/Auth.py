@@ -14,7 +14,7 @@ from Controllers.OtpGen import create_otp
 from datetime import timedelta
 import uuid
 from typing import List, Dict
-from Schemas.userSpecific import UserSpecific
+from Schemas.userSpecific import UserSpecific,CreditCard
 from Models.Files import Carousel_image
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -120,6 +120,7 @@ async def update_user(req: UserUpdate, db: Session, userId:str, current_user:Use
 
     # Update the user's details with the data from req
     if req.username is not None:
+        await check_unique_username(req.username,db)
         user.username = req.username
     if req.works_at is not None:
         user.works_at = req.works_at
@@ -350,7 +351,8 @@ async def get_user_specific_data(userId: str, user_specific_container, event_con
             userId=userId,
             booked_events=[],
             recent_searches=[],
-            interest_areas=[]
+            interest_areas=[],
+            cred=[]
         )
         user_specific_container.create_item(user_specific.to_dict())
         return user_specific
@@ -423,3 +425,61 @@ def fetch_carousel_images_db(db: Session) -> List[Dict[str, str]]:
     ]
     
     return images_as_dicts
+
+async def get_recent_search_data(userId: str, user_specific_container):
+    # Query to get user-specific data
+    query = "SELECT c.recent_searches FROM c WHERE c.userId = @userId"
+    params = [{"name": "@userId", "value": userId}]
+    
+    search = list(user_specific_container.query_items(
+        query=query,
+        parameters=params,
+        enable_cross_partition_query=True
+    ))
+    
+    if not search:
+        user_specific=UserSpecific(
+            id=userId,
+            userId=userId,
+            booked_events=[],
+            recent_searches=[],
+            interest_areas=[],
+            cred=[]
+        )
+        user_specific_container.create_item(user_specific.to_dict())
+        return []
+    
+    user_data = search[0]
+    return user_data
+
+async def add_credit_card(userId: str, card_details: dict, user_specific_container):
+    query = "SELECT * FROM c WHERE c.userId = @userId"
+    params = [{"name": "@userId", "value": userId}]
+    print (card_details)
+    search = list(user_specific_container.query_items(
+        query=query,
+        parameters=params,
+        enable_cross_partition_query=True
+    ))
+    
+    if search:
+        user_specific_data = search[0]
+        user_specific = UserSpecific(**user_specific_data)
+    else:
+        user_specific = UserSpecific(
+            id=userId,
+            userId=userId,
+            booked_events=[],
+            recent_searches=[],
+            interest_areas=[],
+            credit_cards=[]  # Initialize with an empty list of credit cards
+        )
+
+    # Add new credit card
+    new_card = CreditCard(**card_details)
+
+    user_specific.add_credit_card(new_card)
+
+    # Upsert the user-specific document back to the container
+    user_specific_container.upsert_item(user_specific.to_dict())
+    return {"message": "Credit card added successfully", "success": True}

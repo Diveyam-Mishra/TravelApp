@@ -2,6 +2,11 @@ from datetime import datetime
 from typing import List, Optional
 from pydantic import BaseModel
 
+class CreditCard(BaseModel):
+    card_number: str
+    card_holder_name: str
+    expiry_date: str
+
 class EventData(BaseModel):
     event_id: str
     payment_id: str
@@ -30,7 +35,7 @@ class UserSpecific(BaseModel):
     booked_events: List[EventData]
     recent_searches: List[str]
     interest_areas: List[str]
-
+    credit_cards: List[CreditCard] =[]
     class Config:
         extra = 'allow'
 
@@ -54,3 +59,8 @@ class UserSpecific(BaseModel):
             "recent_searches": self.recent_searches,
             "interest_areas": self.interest_areas
         }
+    def add_credit_card(self, card: CreditCard):
+        for existing_card in self.credit_cards:
+            if existing_card.card_number == card.card_number:
+                raise ValueError("Card already exists")
+        self.credit_cards.append(card)

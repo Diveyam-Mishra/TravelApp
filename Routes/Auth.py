@@ -5,14 +5,14 @@ from Schemas.UserSchemas import SuccessResponse, EmailRequest, UserLoginVerify,U
 from Schemas.UserSchemas import UserResponse, UserCreate, DeleteUserAfterCheckingPass, OTPVerification, UserLogin
 from Controllers.Auth import get_current_user, login_verify, update_user,\
     check_unique_username, add_interest_areas_to_user, add_recent_search,\
-    get_user_specific_data, fetch_carousel_images_db
+    get_user_specific_data, fetch_carousel_images_db,get_recent_search_data
 from Database.Connection import get_db, get_user_specific_container,\
     get_container
 from config import JWTBearer
-from Controllers.Auth import (create_user, register_user, login_user,delete_user,look_up_username)
+from Controllers.Auth import (create_user, register_user, login_user,delete_user,look_up_username,add_credit_card)
 from Controllers.OtpGen import (verify_otp)
 from typing import List, Dict
-from Schemas.userSpecific import UserSpecific
+from Schemas.userSpecific import UserSpecific,CreditCard
 from Schemas.Files import CarouselImageResponse
 from Database.Connection import get_redis
 import json
@@ -89,7 +89,7 @@ async def addRecentSearch(searchItem:str=Body(...), user_specific_container=Depe
     return resp
 
 @router.get("/userSpecific/", dependencies=[Depends(JWTBearer())], response_model=UserSpecific)
-async def get_user_specific_container(user_specific_container=Depends(get_user_specific_container), current_user:User=Depends(get_current_user), eventContainer = Depends(get_container)):
+async def get_user_specific_containers(user_specific_container=Depends(get_user_specific_container), current_user:User=Depends(get_current_user), eventContainer = Depends(get_container)):
     if current_user is None:
         raise HTTPException(status_code=401, detail="Not authenticated")
     userId = current_user.id
@@ -114,3 +114,18 @@ async def fetch_carousel_images(
     # redis.set("carousel_images", json.dumps(images))
     
     return images
+@router.get("/recent_searches/",dependencies=[Depends(JWTBearer())])
+async def getRecentSearch(user_specific=Depends(get_user_specific_container), current_user:User=Depends(get_current_user)):
+    if current_user is None:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    userId = current_user.id
+    resp = await get_recent_search_data(userId, user_specific)
+    return resp
+
+@router.post("/add_credit_card/", dependencies=[Depends(JWTBearer())])
+async def add_credit_card_route(card_details: CreditCard, user_specific=Depends(get_user_specific_container), current_user: User = Depends(get_current_user)):
+    if current_user is None:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    userId = current_user.id
+    resp = await add_credit_card(userId, card_details.dict(), user_specific)
+    return resp

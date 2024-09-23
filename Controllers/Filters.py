@@ -174,11 +174,13 @@ async def search_events_by_name(
     SELECT * FROM c 
     WHERE CONTAINS (c.search_name, @partial_name)
     """
+    now = datetime.now().isoformat()
+    query += "AND IS_STRING(c.start_date_and_time) AND c.start_date_and_time > @now"
 
     params = [
         {"name": "@partial_name", "value": partialname.partial_name.lower()}  # Convert the search term to lowercase
     ]
-
+    params.append({"name": "@now", "value": now})
     events = list(event_container.query_items(
         query=query,
         parameters=params,
