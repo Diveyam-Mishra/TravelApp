@@ -286,7 +286,7 @@ def look_up_username(username: str, db: Session, current_user: User = Depends(ge
     return {"user": user_details, "avatar_url": avatar_url}
 
 async def add_interest_areas_to_user(userId:str, interestAreas:List[str], user_specific_container):
-    query = "SELECT * FROM c where c.userId = @userId"
+    query = "SELECT interest_areas FROM c where c.userId = @userId"
     params = [{"name":"@userId", "value":userId}]
 
     search = list(user_specific_container.query_items(query=query,

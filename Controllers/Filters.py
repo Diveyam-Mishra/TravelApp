@@ -71,7 +71,7 @@ async def get_event_of_single_category(category: str, event_container, file_cont
 
 async def update_events_with_thumbnails(event_container, file_container):
     # Query to fetch all events
-    query = "SELECT * FROM c"
+    query = "SELECT event_id FROM c"
 
     # List to hold all event updates
     updates = []
@@ -172,7 +172,7 @@ async def search_events_by_name(
 ):
     query = """
     SELECT * FROM c 
-    WHERE CONTAINS(LOWER(c.event_name), LOWER(@partial_name))
+    WHERE CONTAINS (c.search_name, @partial_name)
     """
 
     params = [

@@ -307,7 +307,7 @@ async def upload_event_files(
     file_container
 ):
     # Query to find the event
-    query_event = "SELECT * FROM eventcontainer e WHERE e.id = @id"
+    query_event = "SELECT editor_access FROM eventcontainer e WHERE e.id = @id"
     params_event = [{"name": "@id", "value": eventId}]
     event_items = list(event_container.query_items(query=query_event, parameters=params_event, enable_cross_partition_query=True))
 

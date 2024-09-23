@@ -15,7 +15,7 @@ from azure.cosmos.exceptions import CosmosHttpResponseError
 async def create_event(event_details: EventDetails, current_user: User, container=Depends(get_container)) -> SuccessResponse:
     # Prepare the query to check if the event already exists
     query = """
-    SELECT * FROM eventcontainer e WHERE e.name = @name AND e.host_id = @host_id AND e.type = @type AND e.start_date = @start_date AND e.end_date = @end_date
+    SELECT event_name,host_information,event_type,start_date_and_time,end_date_and_time FROM eventcontainer e WHERE e.name = @name AND e.host_id = @host_id AND e.type = @type AND e.start_date = @start_date AND e.end_date = @end_date
     """
     
     params = [
@@ -157,7 +157,7 @@ async def give_editor_access(
 ) -> SuccessResponse:
     try:
         # Check if event exists in event container
-        query = "SELECT * FROM eventcontainer e WHERE e.id = @id"
+        query = "SELECT id,editor_access,creator_id FROM eventcontainer e WHERE e.id = @id"
         params = [{"name": "@id", "value": event_id}]
         items = list(container.query_items(query=query, parameters=params, enable_cross_partition_query=True))
 
@@ -315,7 +315,7 @@ async def get_filtered_events(
         raise HTTPException(status_code=400, detail="User Not Found")
 
     # Initialize the query with a base filter for valid events
-    query = "SELECT * FROM event_container e WHERE IS_STRING(e.start_date_and_time)"
+    query = "SELECT start_date_and_time,event_type,location FROM event_container e WHERE IS_STRING(e.start_date_and_time)"
     now = datetime.now().isoformat()
     query += " AND e.start_date_and_time > @now"
     params = []

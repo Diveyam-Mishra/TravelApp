@@ -51,7 +51,7 @@ async def delete_whole_event(
 
     # Step 4: Delete file metadata from the file container
     for file_name in file_names:
-        query = "SELECT * FROM c WHERE c.filename = @file_name"
+        query = "SELECT id FROM c WHERE c.filename = @file_name"
         params = [{"name": "@file_name", "value": file_name}]
         file_items = list(file_container.query_items(query=query, parameters=params, enable_cross_partition_query=True))
         
@@ -122,7 +122,7 @@ async def delete_file(
         raise HTTPException(status_code=500, detail=f"Failed to delete file from blob storage: {str(e)}")
 
     # Step 3: Delete file metadata from the file container
-    query = "SELECT * FROM c WHERE c.filename = @file_name"
+    query = "SELECT id FROM c WHERE c.filename = @file_name"
     params = [{"name": "@file_name", "value": file_name}]
     file_items = list(file_container.query_items(query=query, parameters=params, enable_cross_partition_query=True))
     
@@ -140,7 +140,7 @@ async def delete_file(
     file_name_temp = file_name.split('.')[0]
     if file_name_temp.endswith('1'):
         event_update_query = """
-        SELECT * FROM c 
+        SELECT thumbnail,id FROM c 
         WHERE c.id = @event_ID
         """
         params = [{"name": "@event_ID", "value": event_id}]

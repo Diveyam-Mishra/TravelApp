@@ -165,11 +165,12 @@ async def addBookingDataInUserSpecific(
 def generate_unique_ticket_id(user_id: str, event_id: str, merchantTransactionNo: str) -> str:
     # Create a combined string of user_id and event_id
     combined_string = f"{user_id}_{event_id}_{merchantTransactionNo}"
-    
+    print(combined_string)
     # Generate a SHA-256 hash of the combined string
     hash_object = hashlib.sha256(combined_string.encode())
+    print (hash_object)
     hash_hex = hash_object.hexdigest()
-    
+    print(hash_hex)
     # Shorten the hash to a desired length for the ticket ID
     ticket_id = hash_hex[:16]  # For example, take the first 16 characters
     
@@ -238,6 +239,7 @@ async def bookEventForUser(
         transaction_dict['added_in_event_booking'] = True
 
         transaction_dict['ticketId'] = generate_unique_ticket_id(userId, eventId, transactionId)
+        print (transaction_dict['ticketId'])
         transaction_dict['userId'] = userId
         ticketId = transaction_dict['ticketId']
         # Replace transaction item
@@ -424,7 +426,7 @@ def generate_ticket_id(user_id: str, event_id: str) -> str:
     return ticket_id
 
 
-async def create_ticket_pdf(ticket_data: ticketData, output_path: str, eventContainer, db):
+async def create_ticket_pdf(ticket_data: ticketData, output_path: str, eventContainer, db,ticketId:str):
     ticket_data_dict = ticket_data.dict()
     # print(ticket_data_dict)
    
@@ -433,13 +435,11 @@ async def create_ticket_pdf(ticket_data: ticketData, output_path: str, eventCont
         raise TypeError("ticket_data must be an instance of ticketData")
     
     # Convert ticket_data to a dictionary
-
     # Prepare QR code data
     qr_data = {
-        "qr": "eventBooking",
-        "event_id": ticket_data_dict['eventId'],  # Use relevant data for event_id
-        "user_id": ticket_data_dict['userId_O']  # Use relevant data for user_id if available
-    }
+        "id": "trabii.com",
+        "ticket_id": ticketId
+       }
     
     event_query = """
     SELECT * FROM eventcontainer e WHERE e.id = @id
@@ -458,7 +458,7 @@ async def create_ticket_pdf(ticket_data: ticketData, output_path: str, eventCont
     ticket_data_dict['event_time_O'] = str(event_datetime.strftime(time_format))
     ticket_data_dict['event_venue_O'] = existing_event['location']['venue']
 
-    ticket_data_dict['ticketId_O'] = generate_unique_ticket_id(ticket_data_dict['userId_O'], ticket_data_dict['eventId'], ticket_data_dict['payment_id_O'])
+    ticket_data_dict['ticketId_O'] = ticketId
 
     ticket_data_dict['organizer_O'] = existing_event['host_information']
 
