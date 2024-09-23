@@ -34,8 +34,7 @@ async def create_event(
     container=Depends(get_container),
     fileContainer=Depends(get_file_container),
     current_user: User=Depends(get_current_user),
-    blob_client=Depends(get_blob_service_client),
-    redis=Depends(get_redis)
+    blob_client=Depends(get_blob_service_client)
 ):
     if current_user is None:
         raise HTTPException(status_code=401, detail="Unauthorized")
@@ -65,7 +64,7 @@ async def create_event(
         location=location
     )
 
-    return await create_event_and_upload_files(event_data, files, current_user, container, fileContainer, blob_client, redis)
+    return await create_event_and_upload_files(event_data, files, current_user, container, fileContainer, blob_client)
 
 
 @router.post("/event/{eventId}/edit/", dependencies=[Depends(JWTBearer())], response_model=SuccessResponse)
