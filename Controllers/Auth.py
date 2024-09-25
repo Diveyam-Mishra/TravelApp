@@ -16,7 +16,6 @@ import uuid
 from typing import List, Dict
 from Schemas.userSpecific import UserSpecific,CreditCard
 from Models.Files import Carousel_image
-import datetime
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -81,8 +80,7 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
         raise HTTPException(status_code=401, detail="Invalid token")
     except Exception as e:
         raise HTTPException(status_code=401, detail=f"Token error: {str(e)}")
-    current_time = datetime.datetime.now()
-    print(current_time.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3])
+     
     return user_with_avatar
 
 async def get_current_user_optional(token: str=Depends(oauth2_scheme), db: Session=Depends(get_db)):
@@ -107,8 +105,7 @@ async def get_current_user_optional(token: str=Depends(oauth2_scheme), db: Sessi
     except Exception as e:
         # Handle other potential exceptions
         raise HTTPException(status_code=401, detail=f"Token error: {str(e)}")
-    current_time = datetime.datetime.now()
-    print(current_time.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3])
+     
     return user
 
 async def update_user(req: UserUpdate, db: Session, userId:str, current_user:User, user_specific_container):
@@ -141,8 +138,7 @@ async def update_user(req: UserUpdate, db: Session, userId:str, current_user:Use
 
     # Optionally, you might want to refresh the instance to reflect changes
     db.refresh(user)
-    current_time = datetime.datetime.now()
-    print(current_time.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3])
+     
     return {"message": "User updated successfully", "success": True}
 
 
@@ -168,8 +164,7 @@ def create_user(db: Session, user: UserCreate) -> UserResponse:
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
-    current_time = datetime.datetime.now()
-    print(current_time.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3])
+     
     return db_user
 
 
@@ -185,8 +180,7 @@ def delete_user( current_user: User, db: Session) -> SuccessResponse:
     if avatar:
         db.delete(avatar)
     db.commit()
-    current_time = datetime.datetime.now()
-    print(current_time.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3])
+     
     return SuccessResponse(message="User deleted successfully", success=True)
 
     
@@ -206,8 +200,7 @@ def register_user(db: Session, email: str=None, username: str=None) -> SuccessRe
     
     if email:  # Assuming create_otp only needs email
         create_otp(db, email)
-    current_time = datetime.datetime.now()
-    print(current_time.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3])
+     
     return SuccessResponse(message="OTP sent to your email", success=True)
 
 
@@ -231,8 +224,7 @@ def login_user(login_data: UserLogin, db: Session) -> SuccessResponse:
         raise HTTPException(status_code=400, detail="User not found")
     
     create_otp(db, user_email)
-    current_time = datetime.datetime.now()
-    print(current_time.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3])
+     
     return SuccessResponse(message="OTP sent to your email", success=True)
 
 
@@ -273,8 +265,7 @@ def login_verify(login_data: UserLoginVerify, db: Session) -> SuccessResponse:
     token = jwt.encode(token_data, JWT_SECRET, algorithm="HS256")
     db.delete(db_otp)
     db.commit()
-    current_time = datetime.datetime.now()
-    print(current_time.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3])
+     
     return SuccessResponse(message="User logged in successfully", token=token, success=True)
 
 def look_up_username(username: str, db: Session, current_user: User = Depends(get_current_user)):
@@ -293,8 +284,7 @@ def look_up_username(username: str, db: Session, current_user: User = Depends(ge
         raise HTTPException(status_code=400, detail="User not found")
     
     user_details, avatar_url = db_user  # Unpack the result tuple
-    current_time = datetime.datetime.now()
-    print(current_time.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3])
+     
     # You can return both user details and avatar URL here
     return {"user": user_details, "avatar_url": avatar_url}
 
@@ -347,8 +337,7 @@ async def add_recent_search(userId, searchItem, user_specific_container):
     
     # Update the user document in the container
     user_specific_container.upsert_item(user_specific.to_dict())
-    current_time = datetime.datetime.now()
-    print(current_time.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3])
+     
     return SuccessResponse(message="Added search in recent items", success=True)
     
 
@@ -424,8 +413,7 @@ async def get_user_specific_data(userId: str, user_specific_container, event_con
                     # Update the event with the fetched details
                     event.update(event_map[event_id])
     # #print(user_data)
-    current_time = datetime.datetime.now()
-    print(current_time.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3])
+     
     return user_data
 
 
@@ -443,8 +431,7 @@ def fetch_carousel_images_db(db: Session) -> List[Dict[str, str]]:
         }
         for image in db_images
     ]
-    current_time = datetime.datetime.now()
-    print(current_time.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3])
+     
     return images_as_dicts
 
 async def get_recent_search_data(userId: str, user_specific_container):
@@ -471,8 +458,7 @@ async def get_recent_search_data(userId: str, user_specific_container):
         return []
     
     user_data = search[0]
-    current_time = datetime.datetime.now()
-    print(current_time.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3])
+     
     return user_data
 
 async def add_credit_card(userId: str, card_details: dict, user_specific_container):
@@ -505,6 +491,5 @@ async def add_credit_card(userId: str, card_details: dict, user_specific_contain
     print (user_specific)
     # Upsert the user-specific document back to the container
     user_specific_container.upsert_item(user_specific.to_dict())
-    current_time = datetime.datetime.now()
-    print(current_time.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3])
+     
     return {"message": "Credit card added successfully", "success": True}

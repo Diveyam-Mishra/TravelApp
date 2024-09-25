@@ -19,8 +19,7 @@ async def delete_whole_event(
 ) -> SuccessResponse:
     if current_user is None:
         raise HTTPException(status_code=400, detail="User not found")
-    current_time = datetime.datetime.now()
-    print(current_time.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3])
+     
     # Step 1: Retrieve the event details
     query = """
     SELECT * FROM c 
@@ -32,8 +31,7 @@ async def delete_whole_event(
         {"name": "@userID", "value": current_user.id}
     ]
     items = list(event_container.query_items(query=query, parameters=params, enable_cross_partition_query=True))
-    current_time = datetime.datetime.now()
-    print(current_time.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3])
+     
     if not items:
         raise HTTPException(status_code=404, detail="Event not found or you do not have permission to delete this event")
 
