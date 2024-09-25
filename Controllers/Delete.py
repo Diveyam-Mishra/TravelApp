@@ -19,7 +19,8 @@ async def delete_whole_event(
 ) -> SuccessResponse:
     if current_user is None:
         raise HTTPException(status_code=400, detail="User not found")
-
+    current_time = datetime.datetime.now()
+    print(current_time.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3])
     # Step 1: Retrieve the event details
     query = """
     SELECT * FROM c 
@@ -31,12 +32,13 @@ async def delete_whole_event(
         {"name": "@userID", "value": current_user.id}
     ]
     items = list(event_container.query_items(query=query, parameters=params, enable_cross_partition_query=True))
-
+    current_time = datetime.datetime.now()
+    print(current_time.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3])
     if not items:
         raise HTTPException(status_code=404, detail="Event not found or you do not have permission to delete this event")
 
     item_to_delete = items[0]
-
+    print (item_to_delete)
     # Step 2: Get file names associated with the event
     file_names = [item_to_delete.get(f'fileName{i+1}') for i in range(5) if item_to_delete.get(f'fileName{i+1}')]
 
@@ -51,7 +53,7 @@ async def delete_whole_event(
 
     # Step 4: Delete file metadata from the file container
     for file_name in file_names:
-        query = "SELECT id FROM c WHERE c.filename = @file_name"
+        query = "SELECT c.id FROM c WHERE c.filename = @file_name"
         params = [{"name": "@file_name", "value": file_name}]
         file_items = list(file_container.query_items(query=query, parameters=params, enable_cross_partition_query=True))
         
@@ -72,7 +74,7 @@ async def delete_whole_event(
     return SuccessResponse(message=f"Event with event_id: {event_id} deleted successfully", success=True)
 
 
-
+#to be done SELECT *
 async def delete_file(
     event_id: str,
     file_name: str,
