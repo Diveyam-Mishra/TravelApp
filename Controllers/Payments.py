@@ -165,11 +165,12 @@ async def addBookingDataInUserSpecific(
 def generate_unique_ticket_id(user_id: str, event_id: str, merchantTransactionNo: str) -> str:
     # Create a combined string of user_id and event_id
     combined_string = f"{user_id}_{event_id}_{merchantTransactionNo}"
-    
+    print(combined_string)
     # Generate a SHA-256 hash of the combined string
     hash_object = hashlib.sha256(combined_string.encode())
+    print (hash_object)
     hash_hex = hash_object.hexdigest()
-    
+    print(hash_hex)
     # Shorten the hash to a desired length for the ticket ID
     ticket_id = hash_hex[:16]  # For example, take the first 16 characters
     
@@ -238,6 +239,7 @@ async def bookEventForUser(
         transaction_dict['added_in_event_booking'] = True
 
         transaction_dict['ticketId'] = generate_unique_ticket_id(userId, eventId, transactionId)
+        print (transaction_dict['ticketId'])
         transaction_dict['userId'] = userId
         ticketId = transaction_dict['ticketId']
         # Replace transaction item

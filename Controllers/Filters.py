@@ -28,7 +28,7 @@ def event_distance(lat1, lon1, lat2, lon2):
 
 async def get_event_of_single_category(category: str, event_container, file_container):
     # Query to fetch events of a specific category
-    query = f"SELECT c.id, c.event_name, c.event_description, c.event_type, c.location FROM c WHERE ARRAY_CONTAINS(c.event_type, '{category}')"
+    query = f"SELECT * FROM c WHERE ARRAY_CONTAINS(c.event_type, '{category}')"
 
     events = []
     event_ids = []
@@ -40,7 +40,7 @@ async def get_event_of_single_category(category: str, event_container, file_cont
 
     #print(items)
 
-
+    print (1)
     for event in items:
         events.append(event)
         event_ids.append(event['id'])
@@ -58,7 +58,7 @@ async def get_event_of_single_category(category: str, event_container, file_cont
 
     image_futures = [fetch_image(event_id) for event_id in event_ids]
     images = await asyncio.gather(*image_futures)
-
+    
     for event, image in zip(events, images):
         if image:
             event['thumbnail'] = {
@@ -172,13 +172,15 @@ async def search_events_by_name(
 ):
     query = """
     SELECT * FROM c 
-    WHERE CONTAINS(LOWER(c.event_name), LOWER(@partial_name))
+    WHERE CONTAINS(LOWER(c.event_name), @partial_name)
     """
+    now = datetime.now().isoformat()
+    query += "AND IS_STRING(c.start_date_and_time) AND c.start_date_and_time > @now"
 
     params = [
         {"name": "@partial_name", "value": partialname.partial_name.lower()}  # Convert the search term to lowercase
     ]
-
+    params.append({"name": "@now", "value": now})
     events = list(event_container.query_items(
         query=query,
         parameters=params,
