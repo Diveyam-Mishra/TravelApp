@@ -172,7 +172,7 @@ async def search_events_by_name(
 ):
     query = """
     SELECT * FROM c 
-    WHERE CONTAINS(LOWER(c.event_name), @partial_name)
+    WHERE CONTAINS(c.search_name, @partial_name)
     """
     now = datetime.now().isoformat()
     query += "AND IS_STRING(c.start_date_and_time) AND c.start_date_and_time > @now"
