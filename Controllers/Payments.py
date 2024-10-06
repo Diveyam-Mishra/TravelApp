@@ -272,7 +272,7 @@ async def bookEventForUser(
         return SuccessResponse(message="An error occurred while booking the event", success=False)
     
 
-async def addAttendee(ticketId: str, userId: str, bookingContainer, eventContainer, fileContainer,db):
+async def addAttendee(ticketId: str, userId: str, bookingContainer, eventContainer, fileContainer, db):
     # Check if the user has booked the event
     booking_records = await ticket_information(ticketId, bookingContainer, eventContainer, fileContainer)
 
@@ -285,11 +285,11 @@ async def addAttendee(ticketId: str, userId: str, bookingContainer, eventContain
     eventId = booking_record['event_details']['id']
     transactionId = booking_record['Transaction']['booking']['transactionId']
     members = (str)(booking_record['Transaction']['booking']['members'])
-    k=db.query(User).filter(User.id == booking_record['Transaction']['booking']['userId']).first()
-    username=k.username
+    k = db.query(User).filter(User.id == booking_record['Transaction']['booking']['userId']).first()
+    username = k.username
     start_date_and_time = booking_record['event_details']['start_date_and_time']
     end_date_and_time = booking_record['event_details']['end_date_and_time']
-    event_name=booking_record['event_details']['event_name']
+    event_name = booking_record['event_details']['event_name']
     location = booking_record['event_details']['location']
 
     if creator != userId:
@@ -316,9 +316,8 @@ async def addAttendee(ticketId: str, userId: str, bookingContainer, eventContain
     booking_list_item.mark_attended_by_ticket_id(ticketId)
     bookingContainer.replace_item(item=booking_list_item.id, body=booking_list_item.to_dict())
 
-
-    return SuccessResponse(message="User successfully added to attended users ",event_name=event_name ,username=username,location=location,
-                           start_date_and_time=start_date_and_time,end_date_and_time=end_date_and_time ,members=members,success=True)
+    return SuccessResponse(message="User successfully added to attended users ", event_name=event_name , username=username, location=location,
+                           start_date_and_time=start_date_and_time, end_date_and_time=end_date_and_time , members=members, success=True)
 
 
 async def getBookedUsers(eventId: str, bookingContainer, current_user, db):
@@ -644,7 +643,7 @@ async def ticket_information(ticketId: str, eventBooking, event_container, file_
                 try:
                     event_result = await get_event_by_id(event_id, event_container, file_container, 0.0, 0.0)
                     # Remove unnecessary fields from event result
-                    event_result1 = {key: value for key, value in event_result.items() if key not in ['_rid', '_self', '_etag', '_attachments', '_ts','distance','images']}
+                    event_result1 = {key: value for key, value in event_result.items() if key not in ['_rid', '_self', '_etag', '_attachments', '_ts', 'distance', 'images']}
                     # Create ticket information dictionary
                     ticket_info = {
                         'ticket_id': ticketId,

@@ -111,14 +111,14 @@ def get_blob_service_client():
     yield blob_service_client
 
 # Redis client initialization (using connection pooling)
-redis_pool = redis.ConnectionPool(
-    host=redis_host,
-    port=redis_port,
-    password=redis_password,
-    decode_responses=True,
-    max_connections=20  # Max number of connections to the Redis server
-)
+# redis_pool = redis.ConnectionPool(
+#     host=redis_host,
+#     port=redis_port,
+#     password=redis_password,
+#     decode_responses=True,
+#     max_connections=20  # Max number of connections to the Redis server
+# )
 
-async def get_redis():
-    r = redis.Redis(connection_pool=redis_pool)
-    return r
+# async def get_redis():
+#     r = redis.Redis(connection_pool=redis_pool)
+#     return r

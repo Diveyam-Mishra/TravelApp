@@ -14,7 +14,6 @@ from Controllers.OtpGen import (verify_otp)
 from typing import List, Dict
 from Schemas.userSpecific import UserSpecific
 from Schemas.Files import CarouselImageResponse
-from Database.Connection import get_redis
 import json
 
 router = APIRouter()

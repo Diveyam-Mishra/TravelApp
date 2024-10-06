@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, Query
-from Database.Connection import get_container, get_file_container, get_redis, \
+from Database.Connection import get_container, get_file_container, \
     get_db, user_specific_container, get_user_specific_container, get_booking_container
 from typing import List
 from Schemas.EventSchemas import*
@@ -33,53 +33,46 @@ async def get_optional_current_user(
     return user
 
 
-@router.get("/events/filtered/category", response_model=SearchEventResultWithCnt)
-async def filter_events_v1(
-    filters: List[str]=Query(...),
-    page: int=0,
-    event_container=Depends(get_container),
-    file_container=Depends(get_file_container),
-    redis=Depends(get_redis)
-):
-    unique_events = set()
-    items_per_page = 15
+# @router.get("/events/filtered/category", response_model=SearchEventResultWithCnt)
+# async def filter_events_v1(
+#     filters: List[str]=Query(...),
+#     page: int=0,
+#     event_container=Depends(get_container),
+#     file_container=Depends(get_file_container)
+# ):
+#     unique_events = set()
+#     items_per_page = 15
 
-    for category in filters:
-        cache_key = f"events:{category}"
-
-        cached_data = redis.get(cache_key)
-
-        if cached_data:
-            category_events = json.loads(cached_data)
-        else:
-            category_events = await get_event_of_single_category(category, event_container, file_container)
-
-            redis.set(cache_key, json.dumps(category_events))
+#     for category in filters:
         
-        for event in category_events:
-            unique_events.add(json.dumps(event))
+#             category_events = await get_event_of_single_category(category, event_container, file_container)
+
+            
+        
+#         for event in category_events:
+#             unique_events.add(json.dumps(event))
     
-    unique_events_list = [json.loads(event) for event in unique_events]
+#     unique_events_list = [json.loads(event) for event in unique_events]
 
-    start_index = page * items_per_page
-    paginated_events = unique_events_list[start_index:start_index + items_per_page]
-    # #print(paginated_events)
-    result = [
-        {
-            "id": event.get("event_id"),
-            "name": event.get("event_name"),
-            "description": event.get("event_description"),
-            "type": event.get("event_type"),
-            "thumbnail": event.get("thumbnail"),
-            "location": event.get("location")
-        } for event in paginated_events
-    ]
+#     start_index = page * items_per_page
+#     paginated_events = unique_events_list[start_index:start_index + items_per_page]
+#     # #print(paginated_events)
+#     result = [
+#         {
+#             "id": event.get("event_id"),
+#             "name": event.get("event_name"),
+#             "description": event.get("event_description"),
+#             "type": event.get("event_type"),
+#             "thumbnail": event.get("thumbnail"),
+#             "location": event.get("location")
+#         } for event in paginated_events
+#     ]
 
-    # Return the updated response
-    return {
-        "cnt": len(unique_events),
-        "results": result
-    }
+#     # Return the updated response
+#     return {
+#         "cnt": len(unique_events),
+#         "results": result
+#     }
 
 
 @router.post("/events/filtered/category/")
