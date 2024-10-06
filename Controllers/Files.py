@@ -164,7 +164,7 @@ async def create_event_and_upload_files(
 ) -> SuccessResponse:
     # Prepare the query to check if the event already exists
     query = """
-    SELECT * FROM eventcontainer e WHERE e.name = @name AND e.host_id = @host_id AND e.type = @type AND e.start_date = @start_date AND e.end_date = @end_date
+    SELECT e.name,e.host_id,e.type,e.start_date,e.end_date FROM eventcontainer e WHERE e.name = @name AND e.host_id = @host_id AND e.type = @type AND e.start_date = @start_date AND e.end_date = @end_date
     """
     
     params = [
@@ -301,7 +301,7 @@ async def get_avatar(
         "fileType": file_type,
         "fileUrl": file_url  # Return the URL of the file
     }
-    
+
     return response
 
 
@@ -328,7 +328,7 @@ async def upload_event_files(
     editor_access_list = existing_event.get("editor_access", "")
     if userId not in editor_access_list:
         raise HTTPException(status_code=403, detail="User does not have editor access")
-    
+
     if files:
         if len(files) > 5:
             raise HTTPException(status_code=400, detail="Maximum 5 files can be uploaded at once")
@@ -411,7 +411,7 @@ async def fetch_event_files(
     file_container
 ):
     # Query to find the existing record of event files
-    query = "SELECT * FROM eventfilescontainer ef WHERE ef.id = @eventId"
+    query = "SELECT * FROM eventfilescontainer ef WHERE ef.event_ID = @eventId"
     params = [{"name": "@eventId", "value": eventId}]
     file_items = list(file_container.query_items(query=query, parameters=params, enable_cross_partition_query=True))
 

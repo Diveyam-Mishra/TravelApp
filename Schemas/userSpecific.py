@@ -2,6 +2,19 @@ from datetime import datetime
 from typing import List, Optional
 from pydantic import BaseModel
 
+class CreditCard(BaseModel):
+    card_number: str
+    card_holder_name: str
+    expiry_date: str
+
+    def to_dict(self):
+        return{
+
+            "card_number" :self.card_number,
+            "card_holder_name": self.card_holder_name,
+            "expiry_date": self.expiry_date
+        }
+
 class EventData(BaseModel):
     event_id: str
     payment_id: str
@@ -30,7 +43,7 @@ class UserSpecific(BaseModel):
     booked_events: List[EventData]
     recent_searches: List[str]
     interest_areas: List[str]
-
+    credit_cards: Optional[List[CreditCard]]=[]
     class Config:
         extra = 'allow'
 
@@ -52,5 +65,12 @@ class UserSpecific(BaseModel):
             "userId": self.userId,
             "booked_events": [event.to_dict() for event in self.booked_events],
             "recent_searches": self.recent_searches,
-            "interest_areas": self.interest_areas
+            "interest_areas": self.interest_areas,
+            "credit_cards":[credit_card.to_dict() for credit_card in self.credit_cards]
+
         }
+    def add_credit_card(self, card: CreditCard):
+        for existing_card in self.credit_cards:
+            if existing_card.card_number == card.card_number:
+                raise ValueError("Card already exists")
+        self.credit_cards.append(card)

@@ -14,7 +14,7 @@ from Controllers.OtpGen import create_otp
 from datetime import timedelta
 import uuid
 from typing import List, Dict
-from Schemas.userSpecific import UserSpecific
+from Schemas.userSpecific import UserSpecific,CreditCard
 from Models.Files import Carousel_image
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -80,7 +80,7 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
         raise HTTPException(status_code=401, detail="Invalid token")
     except Exception as e:
         raise HTTPException(status_code=401, detail=f"Token error: {str(e)}")
-    
+     
     return user_with_avatar
 
 async def get_current_user_optional(token: str=Depends(oauth2_scheme), db: Session=Depends(get_db)):
@@ -105,7 +105,7 @@ async def get_current_user_optional(token: str=Depends(oauth2_scheme), db: Sessi
     except Exception as e:
         # Handle other potential exceptions
         raise HTTPException(status_code=401, detail=f"Token error: {str(e)}")
-    
+     
     return user
 
 async def update_user(req: UserUpdate, db: Session, userId:str, current_user:User, user_specific_container):
@@ -120,6 +120,7 @@ async def update_user(req: UserUpdate, db: Session, userId:str, current_user:Use
 
     # Update the user's details with the data from req
     if req.username is not None:
+        await check_unique_username(req.username,db)
         user.username = req.username
     if req.works_at is not None:
         user.works_at = req.works_at
@@ -137,7 +138,7 @@ async def update_user(req: UserUpdate, db: Session, userId:str, current_user:Use
 
     # Optionally, you might want to refresh the instance to reflect changes
     db.refresh(user)
-
+     
     return {"message": "User updated successfully", "success": True}
 
 
@@ -163,6 +164,7 @@ def create_user(db: Session, user: UserCreate) -> UserResponse:
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
+     
     return db_user
 
 
@@ -178,6 +180,7 @@ def delete_user( current_user: User, db: Session) -> SuccessResponse:
     if avatar:
         db.delete(avatar)
     db.commit()
+     
     return SuccessResponse(message="User deleted successfully", success=True)
 
     
@@ -197,7 +200,7 @@ def register_user(db: Session, email: str=None, username: str=None) -> SuccessRe
     
     if email:  # Assuming create_otp only needs email
         create_otp(db, email)
-    
+     
     return SuccessResponse(message="OTP sent to your email", success=True)
 
 
@@ -221,7 +224,7 @@ def login_user(login_data: UserLogin, db: Session) -> SuccessResponse:
         raise HTTPException(status_code=400, detail="User not found")
     
     create_otp(db, user_email)
-    
+     
     return SuccessResponse(message="OTP sent to your email", success=True)
 
 
@@ -262,7 +265,7 @@ def login_verify(login_data: UserLoginVerify, db: Session) -> SuccessResponse:
     token = jwt.encode(token_data, JWT_SECRET, algorithm="HS256")
     db.delete(db_otp)
     db.commit()
-    
+     
     return SuccessResponse(message="User logged in successfully", token=token, success=True)
 
 def look_up_username(username: str, db: Session, current_user: User = Depends(get_current_user)):
@@ -281,12 +284,12 @@ def look_up_username(username: str, db: Session, current_user: User = Depends(ge
         raise HTTPException(status_code=400, detail="User not found")
     
     user_details, avatar_url = db_user  # Unpack the result tuple
-    
+     
     # You can return both user details and avatar URL here
     return {"user": user_details, "avatar_url": avatar_url}
 
 async def add_interest_areas_to_user(userId:str, interestAreas:List[str], user_specific_container):
-    query = "SELECT * FROM c where c.userId = @userId"
+    query = "SELECT interest_areas FROM c where c.userId = @userId"
     params = [{"name":"@userId", "value":userId}]
 
     search = list(user_specific_container.query_items(query=query,
@@ -296,17 +299,21 @@ async def add_interest_areas_to_user(userId:str, interestAreas:List[str], user_s
     if not search:
         user_specific = UserSpecific(id=userId, userId=userId, booked_events=[], recent_searches=[], interest_areas=interestAreas)
         user_specific_container.create_item(user_specific.to_dict())
+        current_time = datetime.datetime.now()
+        print(current_time.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3])
         return SuccessResponse(message="User Interest areas updated successfully", success=True)
     else:
         # Update the interest_areas if the user already exists
         user_specific = search[0]
         user_specific["interest_areas"] = interestAreas
         user_specific_container.replace_item(user_specific["id"], user_specific)
+        current_time = datetime.datetime.now()
+        print(current_time.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3])
         return {"message": "User interest areas updated successfully", "success": True}
 
 
 async def add_recent_search(userId, searchItem, user_specific_container):
-    query = "SELECT * FROM c where c.userId = @userId"
+    query = "SELECT * FROM c WHERE c.userId = @userId"
     params = [{"name":"@userId", "value":userId}]
 
     search = list(user_specific_container.query_items(query=query,
@@ -322,14 +329,15 @@ async def add_recent_search(userId, searchItem, user_specific_container):
             userId=userId,
             booked_events=[],
             recent_searches=[],  # Start with the new searchItem
-            interest_areas=[]
+            interest_areas=[],
+            credit_cards=[]
         )
     # Update recent searches
     user_specific.add_search(searchItem)
     
     # Update the user document in the container
     user_specific_container.upsert_item(user_specific.to_dict())
-
+     
     return SuccessResponse(message="Added search in recent items", success=True)
     
 
@@ -350,7 +358,8 @@ async def get_user_specific_data(userId: str, user_specific_container, event_con
             userId=userId,
             booked_events=[],
             recent_searches=[],
-            interest_areas=[]
+            interest_areas=[],
+            credit_cards=[]
         )
         user_specific_container.create_item(user_specific.to_dict())
         return user_specific
@@ -404,6 +413,7 @@ async def get_user_specific_data(userId: str, user_specific_container, event_con
                     # Update the event with the fetched details
                     event.update(event_map[event_id])
     # #print(user_data)
+     
     return user_data
 
 
@@ -421,5 +431,65 @@ def fetch_carousel_images_db(db: Session) -> List[Dict[str, str]]:
         }
         for image in db_images
     ]
-    
+     
     return images_as_dicts
+
+async def get_recent_search_data(userId: str, user_specific_container):
+    # Query to get user-specific data
+    query = "SELECT c.recent_searches FROM c WHERE c.userId = @userId"
+    params = [{"name": "@userId", "value": userId}]
+    
+    search = list(user_specific_container.query_items(
+        query=query,
+        parameters=params,
+        enable_cross_partition_query=True
+    ))
+    
+    if not search:
+        user_specific=UserSpecific(
+            id=userId,
+            userId=userId,
+            booked_events=[],
+            recent_searches=[],
+            interest_areas=[],
+            credit_cards=[]
+        )
+        user_specific_container.create_item(user_specific.to_dict())
+        return []
+    
+    user_data = search[0]
+     
+    return user_data
+
+async def add_credit_card(userId: str, card_details: dict, user_specific_container):
+    query = "SELECT * FROM c WHERE c.userId = @userId"
+    params = [{"name": "@userId", "value": userId}]
+    print (card_details)
+    search = list(user_specific_container.query_items(
+        query=query,
+        parameters=params,
+        enable_cross_partition_query=True
+    ))
+    
+    if search:
+        user_specific_data = search[0]
+        user_specific = UserSpecific(**user_specific_data)
+    else:
+        user_specific = UserSpecific(
+            id=userId,
+            userId=userId,
+            booked_events=[],
+            recent_searches=[],
+            interest_areas=[],
+            credit_cards=[]  # Initialize with an empty list of credit cards
+        )
+
+    # Add new credit card
+    new_card = CreditCard(**card_details)
+
+    user_specific.add_credit_card(new_card)
+    print (user_specific)
+    # Upsert the user-specific document back to the container
+    user_specific_container.upsert_item(user_specific.to_dict())
+     
+    return {"message": "Credit card added successfully", "success": True}

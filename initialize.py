@@ -1,5 +1,5 @@
 # main.py
-from fastapi import FastAPI
+from fastapi import FastAPI,Request
 from fastapi.middleware.cors import CORSMiddleware
 import motor.motor_asyncio
 from passlib.context import CryptContext
@@ -19,6 +19,7 @@ from Routes.admin.promotionImages import router as adminImageRouter
 from Routes.Delete import router as DeleteRouter
 from Routes.PaymentWebhook import router as Webhook
 from sqlalchemy import MetaData
+from  datetime import datetime
 # print(settings.sqlURI)
 
 app = FastAPI(title="Backend with MongoDB and SQL")
@@ -57,6 +58,27 @@ async def startup_event():
 async def read_root():
     return {"Trabii Server!!"}
 
+
+@app.middleware("http")
+async def log_time_middleware(request: Request, call_next):
+    # Get the time when the request is received
+    start_time = datetime.now()
+    request_time = start_time.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+    print(f"Request received at: {request_time}")
+
+    # Process the request and get the response
+    response = await call_next(request)
+
+    # Get the time when the response is sent
+    end_time = datetime.now()
+    response_time = end_time.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+    print(f"Response sent at: {response_time}")
+
+    # Calculate the difference in milliseconds
+    time_diff = (end_time - start_time).total_seconds() * 1000  # Convert to milliseconds
+    print(f"Time taken to process the request: {time_diff:.2f} ms")
+
+    return response
 
 if __name__ == "__main__":
     import uvicorn
