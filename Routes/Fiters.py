@@ -87,17 +87,14 @@ async def filter_events(
     filters: List[str],
     coord: List[float],
     event_container=Depends(get_container),
-    page: int=0
+    limit: int = 15,   # Number of items per page (limit)
+    offset: int = 0    # Offset to start fetching from (for pagination)
 ):
-    
-    eventsRes = await get_category_events(filters, coord, event_container, page)
-    
+    eventsRes = await get_category_events(filters, coord, event_container, limit, offset)
+
     # Extract the total count and results from the response
     total_count = eventsRes['cnt']
     events = eventsRes['results']
-    
-    # Sort the events based on the number of matching types
-    sorted_events = sorted(events, key=itemgetter('match_count'), reverse=True)
 
     # Format the results
     result = [
@@ -107,12 +104,12 @@ async def filter_events(
             "description": event.get("event_description"),
             "type": event.get("event_type"),
             "thumbnail": {
-                    "file_name": event.get("thumbnail", {}).get("fileName"),
-                    "file_url": event.get("thumbnail", {}).get("fileUrl"),
-                    "file_type": event.get("thumbnail", {}).get("fileType"),
-                } if event.get("thumbnail") else None,
+                    "file_name": event.get("thumbnail_fileName"),
+                    "file_url": event.get("thumbnail_fileUrl"),
+                    "file_type": event.get("thumbnail_fileType"),
+                } if event.get("thumbnail_fileName") else None,
             "distance": f"{event.get('distance')} km"
-        } for event in sorted_events
+        } for event in events
     ]
 
     # Return the updated response
@@ -120,6 +117,7 @@ async def filter_events(
         "cnt": total_count,
         "results": result
     }
+
 
 # @router.get("/events/search_by_name_and_access/", response_model=List[Dict[str, str]])
 # async def search_events_by_name_with_access(
@@ -136,22 +134,24 @@ async def filter_events(
 @router.post("/events/search_by_name/", response_model=SearchEventResultWithCnt)
 async def search_events_by_name1(
     partial_name: PartialName,
-    coord:List[float],
+    coord: List[float],
     event_container=Depends(get_container),
-    current_user: Optional[User]=Depends(get_optional_current_user),
+    current_user: Optional[User] = Depends(get_optional_current_user),
     file_container=Depends(get_file_container),
     user_specific_container=Depends(get_user_specific_container),
-    page: int=0
+    page: int = 0
 ):
     if current_user is not None:
-        # #print(current_user)
-        await add_recent_search(current_user.id, partial_name.partial_name, user_specific_container)    
+        # Store recent search for logged-in users
+        await add_recent_search(current_user.id, partial_name.partial_name, user_specific_container)
 
+    # Fetch paginated events
     eventsRes = await search_events_by_name(partial_name, coord, event_container, file_container, page)
     
     total_count = eventsRes['cnt']
     events = eventsRes['results']
-    # Create the result list with the required fields
+
+    # Format the result with necessary fields
     result = [
         {
             "id": event["id"],
@@ -159,32 +159,54 @@ async def search_events_by_name1(
             "description": event["event_description"],
             "type": event.get("event_type"),
             "thumbnail": {
-                    "file_name": event.get("thumbnail", {}).get("fileName") or event.get("thumbnail", {}).get("file_name"),
-                    "file_url": event.get("thumbnail", {}).get("fileUrl") or event.get("thumbnail", {}).get("file_url"),
-                    "file_type": event.get("thumbnail", {}).get("fileType") or event.get("thumbnail", {}).get("file_type"),
-                } if event.get("thumbnail") else None,
-            "distance":str(event["distance"]) + "km"
+                "file_name": event.get("thumbnail_fileName"),
+                "file_url": event.get("thumbnail_fileUrl"),
+                "file_type": event.get("thumbnail_fileType")
+            } if event.get("thumbnail_fileName") else None,
+            "distance": f"{event['distance']} km"
         } 
         for event in events
     ]
-    # #print(len(result))
+
+    # Return the total count and formatted results
     return {
         "cnt": total_count,
         "results": result
     }
 
 
-@router.post("/events/search_by_creator/" , dependencies=[Depends(JWTBearer())], response_model=SearchEventResultWithCnt)
+
+@router.post("/events/search_by_creator/", dependencies=[Depends(JWTBearer())], response_model=SearchEventResultWithCnt)
 async def search_events_by_creator1(
     creator_id: CreatorId,
     coord: List[float],
     event_container=Depends(get_container),
-    page: int=0
+    page: int = 0
 ):
+    # Fetch the events using the optimized search_events_by_creator function
     eventsRes = await search_events_by_creator(creator_id, coord, event_container, page)
+    
+    # Extract total count and paginated events
     total_count = eventsRes['cnt']
     events = eventsRes['results']
-    result = [{"id": event["id"], "name": event["event_name"], "description": event["event_description"], "type":event.get("event_type"), "thumbnail":event.get("thumbnail"), "distance":str(event["distance"]) + "km"} for event in events]
+    
+    # Format the results with the required fields
+    result = [
+        {
+            "id": event["id"],
+            "name": event["event_name"],
+            "description": event["event_description"],
+            "type": event.get("event_type"),
+            "thumbnail": {
+                "file_name": event.get("thumbnail_fileName"),
+                "file_url": event.get("thumbnail_fileUrl"),
+                "file_type": event.get("thumbnail_fileType")
+            } if event.get("thumbnail_fileName") else None,
+            "distance": f"{event['distance']} km"
+        }
+        for event in events
+    ]
+
     return {
         "cnt": total_count,
         "results": result

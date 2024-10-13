@@ -74,3 +74,7 @@ class UserSpecific(BaseModel):
             if existing_card.card_number == card.card_number:
                 raise ValueError("Card already exists")
         self.credit_cards.append(card)
+    def remove_search(self, search_term: str):
+        # Remove the search term if it exists in the recent searches
+        if search_term in self.recent_searches:
+            self.recent_searches.remove(search_term)

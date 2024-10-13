@@ -5,7 +5,7 @@ from Schemas.UserSchemas import SuccessResponse, EmailRequest, UserLoginVerify,U
 from Schemas.UserSchemas import UserResponse, UserCreate, DeleteUserAfterCheckingPass, OTPVerification, UserLogin
 from Controllers.Auth import get_current_user, login_verify, update_user,\
     check_unique_username, add_interest_areas_to_user, add_recent_search,\
-    get_user_specific_data, fetch_carousel_images_db,get_recent_search_data
+    get_user_specific_data, fetch_carousel_images_db,get_recent_search_data,delete_recent
 from Database.Connection import get_db, get_user_specific_container,\
     get_container
 from config import JWTBearer
@@ -141,4 +141,13 @@ async def add_credit_card_route(card_details: CreditCard, user_specific=Depends(
      
     userId = current_user.id
     resp = await add_credit_card(userId, card_details.dict(), user_specific)
+    return resp
+
+@router.delete("/delete_recent_searches/{delete_term}", dependencies=[Depends(JWTBearer())])
+async def delete_recent_search( delete_term:str, user_specific_container=Depends(get_user_specific_container), current_user: User = Depends(get_current_user)):
+    if current_user is None:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    userId = current_user.id
+     
+    resp = await delete_recent(userId, delete_term, user_specific_container)
     return resp

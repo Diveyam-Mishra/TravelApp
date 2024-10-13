@@ -493,3 +493,31 @@ async def add_credit_card(userId: str, card_details: dict, user_specific_contain
     user_specific_container.upsert_item(user_specific.to_dict())
      
     return {"message": "Credit card added successfully", "success": True}
+
+async def delete_recent(userId, delete_term, user_specific_container):
+    query = "SELECT * FROM c WHERE c.userId = @userId"
+    params = [{"name":"@userId", "value":userId}]
+
+    search = list(user_specific_container.query_items(query=query,
+        parameters=params,
+        enable_cross_partition_query=True))
+    
+    if search:
+        user_specific_data = search[0]
+        user_specific=UserSpecific(**user_specific_data)
+    else:
+        user_specific = UserSpecific(
+            id=userId,
+            userId=userId,
+            booked_events=[],
+            recent_searches=[],  # Start with the new searchItem
+            interest_areas=[],
+            credit_cards=[]
+        )
+    # Update recent searches
+    
+    user_specific.remove_search(delete_term)
+    # Update the user document in the container
+    user_specific_container.upsert_item(user_specific.to_dict())
+     
+    return SuccessResponse(message="Deleted search in recent items", success=True)

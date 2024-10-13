@@ -102,10 +102,23 @@ async def update_events_with_thumbnails(event_container, file_container):
 
     return "Events updated with thumbnails."
 
-async def get_category_events(filters: List[str], coord: List[float], event_container, page: int):
-    # Fetch all events
-    query = "SELECT * FROM c"
-    
+async def get_category_events(filters: List[str], coord: List[float], event_container, limit: int, offset: int):
+    # Construct the query to fetch only necessary fields with limit and offset
+    query = f"""
+        SELECT 
+            c.id, 
+            c.event_name, 
+            c.event_description, 
+            c.event_type, 
+            c.location.geo_tag.latitude AS latitude, 
+            c.location.geo_tag.longitude AS longitude, 
+            c.thumbnail.fileName AS thumbnail_fileName, 
+            c.thumbnail.fileUrl AS thumbnail_fileUrl, 
+            c.thumbnail.fileType AS thumbnail_fileType
+        FROM c
+        OFFSET {offset} LIMIT {limit}
+    """
+
     events = []
     for event in event_container.query_items(
             query=query,
@@ -117,25 +130,24 @@ async def get_category_events(filters: List[str], coord: List[float], event_cont
         if match_count > 0:
             event['match_count'] = match_count
             event['distance'] = event_distance(
-                event['location']['geo_tag']['latitude'],
-                event['location']['geo_tag']['longitude'],
+                event['latitude'],
+                event['longitude'],
                 coord[0],
                 coord[1]
             )
             events.append(event)
 
-    # Sort events based on the number of matching types
+    # Sort events based on the number of matching types (if required)
     sorted_events = sorted(events, key=lambda e: e['match_count'], reverse=True)
+
+    # Get the total count of matching events (if needed)
     total_count = len(sorted_events)
-    items_per_page = 15
-    start_index = page * items_per_page
-    end_index = start_index + items_per_page
-    paginated_events = sorted_events[start_index:end_index]
 
     return {
         "cnt": total_count,
-        "results": paginated_events
+        "results": sorted_events
     }
+
 
 #filters Coming as Objects
 
@@ -166,75 +178,126 @@ async def get_sponsered_events(
 
 async def search_events_by_name(
     partialname: PartialName,
-    coord:List[float], 
+    coord: List[float], 
     event_container,
-    file_container , page
+    file_container, 
+    page: int
 ):
-    query = """
-    SELECT * FROM c 
-    WHERE CONTAINS(c.search_name, @partial_name)
-    """
-    now = datetime.now().isoformat()
-    query += "AND IS_STRING(c.start_date_and_time) AND c.start_date_and_time > @now"
+    # Define the number of items per page for pagination
+    items_per_page = 15
+    offset = page * items_per_page
 
+    # Define query to select only the necessary fields and implement pagination
+    query = """
+    SELECT 
+        c.id, 
+        c.event_name, 
+        c.event_description, 
+        c.event_type, 
+        c.location.geo_tag.latitude AS latitude, 
+        c.location.geo_tag.longitude AS longitude, 
+        c.thumbnail.fileName AS thumbnail_fileName, 
+        c.thumbnail.fileUrl AS thumbnail_fileUrl, 
+        c.thumbnail.fileType AS thumbnail_fileType
+    FROM c 
+    WHERE CONTAINS(c.search_name, @partial_name) 
+    
+    OFFSET @offset LIMIT @limit
+    """
+
+    # Current time to filter upcoming events
+    now = datetime.now().isoformat()
+
+    # Define parameters for the query
     params = [
-        {"name": "@partial_name", "value": partialname.partial_name.lower()}  # Convert the search term to lowercase
+        {"name": "@partial_name", "value": partialname.partial_name.lower()},  # Convert search term to lowercase
+        {"name": "@now", "value": now},  # Filter for upcoming events
+        {"name": "@offset", "value": offset},  # Pagination offset
+        {"name": "@limit", "value": items_per_page}  # Pagination limit
     ]
-    params.append({"name": "@now", "value": now})
+
+    # Fetch events from the database with pagination and necessary fields only
     events = list(event_container.query_items(
         query=query,
         parameters=params,
         enable_cross_partition_query=True
     ))
 
-    # Fetch and attach the thumbnail (first image file) for each event
+    # Attach the calculated distance for each event
     for event in events:
-        event['distance']=event_distance(event['location']['geo_tag']['latitude'],event['location']['geo_tag']['longitude'],coord[0],coord[1])
-    
-    #print(events)
-    total_count = len(events)
-    items_per_page = 15
-    start_index = page * items_per_page
-    end_index = start_index + items_per_page
-    paginated_events = events[start_index:end_index]
+        event['distance'] = event_distance(
+            event['latitude'],
+            event['longitude'],
+            coord[0],
+            coord[1]
+        )
 
+    # Return the total count and paginated results
+    total_count = len(events)  # Might need a separate query if full count is required
     return {
         "cnt": total_count,
-        "results": paginated_events
+        "results": events
     }
 
+
 async def search_events_by_creator(
-    coord:List[float],
-    event_container,page,
+    coord: List[float],
+    event_container,
+    page: int,
     creator_id: User = Depends(get_current_user)
 ):
-    creator_id=User.id
+    # Get the creator_id from the current user
+    creator_id = creator_id.id
+
+    # Define the number of items per page for pagination
+    items_per_page = 15
+    offset = page * items_per_page
+
+    # Select only the required fields and add pagination using LIMIT and OFFSET
     query = """
-    SELECT * FROM eventcontainer e 
+    SELECT 
+        e.id, 
+        e.event_name, 
+        e.event_description, 
+        e.event_type, 
+        e.location.geo_tag.latitude AS latitude, 
+        e.location.geo_tag.longitude AS longitude, 
+        e.thumbnail.fileName AS thumbnail_fileName, 
+        e.thumbnail.fileUrl AS thumbnail_fileUrl, 
+        e.thumbnail.fileType AS thumbnail_fileType
+    FROM eventcontainer e
     WHERE e.creator_id = @creator_id
+    OFFSET @offset LIMIT @limit
     """
 
+    # Define the parameters for the query
     params = [
-        {"name": "@creator_id", "value": creator_id}
+        {"name": "@creator_id", "value": creator_id},
+        {"name": "@offset", "value": offset},
+        {"name": "@limit", "value": items_per_page}
     ]
 
+    # Execute the query
     events = list(event_container.query_items(
         query=query,
         parameters=params,
         enable_cross_partition_query=True
     ))
+
+    # Calculate the distance for each event
     for event in events:
-        event['distance']=event_distance(event['location']['geo_tag']['latitude'],event['location']['geo_tag']['longitude'],coord[0],coord[1])
-    
+        event['distance'] = event_distance(
+            event['latitude'],
+            event['longitude'],
+            coord[0],
+            coord[1]
+        )
+
+    # Return the total count and paginated results
     total_count = len(events)
-    items_per_page = 15
-    start_index = page * items_per_page
-    end_index = start_index + items_per_page
-    paginated_events = events[start_index:end_index]
-        
     return {
         "cnt": total_count,
-        "results": paginated_events
+        "results": events
     }
 
 async def search_events_by_creator_past(
