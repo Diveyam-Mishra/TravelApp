@@ -34,6 +34,9 @@ class Settings(BaseSettings):
     REDIS_HOST:str
     REDIS_PORT:str
     REDIS_PASSWORD:str
+    AZURE_OPENAI_API_KEY:str
+    AZURE_OPENAI_ENDPOINT:str
+    AZURE_OPENAI_DEVNAME: str
 
     class Config:
         env_file = ".env"
