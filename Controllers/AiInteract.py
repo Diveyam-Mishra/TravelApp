@@ -1,11 +1,20 @@
-from openai import OpenAI
+from openai import AzureOpenAI
 from config import settings
 from Models.user_models import User
 from fastapi import Depends, HTTPException
 from Controllers.Auth import get_current_user
 api_key = settings.OPENAI_API_KEY
 import ast
-client = OpenAI(api_key=api_key)
+azure_api_key = settings.AZURE_OPENAI_API_KEY
+azure_endpoint = settings.AZURE_OPENAI_ENDPOINT
+azure_devname = settings.AZURE_OPENAI_DEVNAME
+client = AzureOpenAI(
+    api_key=azure_api_key,  
+    api_version="2024-02-01",
+    azure_endpoint = azure_endpoint
+    )
+
+deployment_name=azure_devname
 
 
 def generate_questions(input, current_user: User=Depends(get_current_user)):
@@ -61,38 +70,45 @@ def suggest_events(input: str, events: list, current_user: User=Depends(get_curr
     else:
         formatted_events = events
 
-    messages = [
-        {
-            "role": "assistant",
-            "content": """
-                You will be given certain characteristics of some user, like the vibe preference, location preference, engagement level, interest areas, and budget.
-                Based on those choices/preferences, pick at most 6 events from the list of events provided in the input that most closely (not necessarily accurate) match these characteristics.
-                ONLY return an array consisting of the event IDs, like [a, b, c].
-                Act like a python script to return only the list of string with the ids of events.
-            """
-        },
-        {
-            "role": "assistant",
-            "content": f"The events are given below:\n{formatted_events}"
-        },
-        {
-            "role": "user",
-            "content": f"{input}"
-        }
-    ]
+    # print(formatted_events)
+
+    prompt = f"""
+    You will be given certain characteristics of some user, like the vibe preference, location preference, engagement level, interest areas, and budget.
+    Based on those choices/preferences, pick at most 6 events from the list of events provided in the input that most closely (not necessarily accurate) match these characteristics.
+    ONLY return an array consisting of the event IDs, like [a, b, c].
+    Act like a python script to return only the list of string with the ids of events. Nothing else just a list of strings.
+
+    The events are given below:
+    {formatted_events}
+
+    User input:
+    {input}
+    """
+
     
     # Call the OpenAI API
-    completion = client.chat.completions.create(
-        model="gpt-3.5-turbo",
-        messages=messages
+    completion = client.completions.create(
+        model=deployment_name,
+        prompt=prompt,
+        temperature=1,
+        max_tokens=1000,
+        top_p=0.5,
+        frequency_penalty=0,
+        presence_penalty=0,
+        best_of=1,
+        stop=None
     )
     
     # Get the model's reply
-    reply = completion.choices[0].message.content
+    reply = completion.choices[0].text
+    # print(reply)
     # print(reply)
     # Parse the reply to ensure it's a valid array of strings
     try:
-        events_list = ast.literal_eval(reply)
+        output_part = reply.split("Output:")[1].strip()
+
+        # Parse the list from the output
+        events_list = ast.literal_eval(output_part)
         if not isinstance(events_list, list):
             raise ValueError("Reply is not a list.")
     except (SyntaxError, ValueError):
