@@ -36,7 +36,24 @@ class EventData(BaseModel):
             "ticket_id": self.ticket_id
         }
 
+class BankingDetails(BaseModel):
+    account_no: str
+    ifsc_code: str
+    PAN: str
+    GST_no: str
+    bank_name:str
 
+    class Config:
+        extra = 'allow'
+
+    def to_dict(self):
+        return {
+            "account_no": self.account_no,
+            "ifsc_code": self.ifsc_code,
+            "PAN": self.PAN,
+            "GST_no": self.GST_no,
+            "bank_name": self.bank_name
+        }
 class UserSpecific(BaseModel):
     id: str
     userId: str
@@ -44,6 +61,7 @@ class UserSpecific(BaseModel):
     recent_searches: List[str]
     interest_areas: List[str]
     credit_cards: Optional[List[CreditCard]]=[]
+    bank_details: Optional[BankingDetails]= None
     class Config:
         extra = 'allow'
 
@@ -66,7 +84,8 @@ class UserSpecific(BaseModel):
             "booked_events": [event.to_dict() for event in self.booked_events],
             "recent_searches": self.recent_searches,
             "interest_areas": self.interest_areas,
-            "credit_cards":[credit_card.to_dict() for credit_card in self.credit_cards]
+            "credit_cards":[credit_card.to_dict() for credit_card in self.credit_cards],
+            "bank_details": self.bank_details.to_dict() if self.bank_details else None
 
         }
     def add_credit_card(self, card: CreditCard):
@@ -74,3 +93,6 @@ class UserSpecific(BaseModel):
             if existing_card.card_number == card.card_number:
                 raise ValueError("Card already exists")
         self.credit_cards.append(card)
+
+    def add_banking_details(self, banking_details: BankingDetails):
+        self.bank_details = banking_details
