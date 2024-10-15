@@ -25,11 +25,13 @@ ADVERTISEMENT_CONTAINER_NAME = settings.ADVERTISEMENT_CONTAINER_NAME
 BOOKING_CONTAINER_NAME = settings.BOOKING_CONTAINER_NAME
 USER_SPECIFIC_CONTAINER = settings.USER_SPECIFIC_CONTAINER_NAME
 SUCCESSFUL_TRANSACTION_CONTAINER = settings.SUCCESSFUL_TRANSACTION_CONTAINER
+BUGS_CONTAINER = settings.BLOB_CONTAINER_BUGS_NAME
 
 # Blob Storage settings
 avatar_connection_string = settings.BLOB_AVATAR_CONNECTION_STRING
 avatar_container_name = settings.BLOB_CONTAINER_AVATAR_NAME
 event_files_blob_container_name = settings.BLOB_CONTAINER_EVENT_FILE_NAME
+bug_file_container_name = settings.BLOB_CONTAINER_BUGS_NAME
 
 # Redis settings
 redis_host = settings.REDIS_HOST
@@ -75,6 +77,7 @@ advertisement_container = database.get_container_client(ADVERTISEMENT_CONTAINER_
 booking_container = database.get_container_client(BOOKING_CONTAINER_NAME)
 user_specific_container = database.get_container_client(USER_SPECIFIC_CONTAINER)
 success_transaction_container = database.get_container_client(SUCCESSFUL_TRANSACTION_CONTAINER)
+bugs_container = database.get_container_client(BUGS_CONTAINER)
 
 # Initialize Blob Storage client
 blob_service_client = BlobServiceClient.from_connection_string(avatar_connection_string)
@@ -109,6 +112,9 @@ def get_successful_transaction_container():
 # Dependency injection for Blob Storage client
 def get_blob_service_client():
     yield blob_service_client
+
+def get_bugs_container():
+    yield bugs_container
 
 # Redis client initialization (using connection pooling)
 # redis_pool = redis.ConnectionPool(

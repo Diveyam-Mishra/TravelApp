@@ -18,6 +18,8 @@ from Routes.Payments import router as PaymentRouter
 from Routes.admin.promotionImages import router as adminImageRouter
 from Routes.Delete import router as DeleteRouter
 from Routes.PaymentWebhook import router as Webhook
+from Routes.Bugs import router as BugRouter
+from Routes.admin.bugs import router as AdminBugRouter
 from sqlalchemy import MetaData
 from  datetime import datetime
 # print(settings.sqlURI)
@@ -34,6 +36,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.include_router(adminImageRouter, tags=["Admin - File Management"])
+app.include_router(AdminBugRouter, tags=["Admin-Bugs"])
 app.include_router(auth_router, tags=["Authentication"])
 app.include_router(organization_router, tags=["Organizations"])
 app.include_router(forgot_password, tags=["Forgot Password"])
@@ -44,6 +47,7 @@ app.include_router(FileRouter, tags=["File Management"])
 app.include_router(FilterRouter, tags=["Filters"])
 app.include_router(PaymentRouter, tags=["Payments"])
 app.include_router(Webhook, tags=["Webhook"])
+app.include_router(BugRouter, tags=["Bugs"])
 
 
 @app.on_event("startup")
