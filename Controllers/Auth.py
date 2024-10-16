@@ -383,8 +383,6 @@ async def get_user_specific_data(userId: str, user_specific_container, event_con
             booked_events=[],
             recent_searches=[],
             interest_areas=[],
-            question_1=None,
-            question_2=None,
             credit_cards=[],
             bank_details=None
         )
@@ -479,8 +477,6 @@ async def get_recent_search_data(userId: str, user_specific_container):
             booked_events=[],
             recent_searches=[],
             interest_areas=[],
-            question_1=None,
-            question_2=None,
             credit_cards=[],
             bank_details=None
         )
@@ -511,8 +507,6 @@ async def add_credit_card(userId: str, card_details: dict, user_specific_contain
             booked_events=[],
             recent_searches=[],
             interest_areas=[],
-            question_1=None,
-            question_2=None,
             credit_cards=[],
             bank_details=None  # Initialize with an empty list of credit cards
         )
@@ -563,8 +557,6 @@ async def add_banking_details(userId, user_specific_container, banking_details_d
             booked_events=[],
             recent_searches=[],
             interest_areas=[],
-            question_1=None,
-            question_2=None,
             credit_cards=[],
             bank_details=banking_details  # Set the new banking details
         )

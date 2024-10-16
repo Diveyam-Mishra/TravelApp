@@ -41,8 +41,7 @@ class BankingDetails(BaseModel):
     ifsc_code: str
     PAN: str
     GST_no: str
-    name_according_to_PAN:str
-    state:bool = False
+    bank_name:str
 
     class Config:
         extra = 'allow'
@@ -53,7 +52,7 @@ class BankingDetails(BaseModel):
             "ifsc_code": self.ifsc_code,
             "PAN": self.PAN,
             "GST_no": self.GST_no,
-            "PAN_name": self.name_according_to_PAN
+            "bank_name": self.bank_name
         }
 class UserSpecific(BaseModel):
     id: str
@@ -61,8 +60,6 @@ class UserSpecific(BaseModel):
     booked_events: List[EventData]
     recent_searches: List[str]
     interest_areas: List[str]
-    question_1:Optional[str]= None
-    question_2:Optional[str]= None
     credit_cards: Optional[List[CreditCard]]=[]
     bank_details: Optional[BankingDetails]= None
     class Config:
