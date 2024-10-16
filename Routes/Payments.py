@@ -12,6 +12,8 @@ from Controllers.Payments import getUserBookingStatus, bookEventForUser, addAtte
 from Schemas.PaymentSchemas import PaymentInformation, ticketData
 from sqlalchemy.orm import Session
 import os
+from Queues.RabbitMq import send_message_to_rabbitmq,\
+    add_send_ticket_data_to_batch
 
 router = APIRouter()
 
@@ -67,34 +69,41 @@ async def getAttendedUsersOfEvent(eventId: str, bookingContainer=Depends(get_boo
 
     return response
 
-
 @router.post("/tickets/send/{ticketId}", response_model=SuccessResponse, dependencies=[Depends(JWTBearer())])
-async def send_ticket_endpoint(req: ticketData, ticketId:str, current_user=Depends(get_current_user), bookingContainer=Depends(get_booking_container), eventContainer=Depends(get_container), db:Session=Depends(get_db)):
-    # ticket_data_dict = req.dict()
+async def send_ticket_endpoint(req: ticketData, ticketId: str, current_user=Depends(get_current_user), bookingContainer=Depends(get_booking_container), eventContainer=Depends(get_container), db: Session = Depends(get_db)):
     if current_user is None:
         raise HTTPException(status_code=401, detail="Unauthorized")
+
     ticket_data_dict = req.dict()
     status_response = await getUserBookingStatus(ticket_data_dict['eventId'], current_user.id, bookingContainer, eventContainer)
 
-    if not status_response.success: 
-        return SuccessResponse(message="User has not booked the event", success=False) 
+    if not status_response.success:
+        return SuccessResponse(message="User has not booked the event", success=False)
 
     status_response_dict = status_response.dict()
-
-    # Assuming 'data' is already a list within the dictionary
     data_list = status_response_dict.get('data', [])
-    # data_list = list(data_list)
+
     ind = 0
     for i, tickets in enumerate(data_list):
         if tickets['ticketId'] == ticketId:
             ind = i
+
     booking_data = data_list[ind]
     booking_data_dict = booking_data
-    # #print(status_response)
-    newTicketData = ticketData(eventId=ticket_data_dict['eventId'], userId_O=current_user.id, paid_amount_O=booking_data_dict['data']['amount'], payment_id_O=booking_data_dict['data']['transactionId'], members_details_O=str(booking_data_dict['members']))
-    response = await send_ticket(newTicketData, eventContainer, db, ticketId)
-    return response
 
+    new_ticket_data = {
+        "eventId": ticket_data_dict['eventId'],
+        "userId_O": current_user.id,
+        "paid_amount_O": booking_data_dict['data']['amount'],
+        "payment_id_O": booking_data_dict['data']['transactionId'],
+        "members_details_O": str(booking_data_dict['members']),
+        "ticketId": ticketId
+    }
+
+    # Send the task to RabbitMQ queue asynchronously
+    await add_send_ticket_data_to_batch(new_ticket_data)
+
+    return SuccessResponse(message="Ticket sending task queued successfully", success=True)
 
 @router.post("/generate-ticket/{ticketId}", dependencies=[Depends(JWTBearer())])
 async def generate_ticket(ticket_data: ticketData, ticketId:str, booking_container=Depends(get_booking_container), event_container=Depends(get_container), db:Session=Depends(get_db), current_user=Depends(get_current_user)):

@@ -76,6 +76,5 @@ jobs:
           app-name: 'Trabii-be-preseed'
           slot-name: 'Production'
 
-      - name: 'install wkhtmltopdf'
-        run: sudo apt-get install -y wkhtmltopdf
+
           

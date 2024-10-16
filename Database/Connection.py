@@ -39,16 +39,16 @@ redis_port = settings.REDIS_PORT
 redis_password = settings.REDIS_PASSWORD
 
 # Create the SQLAlchemy engine with connection pooling enabled
-params = urllib.parse.quote_plus(
-    f'Driver={Driver};'
-    f'Server={Server};'
-    f'Database={Database};'
-    f'Uid={Uid};'
-    f'Pwd={SQLPwd};'
-    'Encrypt=yes;'
-    'TrustServerCertificate=no;'
-    'Connection Timeout=30;'
-)
+# params = urllib.parse.quote_plus(
+#     f'Driver={Driver};'
+#     f'Server={Server};'
+#     f'Database={Database};'
+#     f'Uid={Uid};'
+#     f'Pwd={SQLPwd};'
+#     'Encrypt=yes;'
+#     'TrustServerCertificate=no;'
+#     'Connection Timeout=30;'
+# )
 
 connection_string = f"DRIVER={Driver};SERVER={Server};DATABASE={Database};UID={Uid};PWD={SQLPwd}"
 connection_url = URL.create("mssql+pyodbc", query={"odbc_connect": connection_string})

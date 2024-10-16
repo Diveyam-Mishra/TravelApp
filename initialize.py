@@ -22,6 +22,7 @@ from Routes.Bugs import router as BugRouter
 from Routes.admin.bugs import router as AdminBugRouter
 from sqlalchemy import MetaData
 from  datetime import datetime
+
 # print(settings.sqlURI)
 
 app = FastAPI(title="Backend with MongoDB and SQL")
@@ -83,6 +84,11 @@ async def log_time_middleware(request: Request, call_next):
     print(f"Time taken to process the request: {time_diff:.2f} ms")
 
     return response
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    from Queues.RabbitMq import close_rabbitmq_connection
+    await close_rabbitmq_connection()
 
 if __name__ == "__main__":
     import uvicorn

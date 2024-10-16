@@ -38,6 +38,7 @@ class Settings(BaseSettings):
     AZURE_OPENAI_API_KEY:str
     AZURE_OPENAI_ENDPOINT:str
     AZURE_OPENAI_DEVNAME: str
+    RABBIT_MQ_URI:str
 
     class Config:
         env_file = ".env"
