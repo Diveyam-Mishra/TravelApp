@@ -28,6 +28,7 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: str
     BLOB_AVATAR_CONNECTION_STRING:str
     BLOB_CONTAINER_AVATAR_NAME:str
+    BLOB_CONTAINER_BUGS_NAME: str
     BLOB_CONTAINER_EVENT_FILE_NAME:str
     USER_SPECIFIC_CONTAINER_NAME:str
     SUCCESSFUL_TRANSACTION_CONTAINER:str
@@ -37,6 +38,7 @@ class Settings(BaseSettings):
     AZURE_OPENAI_API_KEY:str
     AZURE_OPENAI_ENDPOINT:str
     AZURE_OPENAI_DEVNAME: str
+    RABBIT_MQ_URI:str
 
     class Config:
         env_file = ".env"

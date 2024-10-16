@@ -7,7 +7,7 @@ name: Build and deploy Python app to Azure Web App - Trabii-be-preseed
 on:
   push:
     branches:
-      - main
+      - dev
   workflow_dispatch:
 
 jobs:
@@ -75,4 +75,6 @@ jobs:
         with:
           app-name: 'Trabii-be-preseed'
           slot-name: 'Production'
+
+
           

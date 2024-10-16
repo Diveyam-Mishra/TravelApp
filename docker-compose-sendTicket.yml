@@ -1,0 +1,12 @@
+
+services:
+  worker:
+    build: 
+      context: .
+      dockerfile: dockerfile.send_ticket
+    environment:
+      - PYTHONUNBUFFERED=1
+    env_file:
+      - .env
+    restart:
+      always
