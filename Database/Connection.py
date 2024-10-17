@@ -1,16 +1,15 @@
-from sqlalchemy import create_engine
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from config import settings
-import urllib
-from azure.cosmos import CosmosClient
 from sqlalchemy.engine import URL
+from azure.cosmos import CosmosClient
 from azure.storage.blob import BlobServiceClient
 import redis
 
-# SQLAlchemy setup
+# SQLAlchemy async setup
 Driver = settings.Driver
-Server = settings.Server
+Server =  settings.Server
 Database = settings.Database
 Uid = settings.Uid
 SQLPwd = settings.SQLPwd
@@ -18,7 +17,7 @@ SQLPwd = settings.SQLPwd
 # Cosmos DB settings
 COSMOS_DB_ENDPOINT = settings.COSMOS_DB_ENDPOINT
 COSMOS_DB_KEY = settings.COSMOS_DB_KEY + "=="
-DATABASE_NAME = settings.DATABASE_NAME 
+DATABASE_NAME = settings.DATABASE_NAME
 CONTAINER_NAME = settings.CONTAINER_NAME
 FILE_CONTAINER_NAME = settings.FILE_CONTAINER_NAME
 ADVERTISEMENT_CONTAINER_NAME = settings.ADVERTISEMENT_CONTAINER_NAME
@@ -38,37 +37,35 @@ redis_host = settings.REDIS_HOST
 redis_port = settings.REDIS_PORT
 redis_password = settings.REDIS_PASSWORD
 
-# Create the SQLAlchemy engine with connection pooling enabled
-# params = urllib.parse.quote_plus(
-#     f'Driver={Driver};'
-#     f'Server={Server};'
-#     f'Database={Database};'
-#     f'Uid={Uid};'
-#     f'Pwd={SQLPwd};'
-#     'Encrypt=yes;'
-#     'TrustServerCertificate=no;'
-#     'Connection Timeout=30;'
-# )
+# Create the async SQLAlchemy engine with connection pooling enabled
+connection_string = f"Driver={Driver};Server={Server};Database={Database};Uid={Uid};Pwd={SQLPwd};Encrypt=yes;TrustServerCertificate=no;Connection Timeout=30;"
+connection_url = URL.create("mssql+aioodbc", query={"odbc_connect": connection_string})
 
-connection_string = f"DRIVER={Driver};SERVER={Server};DATABASE={Database};UID={Uid};PWD={SQLPwd}"
-connection_url = URL.create("mssql+pyodbc", query={"odbc_connect": connection_string})
+# print(connection_url)
 
-# connection_url = "sqlite:///./test.db"
+# Use the async SQLite URL for local testing (replace with appropriate async driver for your DB)
+# For example, for PostgreSQL, use `postgresql+asyncpg://...`
+# connection_url = "sqlite+aiosqlite:///./test.db"  # Example for SQLite with async
 
-engine = create_engine(
+# Create the async engine
+engine = create_async_engine(
     connection_url,
-    pool_size=10,          # Minimum number of connections maintained in the pool
-    max_overflow=20,       # Maximum number of connections beyond the pool_size
-    pool_timeout=30,       # Timeout for acquiring a connection from the pool
-    pool_recycle=1800,     # Recycle connections to avoid DB timeouts (in seconds)
-    echo=False,            # Set to True if you want to see SQL queries in logs (for debugging)
+    echo=False,  # This is optional and enables SQL query logging
+    future=True  # Optional: Enables the 2.0 style API
 )
 
-# SQLAlchemy session setup
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+# SQLAlchemy async session setup
+AsyncSessionLocal = sessionmaker(
+    bind=engine,
+    class_=AsyncSession,
+    expire_on_commit=False,  # Prevent session from expiring objects after commit
+    autocommit=False,
+    autoflush=False,
+)
+
 Base = declarative_base()
 
-# Initialize Cosmos DB clients and containers
+# Initialize Cosmos DB clients and containers (no need to change these as CosmosClient doesn't support asyncio natively)
 client = CosmosClient(COSMOS_DB_ENDPOINT, COSMOS_DB_KEY)
 database = client.get_database_client(DATABASE_NAME)
 container = database.get_container_client(CONTAINER_NAME)
@@ -79,18 +76,15 @@ user_specific_container = database.get_container_client(USER_SPECIFIC_CONTAINER)
 success_transaction_container = database.get_container_client(SUCCESSFUL_TRANSACTION_CONTAINER)
 bugs_container = database.get_container_client(BUGS_CONTAINER)
 
-# Initialize Blob Storage client
+# Initialize Blob Storage client (no change needed here)
 blob_service_client = BlobServiceClient.from_connection_string(avatar_connection_string)
 
-# Dependency injection for SQLAlchemy DB session
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+# Dependency injection for async SQLAlchemy DB session
+async def get_db() -> AsyncSession:
+    async with AsyncSessionLocal() as session:
+        yield session
 
-# Dependency injection for Cosmos DB containers
+# Dependency injection for Cosmos DB containers (no need to change these as CosmosClient doesn't support asyncio natively)
 def get_container():
     yield container
 
@@ -116,15 +110,13 @@ def get_blob_service_client():
 def get_bugs_container():
     yield bugs_container
 
-# Redis client initialization (using connection pooling)
-# redis_pool = redis.ConnectionPool(
-#     host=redis_host,
-#     port=redis_port,
-#     password=redis_password,
-#     decode_responses=True,
-#     max_connections=20  # Max number of connections to the Redis server
-# )
-
+# Redis client initialization (optional if using Redis)
+# You can initialize a Redis async client using `aioredis` for asynchronous Redis access:
+# import aioredis
 # async def get_redis():
-#     r = redis.Redis(connection_pool=redis_pool)
-#     return r
+#     redis = await aioredis.create_redis_pool(
+#         f"redis://{redis_host}:{redis_port}",
+#         password=redis_password,
+#         maxsize=20
+#     )
+#     return redis

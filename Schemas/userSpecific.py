@@ -37,11 +37,11 @@ class EventData(BaseModel):
         }
 
 class BankingDetails(BaseModel):
-    account_no: str
-    ifsc_code: str
-    PAN: str
-    GST_no: str
-    bank_name:str
+    account_no: Optional[str] = None
+    ifsc_code: Optional[str] = None
+    PAN: Optional[str] = None
+    GST_no: Optional[str] = None
+    bank_name:Optional[str] = None
 
     class Config:
         extra = 'allow'

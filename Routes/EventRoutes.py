@@ -136,7 +136,7 @@ async def add_editor(
     eventId: str,  # Add eventId as a path parameter
     userId: UserId,  # Ensure userId is of type int
     container=Depends(get_container),
-    db: Session=Depends(get_db),
+    db: AsyncSessionLocal=Depends(get_db),
     current_user: User=Depends(get_current_user)
 ) -> SuccessResponse:
     return await give_editor_access(db, userId.userid, eventId, current_user, container)

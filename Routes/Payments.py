@@ -3,7 +3,8 @@ from fastapi.responses import FileResponse
 from config import JWTBearer
 from Schemas.EventSchemas import SuccessResponse
 from Database.Connection import get_booking_container, get_container, get_db, \
-    get_user_specific_container, get_successful_transaction_container,get_file_container
+    get_user_specific_container, get_successful_transaction_container,get_file_container,\
+    AsyncSessionLocal
 from Models.user_models import User
 from Controllers.Auth import get_current_user
 from Controllers.Payments import getUserBookingStatus, bookEventForUser, addAttendee, getBookedUsers, \
@@ -51,7 +52,7 @@ async def addAttendeeToEvent(ticketId: str, bookingContainer=Depends(get_booking
 
 
 @router.get("/getBookedUsers/{eventID}/", dependencies=[Depends(JWTBearer())])
-async def getBookedUsersOfEvent(eventId: str, bookingContainer=Depends(get_booking_container), current_user=Depends(get_current_user), db: Session=Depends(get_db)):
+async def getBookedUsersOfEvent(eventId: str, bookingContainer=Depends(get_booking_container), current_user=Depends(get_current_user), db: AsyncSessionLocal=Depends(get_db)):
     if current_user is None:
         raise HTTPException(status_code=401, detail="Unauthorized")
 
@@ -61,7 +62,7 @@ async def getBookedUsersOfEvent(eventId: str, bookingContainer=Depends(get_booki
 
 
 @router.get("/getAttendedUsers/{eventID}/", dependencies=[Depends(JWTBearer())])
-async def getAttendedUsersOfEvent(eventId: str, bookingContainer=Depends(get_booking_container), current_user=Depends(get_current_user), db: Session=Depends(get_db)):
+async def getAttendedUsersOfEvent(eventId: str, bookingContainer=Depends(get_booking_container), current_user=Depends(get_current_user), db: AsyncSessionLocal=Depends(get_db)):
     if current_user is None:
         raise HTTPException(status_code=401, detail="Unauthorized")
 
@@ -70,7 +71,7 @@ async def getAttendedUsersOfEvent(eventId: str, bookingContainer=Depends(get_boo
     return response
 
 @router.post("/tickets/send/{ticketId}", response_model=SuccessResponse, dependencies=[Depends(JWTBearer())])
-async def send_ticket_endpoint(req: ticketData, ticketId: str, current_user=Depends(get_current_user), bookingContainer=Depends(get_booking_container), eventContainer=Depends(get_container), db: Session = Depends(get_db)):
+async def send_ticket_endpoint(req: ticketData, ticketId: str, current_user=Depends(get_current_user), bookingContainer=Depends(get_booking_container), eventContainer=Depends(get_container), db: AsyncSessionLocal = Depends(get_db)):
     if current_user is None:
         raise HTTPException(status_code=401, detail="Unauthorized")
 
@@ -106,7 +107,7 @@ async def send_ticket_endpoint(req: ticketData, ticketId: str, current_user=Depe
     return SuccessResponse(message="Ticket sending task queued successfully", success=True)
 
 @router.post("/generate-ticket/{ticketId}", dependencies=[Depends(JWTBearer())])
-async def generate_ticket(ticket_data: ticketData, ticketId:str, booking_container=Depends(get_booking_container), event_container=Depends(get_container), db:Session=Depends(get_db), current_user=Depends(get_current_user)):
+async def generate_ticket(ticket_data: ticketData, ticketId:str, booking_container=Depends(get_booking_container), event_container=Depends(get_container), db:AsyncSessionLocal=Depends(get_db), current_user=Depends(get_current_user)):
 
     if current_user is None:
         raise HTTPException(status_code=401, detail="Unauthorized")

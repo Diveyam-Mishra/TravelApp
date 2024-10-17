@@ -4,7 +4,8 @@ from Schemas.UserSchemas import SuccessResponse
 from Controllers.Auth import get_current_user
 from Models.user_models import User
 from fastapi import HTTPException, Depends, UploadFile
-from Database.Connection import get_container, event_files_blob_container_name
+from Database.Connection import get_container, event_files_blob_container_name,\
+    AsyncSessionLocal
 from uuid import uuid4
 from datetime import datetime,timedelta
 from Helpers.Haversine import haversine
@@ -147,17 +148,18 @@ async def update_event(
 
     return SuccessResponse(message="Event Updated Successfully", success=True)
 
+from sqlalchemy import select
 
 async def give_editor_access(
-    db: Session,
+    db: AsyncSessionLocal,
     userId: str,
     event_id: str,
     current_user,
     container
 ) -> SuccessResponse:
     try:
-        # Check if event exists in event container
-        query = "SELECT e.id,e.editor_access,e.creator_id FROM eventcontainer e WHERE e.id = @id"
+        # Check if the event exists in the event container
+        query = "SELECT e.id, e.editor_access, e.creator_id FROM eventcontainer e WHERE e.id = @id"
         params = [{"name": "@id", "value": event_id}]
         items = list(container.query_items(query=query, parameters=params, enable_cross_partition_query=True))
 
@@ -166,8 +168,9 @@ async def give_editor_access(
         
         existing_event = items[0]
 
-        # Check if user exists
-        db_user = db.query(User).filter(User.id == userId).first()
+        # Check if the user exists in the database asynchronously
+        db_user = await db.execute(select(User).filter(User.id == userId))
+        db_user = db_user.scalars().first()
         if not db_user:
             raise HTTPException(status_code=400, detail="User not found")
 
@@ -175,7 +178,7 @@ async def give_editor_access(
         if current_user.id != existing_event.get('creator_id'):
             raise HTTPException(status_code=401, detail="Not Authorized")
 
-        # Check if user already has editor access
+        # Check if the user already has editor access
         editor_access_list = existing_event.get('editor_access', [])
         if str(userId) in map(str, editor_access_list):
             raise HTTPException(status_code=400, detail="User already has editor access")
@@ -187,8 +190,9 @@ async def give_editor_access(
         # Replace the item in the container with the updated data
         container.replace_item(item=existing_event['id'], body=existing_event)
 
-        # Commit the transaction to the database
-        db.commit()
+        # Commit the transaction to the database asynchronously
+        await db.commit()
+        
         return SuccessResponse(message=f"Editor Access Granted to user ID: {userId}", success=True)
     
     except CosmosHttpResponseError as e:
