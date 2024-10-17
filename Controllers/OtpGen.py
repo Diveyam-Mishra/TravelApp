@@ -29,7 +29,7 @@ from sqlalchemy import select
 async def generate_otp(length=6) -> str:
     return ''.join(random.choices(string.digits, k=length))
 
-async def send_otp(email: str, otp: str):
+def send_otp(email: str, otp: str):
     subject = "Your OTP Code"
     
     message = {
@@ -43,8 +43,8 @@ async def send_otp(email: str, otp: str):
         }
     }
 
-    poller = await email_client.begin_send(message)  # Adjust based on your email client
-    result = await poller.result()  # Ensure to await the result
+    poller = email_client.begin_send(message)  # Adjust based on your email client
+    result = poller.result()  # Ensure to await the result
     return result
 
 async def create_otp(db: AsyncSessionLocal, email: str):
@@ -55,7 +55,7 @@ async def create_otp(db: AsyncSessionLocal, email: str):
     db.add(db_otp)
     await db.commit()
     
-    await send_otp(email, otp)
+    send_otp(email, otp)
 
 async def verify_otp(user: OTPVerification, db: AsyncSessionLocal) -> SuccessResponse:
     if user.email == "trabiitestaccount1781@trabii.com":
