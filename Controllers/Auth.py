@@ -626,7 +626,22 @@ async def toggle_global_state_controller(userId, bank_container):
     return {"message": "Global state toggled successfully"}
 
 
+async def get_banking_details(userId,bank_container):
+    query = "SELECT * FROM c WHERE c.userId=@userId"
+    params = [{"name": "@userId", "value": userId}]
 
+    # Search for existing records
+    search = list(bank_container.query_items(
+        query=query,
+        parameters=params,
+        enable_cross_partition_query=True
+    ))
+
+    if not search:
+        raise HTTPException(status_code=404, detail="User banking details not found")
+
+    existing_record = search[0]
+    return existing_record
 # if isinstance(banking_details_data, dict):
 #     banking_details = BankingDetails(**banking_details_data)
 # elif isinstance(banking_details_data, BankingDetails):
