@@ -26,6 +26,7 @@ BOOKING_CONTAINER_NAME = settings.BOOKING_CONTAINER_NAME
 USER_SPECIFIC_CONTAINER = settings.USER_SPECIFIC_CONTAINER_NAME
 SUCCESSFUL_TRANSACTION_CONTAINER = settings.SUCCESSFUL_TRANSACTION_CONTAINER
 BUGS_CONTAINER = settings.BLOB_CONTAINER_BUGS_NAME
+BANK_DETAILS=settings.BANKING_CONTAINER_NAME
 
 # Blob Storage settings
 avatar_connection_string = settings.BLOB_AVATAR_CONNECTION_STRING
@@ -78,6 +79,8 @@ booking_container = database.get_container_client(BOOKING_CONTAINER_NAME)
 user_specific_container = database.get_container_client(USER_SPECIFIC_CONTAINER)
 success_transaction_container = database.get_container_client(SUCCESSFUL_TRANSACTION_CONTAINER)
 bugs_container = database.get_container_client(BUGS_CONTAINER)
+bank_container=database.get_container_client(BANK_DETAILS)
+
 
 # Initialize Blob Storage client
 blob_service_client = BlobServiceClient.from_connection_string(avatar_connection_string)
@@ -115,6 +118,9 @@ def get_blob_service_client():
 
 def get_bugs_container():
     yield bugs_container
+
+def get_bank_container():
+    yield bank_container
 
 # Redis client initialization (using connection pooling)
 # redis_pool = redis.ConnectionPool(

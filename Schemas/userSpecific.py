@@ -41,7 +41,7 @@ class BankingDetails(BaseModel):
     ifsc_code: str
     PAN: str
     GST_no: str
-    name_according_to_PAN:str
+    bank_name:str
     state:bool = False
 
     class Config:
@@ -53,7 +53,8 @@ class BankingDetails(BaseModel):
             "ifsc_code": self.ifsc_code,
             "PAN": self.PAN,
             "GST_no": self.GST_no,
-            "PAN_name": self.name_according_to_PAN
+            "PAN_name": self.bank_name,
+            "state":self.state
         }
 class UserSpecific(BaseModel):
     id: str
@@ -89,7 +90,6 @@ class UserSpecific(BaseModel):
             "interest_areas": self.interest_areas,
             "credit_cards":[credit_card.to_dict() for credit_card in self.credit_cards],
             "bank_details": self.bank_details.to_dict() if self.bank_details else None
-
         }
     def add_credit_card(self, card: CreditCard):
         for existing_card in self.credit_cards:

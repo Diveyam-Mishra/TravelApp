@@ -37,7 +37,7 @@ JWT_SECRET = settings.JWT_SECRET
 ALGORITHM = settings.ALGORITHM
 
 
-def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)) -> UserWithAvatar:
+async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)) -> UserWithAvatar:
     try:
         # Decode the token and verify its signature and expiration
         payload = jwt.decode(token, JWT_SECRET, algorithms=[ALGORITHM])
@@ -46,7 +46,6 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
 
         if user_id is None:
             raise HTTPException(status_code=401, detail="Invalid token")
-        
         # Query the user from the database
         db_user = (
             db.query(User, Avatar.fileurl)
@@ -54,7 +53,6 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
             .filter(User.id == user_id)  # Filter by user ID
             .first()
         )
-        
         if not db_user:
             raise HTTPException(status_code=400, detail="User not found")
         
@@ -354,7 +352,10 @@ async def add_recent_search(userId, searchItem, user_specific_container):
             booked_events=[],
             recent_searches=[],  # Start with the new searchItem
             interest_areas=[],
-            credit_cards=[]
+            question_1=None,
+            question_2=None,
+            credit_cards=[],
+            bank_details=None
         )
     # Update recent searches
     user_specific.add_search(searchItem)
@@ -528,48 +529,102 @@ async def add_credit_card(userId: str, card_details: dict, user_specific_contain
     return {"message": "Credit card added successfully", "success": True}
 
 
-async def add_banking_details(userId, user_specific_container, banking_details_data):
+async def add_banking_details(userId, bank_container, banking_details_data: BankingDetails):
     query = "SELECT * FROM c WHERE c.userId=@userId"
     params = [{"name": "@userId", "value": userId}]
-
-    search= list(user_specific_container.query_items(
+    
+    search = list(bank_container.query_items(
         query=query,
         parameters=params,
         enable_cross_partition_query=True
     ))
-    print(search[0])
-    if isinstance(banking_details_data, dict):
-        banking_details = BankingDetails(**banking_details_data)
-    elif isinstance(banking_details_data, BankingDetails):
-        banking_details = banking_details_data
-    print(banking_details)
+
     if search:
-        # Existing user found, update their banking details
-        user_specific_data = search[0]
-        user_specific = UserSpecific(**user_specific_data)
-        print(f"this is {search[0]}")
-        # Add or update the banking details
-        user_specific.add_banking_details(banking_details)
-        print(user_specific)
-        # Replace the existing document with updated details
-        user_specific_container.upsert_item( user_specific.to_dict())
-
-        return {"message": "Banking details updated successfully", "success": True}
-    else:
-        # No existing user found, create a new user-specific document
-        user_specific = UserSpecific(
-            id=userId,
-            userId=userId,
-            booked_events=[],
-            recent_searches=[],
-            interest_areas=[],
-            question_1=None,
-            question_2=None,
-            credit_cards=[],
-            bank_details=banking_details  # Set the new banking details
+        existing_record = search[0]
+        
+        if banking_details_data.global_state:
+            existing_record['business'] = banking_details_data.business.dict() if banking_details_data.business else None
+        else: 
+            existing_record['personal'] = banking_details_data.personal.dict() if banking_details_data.personal else None
+        
+        updated_item = bank_container.replace_item(
+            item=existing_record['id'],
+            body=existing_record
         )
+        return {"message": "Banking details updated successfully.", "data": updated_item}
 
-        # Insert a new document into the container
-        user_specific_container.create_item(user_specific.to_dict())
+    else:
+        new_record = {
+            "id":userId,
+            "userId": userId,
+            "personal": banking_details_data.personal.dict() if banking_details_data.personal else None,
+            "business": banking_details_data.business.dict() if banking_details_data.business else None,
+            "global_state": banking_details_data.global_state
+        }
 
-        return {"message": "Banking details added successfully", "success": True}
+        created_item = bank_container.create_item(body=new_record)
+        return {"message": "Banking details added successfully."}
+        
+
+async def toggle_global_state_controller(userId, bank_container):
+    query = "SELECT * FROM c WHERE c.userId=@userId"
+    params = [{"name": "@userId", "value": userId}]
+
+    # Search for existing records
+    search = list(bank_container.query_items(
+        query=query,
+        parameters=params,
+        enable_cross_partition_query=True
+    ))
+
+    if not search:
+        raise HTTPException(status_code=404, detail="User banking details not found")
+
+    existing_record = search[0]
+
+    current_state = existing_record.get("global_state", False)
+    new_state = not current_state
+    existing_record["global_state"] = new_state
+
+    updated_item = bank_container.replace_item(
+        item=existing_record['id'],
+        body=existing_record
+    )
+    return {"message": "Global state toggled successfully"}
+
+
+
+# if isinstance(banking_details_data, dict):
+#     banking_details = BankingDetails(**banking_details_data)
+# elif isinstance(banking_details_data, BankingDetails):
+#     banking_details = banking_details_data
+
+# if search:
+#     # Existing user found, update their banking details
+#     user_specific_data = search[0]
+#     user_specific = UserSpecific(**user_specific_data)
+#     print(f"this is {search[0]}")
+#     # Add or update the banking details
+#     user_specific.add_banking_details(banking_details)
+#     print(user_specific)
+#     # Replace the existing document with updated details
+#     user_specific_container.upsert_item( user_specific.to_dict())
+
+#     return {"message": "Banking details updated successfully", "success": True}
+# else:
+#     # No existing user found, create a new user-specific document
+#     user_specific = UserSpecific(
+#         id=userId,
+#         userId=userId,
+#         booked_events=[],
+#         recent_searches=[],
+#         interest_areas=[],
+#         question_1=None,
+#         question_2=None,
+#         credit_cards=[],
+#         bank_details=banking_details  # Set the new banking details
+#     )
+
+#     # Insert a new document into the container
+#     user_specific_container.create_item(user_specific.to_dict())
+#     return {"message": "Banking details added successfully", "success": True}
