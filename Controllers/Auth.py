@@ -50,13 +50,15 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession
 
         if user_id is None:
             raise HTTPException(status_code=401, detail="Invalid token")
-        # Query the user from the database
-        db_user = (
-            db.query(User, Avatar.fileurl)
-            .outerjoin(Avatar, User.id == Avatar.userID)  # Use outerjoin for a left join
-            .filter(User.id == user_id)  # Filter by user ID
-            .first()
+
+        # Query the user asynchronously
+        result = await db.execute(
+            select(User, Avatar.fileurl)
+            .outerjoin(Avatar, User.id == Avatar.userID)
+            .filter(User.id == user_id)
         )
+        db_user = result.first()
+        # print(db_user)
         if not db_user:
             raise HTTPException(status_code=400, detail="User not found")
 
