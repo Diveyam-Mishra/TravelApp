@@ -12,7 +12,7 @@ from config import JWTBearer
 from Controllers.Auth import (create_user, register_user, login_user,delete_user,look_up_username,add_credit_card)
 from Controllers.OtpGen import (verify_otp)
 from typing import List, Dict
-from Schemas.userSpecific import UserSpecific,CreditCard,BankingDetails
+from Schemas.userSpecific import UserSpecific,CreditCard
 from Schemas.bankingDetails import BankingDetail
 from Schemas.Files import CarouselImageResponse
 import json

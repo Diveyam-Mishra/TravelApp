@@ -14,7 +14,8 @@ from Controllers.OtpGen import create_otp
 from datetime import timedelta
 import uuid
 from typing import List, Dict
-from Schemas.userSpecific import UserSpecific,CreditCard,BankingDetails
+from Schemas.userSpecific import UserSpecific,CreditCard
+from Schemas.bankingDetails import BankingDetail
 from Models.Files import Carousel_image
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -384,8 +385,7 @@ async def add_recent_search(userId, searchItem, user_specific_container):
             interest_areas=[],
             question_1=None,
             question_2=None,
-            credit_cards=[],
-            bank_details=None
+            credit_cards=[]
         )
 
     # Track time taken for adding the search item
@@ -423,8 +423,7 @@ async def get_user_specific_data(userId: str, user_specific_container, event_con
             booked_events=[],
             recent_searches=[],
             interest_areas=[],
-            credit_cards=[],
-            bank_details=None
+            credit_cards=[]
         )
         user_specific_container.create_item(user_specific.to_dict())
         return user_specific
@@ -518,8 +517,7 @@ async def get_recent_search_data(userId: str, user_specific_container):
             booked_events=[],
             recent_searches=[],
             interest_areas=[],
-            credit_cards=[],
-            bank_details=None
+            credit_cards=[]
         )
         user_specific_container.create_item(user_specific.to_dict())
         return []
@@ -548,8 +546,7 @@ async def add_credit_card(userId: str, card_details: dict, user_specific_contain
             booked_events=[],
             recent_searches=[],
             interest_areas=[],
-            credit_cards=[],
-            bank_details=None  # Initialize with an empty list of credit cards
+            credit_cards=[]  # Initialize with an empty list of credit cards
         )
 
     # Add new credit card
@@ -563,7 +560,7 @@ async def add_credit_card(userId: str, card_details: dict, user_specific_contain
     return {"message": "Credit card added successfully", "success": True}
 
 
-async def add_banking_details(userId, bank_container, banking_details_data: BankingDetails):
+async def add_banking_details(userId, bank_container, banking_details_data: BankingDetail):
     query = "SELECT * FROM c WHERE c.userId=@userId"
     params = [{"name": "@userId", "value": userId}]
     
