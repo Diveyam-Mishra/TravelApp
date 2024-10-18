@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, File, UploadFile, HTTPException, Form
 from Schemas.Files import FileUploadResponse
 from Schemas.UserSchemas import UserUpdate
-from Database.Connection import get_db, get_container, get_file_container, get_blob_service_client
+from Database.Connection import get_db, get_container, get_file_container, get_blob_service_client,\
+    AsyncSessionLocal
 from sqlalchemy.orm import Session
 from Models.user_models import User
 from fastapi.responses import Response
@@ -23,7 +24,7 @@ async def upload_avatar(
     gender: Optional[str] = Form(None),
     dob: Optional[date] = Form(None),
     contact_no: Optional[str] = Form(None),
-    db: Session = Depends(get_db),
+    db: AsyncSessionLocal = Depends(get_db),
     blob_client=Depends(get_blob_service_client),
     current_user: User = Depends(get_current_user),
     file: Optional[UploadFile] = File(None)
@@ -40,7 +41,7 @@ async def upload_avatar(
 
 @router.get("/avatar/fetch/",dependencies=[Depends(JWTBearer())])
 async def fetch_avatar(
-    db: Session=Depends(get_db),
+    db: AsyncSessionLocal=Depends(get_db),
     current_user: User=Depends(get_current_user)
 ):
     if current_user is None:

@@ -53,10 +53,13 @@ app.include_router(BugRouter, tags=["Bugs"])
 
 @app.on_event("startup")
 async def startup_event():
-    Base.metadata.create_all(bind=engine)
-
-    metadata = MetaData()
-    metadata.reflect(bind=engine)
+    async with engine.begin() as conn:
+        # Create tables in an async context using run_sync
+        await conn.run_sync(Base.metadata.create_all)
+        
+        # Reflect existing tables in an async context
+        metadata = MetaData()
+        await conn.run_sync(metadata.reflect)
 
 
 @app.get("/")

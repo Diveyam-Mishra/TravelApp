@@ -167,40 +167,59 @@ async def get_sponsered_events(
 
     return events
 
+import time
 
 async def search_events_by_name(
     partialname: PartialName,
-    coord:List[float], 
+    coord: List[float], 
     event_container,
-    file_container , page
+    page: int
 ):
+    start_time = time.time()  # Start timing the entire function
+
     query = """
     SELECT * FROM c 
-    WHERE CONTAINS(LOWER(c.event_name), @partial_name)
+    WHERE CONTAINS(c.event_name, @partial_name)
     """
+    
     now = datetime.now().isoformat()
-    query += "AND IS_STRING(c.start_date_and_time) AND c.start_date_and_time > @now"
+    query += " AND IS_STRING(c.start_date_and_time) AND c.start_date_and_time > @now"
 
     params = [
         {"name": "@partial_name", "value": partialname.partial_name.lower()}  # Convert the search term to lowercase
     ]
     params.append({"name": "@now", "value": now})
+
+    # Timing the query execution
+    query_start = time.time()
     events = list(event_container.query_items(
         query=query,
         parameters=params,
         enable_cross_partition_query=True
     ))
+    query_time = time.time() - query_start
+    print(f"Time taken for querying events: {query_time:.6f} seconds")
 
-    # Fetch and attach the thumbnail (first image file) for each event
+    # Fetch and attach the distance for each event
+    distance_start = time.time()
     for event in events:
-        event['distance']=event_distance(event['location']['geo_tag']['latitude'],event['location']['geo_tag']['longitude'],coord[0],coord[1])
-    
-    #print(events)
+        event['distance'] = event_distance(event['location']['geo_tag']['latitude'],
+                                           event['location']['geo_tag']['longitude'],
+                                           coord[0], coord[1])
+    distance_time = time.time() - distance_start
+    print(f"Time taken for calculating distances: {distance_time:.6f} seconds")
+
     total_count = len(events)
+
+    # Implement pagination
     items_per_page = 15
     start_index = page * items_per_page
     end_index = start_index + items_per_page
     paginated_events = events[start_index:end_index]
+
+    # Total time taken for the function
+    total_time = time.time() - start_time
+    print(f"Total time taken for search_events_by_name: {total_time:.6f} seconds")
 
     return {
         "cnt": total_count,
