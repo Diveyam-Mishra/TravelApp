@@ -5,7 +5,7 @@ from Schemas.UserSchemas import SuccessResponse, EmailRequest, UserLoginVerify,U
 from Schemas.UserSchemas import UserResponse, UserCreate, DeleteUserAfterCheckingPass, OTPVerification, UserLogin
 from Controllers.Auth import get_current_user, login_verify, update_user,\
     check_unique_username, add_interest_areas_to_user, add_recent_search,\
-    get_user_specific_data, fetch_carousel_images_db,get_recent_search_data,add_banking_details,toggle_global_state_controller,get_banking_details
+    get_user_specific_data, fetch_carousel_images_db,get_recent_search_data,add_banking_details,get_banking_details
 from Database.Connection import get_db, get_user_specific_container,\
     get_container, AsyncSessionLocal,get_bank_container
 from config import JWTBearer
@@ -152,18 +152,18 @@ async def banking_details(banking_details: BankingDetail, bank_container=Depends
     resp = await add_banking_details(userId, bank_container,banking_details)
     return resp
 
-@router.put("/toggle_global_state/", dependencies=[Depends(JWTBearer())])
-async def toggle_global_state(
-    bank_container=Depends(get_bank_container),
-    current_user: User = Depends(get_current_user)
-):
-    if current_user is None:
-        raise HTTPException(status_code=401, detail="Not authenticated")
+# @router.put("/toggle_global_state/", dependencies=[Depends(JWTBearer())])
+# async def toggle_global_state(
+#     bank_container=Depends(get_bank_container),
+#     current_user: User = Depends(get_current_user)
+# ):
+#     if current_user is None:
+#         raise HTTPException(status_code=401, detail="Not authenticated")
     
-    userId = current_user.id
+#     userId = current_user.id
 
-    resp = await toggle_global_state_controller(userId, bank_container)
-    return resp
+#     resp = await toggle_global_state_controller(userId, bank_container)
+#     return resp
 
 @router.get("/get_banking_details/", dependencies=[Depends(JWTBearer())])
 async def get_banking_info(

@@ -18,18 +18,13 @@ class PInfo(BaseModel):
     state: bool = False
 
 class BankingDetail(BaseModel):
-    id: str
-    userId: str
     personal: Optional[PInfo] = None
     business: Optional[BInfo] = None
-    global_state: bool = False
-
-    class Config:
-        extra = 'allow'
+    Is_business: bool = False
 
     def to_dict(self):
         return {
             "personal": self.personal.dict() if self.personal else None,
             "business": self.business.dict() if self.business else None,
-            "global_state": self.global_state
+            "Is_business": self.Is_business
         }

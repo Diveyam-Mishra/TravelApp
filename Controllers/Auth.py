@@ -575,55 +575,63 @@ async def add_banking_details(userId, bank_container, banking_details_data: Bank
     if search:
         existing_record = search[0]
         
-        if banking_details_data.global_state:
-            existing_record['business'] = banking_details_data.business.dict() if banking_details_data.business else None
-        else: 
-            existing_record['personal'] = banking_details_data.personal.dict() if banking_details_data.personal else None
+        existing_record['Is_business'] = banking_details_data.Is_business
         
-        updated_item = bank_container.replace_item(
+        if banking_details_data.Is_business:
+            if banking_details_data.business:
+                existing_record['business'] = banking_details_data.business.dict()  # Update business details
+            
+        else:
+            if banking_details_data.personal:
+                existing_record['personal'] = banking_details_data.personal.dict()  # Update personal details
+            
+        
+        bank_container.replace_item(
             item=existing_record['id'],
             body=existing_record
         )
-        return {"message": "Banking details updated successfully.", "data": updated_item}
+        return {"message": "Banking details updated successfully."}
 
     else:
+    
         new_record = {
-            "id":userId,
+            "id": userId,
             "userId": userId,
-            "personal": banking_details_data.personal.dict() if banking_details_data.personal else None,
-            "business": banking_details_data.business.dict() if banking_details_data.business else None,
-            "global_state": banking_details_data.global_state
+            "personal": banking_details_data.personal.dict() if not banking_details_data.Is_business and banking_details_data.personal else None,
+            "business": banking_details_data.business.dict() if banking_details_data.Is_business and banking_details_data.business else None,
+            "Is_business": banking_details_data.Is_business  # Save the Is_business from input
         }
 
-        created_item = bank_container.create_item(body=new_record)
+        bank_container.create_item(body=new_record)
         return {"message": "Banking details added successfully."}
+
         
 
-async def toggle_global_state_controller(userId, bank_container):
-    query = "SELECT * FROM c WHERE c.userId=@userId"
-    params = [{"name": "@userId", "value": userId}]
+# async def toggle_Is_business_controller(userId, bank_container):
+#     query = "SELECT * FROM c WHERE c.userId=@userId"
+#     params = [{"name": "@userId", "value": userId}]
 
-    # Search for existing records
-    search = list(bank_container.query_items(
-        query=query,
-        parameters=params,
-        enable_cross_partition_query=True
-    ))
+#     # Search for existing records
+#     search = list(bank_container.query_items(
+#         query=query,
+#         parameters=params,
+#         enable_cross_partition_query=True
+#     ))
 
-    if not search:
-        raise HTTPException(status_code=404, detail="User banking details not found")
+#     if not search:
+#         raise HTTPException(status_code=404, detail="User banking details not found")
 
-    existing_record = search[0]
+#     existing_record = search[0]
 
-    current_state = existing_record.get("global_state", False)
-    new_state = not current_state
-    existing_record["global_state"] = new_state
+#     current_state = existing_record.get("global_state", False)
+#     new_state = not current_state
+#     existing_record["global_state"] = new_state
 
-    updated_item = bank_container.replace_item(
-        item=existing_record['id'],
-        body=existing_record
-    )
-    return {"message": "Global state toggled successfully"}
+#     updated_item = bank_container.replace_item(
+#         item=existing_record['id'],
+#         body=existing_record
+#     )
+#     return {"message": "Global state toggled successfully"}
 
 
 async def get_banking_details(userId,bank_container):
