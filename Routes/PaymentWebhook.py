@@ -61,16 +61,16 @@ async def fetch_encoded_data(
     
     # The data to be encrypted
     data = {
-  "paymentInfo": {
-    "merchantId": "PGTESTPAYUAT86",
-    "packageName": "com.example.phone_pe_demo",
-    "appId": "",
-    "environment": "SANDBOX"
-  }
-}
+        "paymentInfo": {
+            "merchantId": "PGTESTPAYUAT86",
+            "packageName": "com.example.phone_pe_demo",
+            "appId": "",
+            "environment": "SANDBOX"
+        }
+    }
     
-    # Convert data to bytes
-    data_bytes = data.encode('utf-8')
+    # Convert data to JSON and then to bytes
+    data_bytes = json.dumps(data).encode('utf-8')
     
     # Load the public key
     public_key = load_public_key("./Secure/public_key.pem")
