@@ -60,7 +60,14 @@ async def fetch_encoded_data(
         raise HTTPException(status_code=401, detail="Unauthorized")
     
     # The data to be encrypted
-    data = "abc"
+    data = {
+  "paymentInfo": {
+    "merchantId": "PGTESTPAYUAT86",
+    "packageName": "com.example.phone_pe_demo",
+    "appId": "",
+    "environment": "SANDBOX"
+  }
+}
     
     # Convert data to bytes
     data_bytes = data.encode('utf-8')
