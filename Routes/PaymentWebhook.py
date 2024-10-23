@@ -4,8 +4,7 @@ from Schemas.PaymentSchemas import PaymentConfirmationRedirectBody,\
 import base64
 import json
 from Schemas.EventSchemas import SuccessResponse
-from Database.Connection import get_booking_container,\
-    get_successful_transaction_container
+from Database.Connection import get_successful_transaction_container
 from Controllers.PaymentWebhook import CreateTransactionInDB
 from Controllers.Auth import get_current_user
 from fastapi.exceptions import HTTPException
@@ -40,7 +39,7 @@ async def payment_redirect(
 
     return res
 
-from cryptography.hazmat.primitives.asymmetric import rsa, padding
+from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.backends import default_backend
 
