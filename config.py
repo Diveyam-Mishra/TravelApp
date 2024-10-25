@@ -39,7 +39,8 @@ class Settings(BaseSettings):
     AZURE_OPENAI_ENDPOINT:str
     AZURE_OPENAI_DEVNAME: str
     RABBIT_MQ_URI:str
-
+    BANKING_CONTAINER_NAME:str
+    
     class Config:
         env_file = ".env"
 

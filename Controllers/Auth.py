@@ -14,7 +14,8 @@ from Controllers.OtpGen import create_otp
 from datetime import timedelta
 import uuid
 from typing import List, Dict
-from Schemas.userSpecific import UserSpecific,CreditCard,BankingDetails
+from Schemas.userSpecific import UserSpecific,CreditCard
+from Schemas.bankingDetails import BankingDetail
 from Models.Files import Carousel_image
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -384,8 +385,9 @@ async def add_recent_search(userId, searchItem, user_specific_container):
             booked_events=[],
             recent_searches=[],  # Start with the new searchItem
             interest_areas=[],
-            credit_cards=[],
-            bank_details=None
+            question_1=None,
+            question_2=None,
+            credit_cards=[]
         )
 
     # Track time taken for adding the search item
@@ -423,8 +425,7 @@ async def get_user_specific_data(userId: str, user_specific_container, event_con
             booked_events=[],
             recent_searches=[],
             interest_areas=[],
-            credit_cards=[],
-            bank_details=None
+            credit_cards=[]
         )
         user_specific_container.create_item(user_specific.to_dict())
         return user_specific
@@ -518,8 +519,7 @@ async def get_recent_search_data(userId: str, user_specific_container):
             booked_events=[],
             recent_searches=[],
             interest_areas=[],
-            credit_cards=[],
-            bank_details=None
+            credit_cards=[]
         )
         user_specific_container.create_item(user_specific.to_dict())
         return []
@@ -548,8 +548,7 @@ async def add_credit_card(userId: str, card_details: dict, user_specific_contain
             booked_events=[],
             recent_searches=[],
             interest_areas=[],
-            credit_cards=[],
-            bank_details=None  # Initialize with an empty list of credit cards
+            credit_cards=[]  # Initialize with an empty list of credit cards
         )
 
     # Add new credit card
@@ -563,46 +562,125 @@ async def add_credit_card(userId: str, card_details: dict, user_specific_contain
     return {"message": "Credit card added successfully", "success": True}
 
 
-async def add_banking_details(userId, user_specific_container, banking_details_data):
+async def add_banking_details(userId, bank_container, banking_details_data: BankingDetail):
     query = "SELECT * FROM c WHERE c.userId=@userId"
     params = [{"name": "@userId", "value": userId}]
-
-    search= list(user_specific_container.query_items(
+    
+    search = list(bank_container.query_items(
         query=query,
         parameters=params,
         enable_cross_partition_query=True
     ))
-    print(search[0])
-    if isinstance(banking_details_data, dict):
-        banking_details = BankingDetails(**banking_details_data)
-    elif isinstance(banking_details_data, BankingDetails):
-        banking_details = banking_details_data
-    print(banking_details)
+
     if search:
-        # Existing user found, update their banking details
-        user_specific_data = search[0]
-        user_specific = UserSpecific(**user_specific_data)
-        print(f"this is {search[0]}")
-        # Add or update the banking details
-        user_specific.add_banking_details(banking_details)
-        print(user_specific)
-        # Replace the existing document with updated details
-        user_specific_container.upsert_item( user_specific.to_dict())
-
-        return {"message": "Banking details updated successfully", "success": True}
-    else:
-        # No existing user found, create a new user-specific document
-        user_specific = UserSpecific(
-            id=userId,
-            userId=userId,
-            booked_events=[],
-            recent_searches=[],
-            interest_areas=[],
-            credit_cards=[],
-            bank_details=banking_details  # Set the new banking details
+        existing_record = search[0]
+        
+        existing_record['Is_business'] = banking_details_data.Is_business
+        
+        if banking_details_data.Is_business:
+            if banking_details_data.business:
+                existing_record['business'] = banking_details_data.business.dict()  # Update business details
+            
+        else:
+            if banking_details_data.personal:
+                existing_record['personal'] = banking_details_data.personal.dict()  # Update personal details
+            
+        
+        bank_container.replace_item(
+            item=existing_record['id'],
+            body=existing_record
         )
+        return {"message": "Banking details updated successfully."}
 
-        # Insert a new document into the container
-        user_specific_container.create_item(user_specific.to_dict())
+    else:
+    
+        new_record = {
+            "id": userId,
+            "userId": userId,
+            "personal": banking_details_data.personal.dict() if not banking_details_data.Is_business and banking_details_data.personal else None,
+            "business": banking_details_data.business.dict() if banking_details_data.Is_business and banking_details_data.business else None,
+            "Is_business": banking_details_data.Is_business  # Save the Is_business from input
+        }
 
-        return {"message": "Banking details added successfully", "success": True}
+        bank_container.create_item(body=new_record)
+        return {"message": "Banking details added successfully."}
+
+        
+
+# async def toggle_Is_business_controller(userId, bank_container):
+#     query = "SELECT * FROM c WHERE c.userId=@userId"
+#     params = [{"name": "@userId", "value": userId}]
+
+#     # Search for existing records
+#     search = list(bank_container.query_items(
+#         query=query,
+#         parameters=params,
+#         enable_cross_partition_query=True
+#     ))
+
+#     if not search:
+#         raise HTTPException(status_code=404, detail="User banking details not found")
+
+#     existing_record = search[0]
+
+#     current_state = existing_record.get("global_state", False)
+#     new_state = not current_state
+#     existing_record["global_state"] = new_state
+
+#     updated_item = bank_container.replace_item(
+#         item=existing_record['id'],
+#         body=existing_record
+#     )
+#     return {"message": "Global state toggled successfully"}
+
+
+async def get_banking_details(userId,bank_container):
+    query = "SELECT * FROM c WHERE c.userId=@userId"
+    params = [{"name": "@userId", "value": userId}]
+
+    # Search for existing records
+    search = list(bank_container.query_items(
+        query=query,
+        parameters=params,
+        enable_cross_partition_query=True
+    ))
+
+    if not search:
+        raise HTTPException(status_code=404, detail="User banking details not found")
+
+    existing_record = search[0]
+    return existing_record
+# if isinstance(banking_details_data, dict):
+#     banking_details = BankingDetails(**banking_details_data)
+# elif isinstance(banking_details_data, BankingDetails):
+#     banking_details = banking_details_data
+
+# if search:
+#     # Existing user found, update their banking details
+#     user_specific_data = search[0]
+#     user_specific = UserSpecific(**user_specific_data)
+#     print(f"this is {search[0]}")
+#     # Add or update the banking details
+#     user_specific.add_banking_details(banking_details)
+#     print(user_specific)
+#     # Replace the existing document with updated details
+#     user_specific_container.upsert_item( user_specific.to_dict())
+
+#     return {"message": "Banking details updated successfully", "success": True}
+# else:
+#     # No existing user found, create a new user-specific document
+#     user_specific = UserSpecific(
+#         id=userId,
+#         userId=userId,
+#         booked_events=[],
+#         recent_searches=[],
+#         interest_areas=[],
+#         question_1=None,
+#         question_2=None,
+#         credit_cards=[],
+#         bank_details=banking_details  # Set the new banking details
+#     )
+
+#     # Insert a new document into the container
+#     user_specific_container.create_item(user_specific.to_dict())
+#     return {"message": "Banking details added successfully", "success": True}
