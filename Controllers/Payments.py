@@ -209,7 +209,7 @@ async def bookEventForUser(
             return SuccessResponse(message="Not enough capacity available for this event", success=False)
         
         # Check if the transaction exists
-        transactionId = generate_merchant_transaction_id(current_user.id, id_no)
+        transactionId = generate_merchant_transaction_id(userId, id_no)
         transaction_query = "SELECT * FROM c WHERE c.transactionId = @transactionId"
         params = [{"name": "@transactionId", "value": transactionId}]
         transactionsList = list(transactionContainer.query_items(query=transaction_query, parameters=params, enable_cross_partition_query=True))
@@ -278,7 +278,7 @@ async def bookEventForUser(
         # print(f"An error occurred: {str(e)}")
 
         # Return a generic error response
-        return SuccessResponse(message="An error occurred while booking the event", success=False)
+        return SuccessResponse(message=f"An error occurred while booking the event, {e}", success=False)
 
 async def saveTransactionInitInDB(userId, finalMerchantId, paymentInitContainer):
     try:
