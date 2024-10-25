@@ -25,6 +25,14 @@ import base64
 import hashlib
 from Helpers.calculateAge import calculate_age
 
+def generate_merchant_transaction_id(user_id: str, id_no: int) -> str:
+    # Create a unique base string from user_id and id_no
+    base_string = f"{user_id}_{id_no}"
+    
+    # Generate a hash of the base string
+    unique_hash = hashlib.sha256(base_string.encode()).hexdigest()[:12]  # 12 characters for example
+    
+    return unique_hash
 
 async def getUserBookingStatus(eventId: str, userId: str, bookingContainer, eventContainer):
     event_query = "SELECT * FROM c WHERE c.id = @eventId"
@@ -181,7 +189,7 @@ async def bookEventForUser(
     userId: str,
     bookingContainer,
     eventContainer,
-    transactionId: str,
+    id_no: int,
     userSpecificContainer,
     transactionContainer,
     members: int
@@ -201,6 +209,7 @@ async def bookEventForUser(
             return SuccessResponse(message="Not enough capacity available for this event", success=False)
         
         # Check if the transaction exists
+        transactionId = generate_merchant_transaction_id(current_user.id, id_no)
         transaction_query = "SELECT * FROM c WHERE c.transactionId = @transactionId"
         params = [{"name": "@transactionId", "value": transactionId}]
         transactionsList = list(transactionContainer.query_items(query=transaction_query, parameters=params, enable_cross_partition_query=True))
@@ -270,6 +279,23 @@ async def bookEventForUser(
 
         # Return a generic error response
         return SuccessResponse(message="An error occurred while booking the event", success=False)
+
+async def saveTransactionInitInDB(userId, finalMerchantId, paymentInitContainer):
+    try:
+        date = datetime.now()
+        newId = str(uuid4())
+
+        newPaymentInit = {
+            "id": newId,
+            "userId": userId,
+            "merchantId": finalMerchantId,
+            "initiated_at": date.isoformat()
+        }
+        paymentInitContainer.create_item(newPaymentInit)
+        return SuccessResponse(message="Transaction initiation data added successfully", success=True)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"{e}")
+
     
 
 async def addAttendee(ticketId: str, userId: str, bookingContainer, eventContainer, fileContainer, db):
