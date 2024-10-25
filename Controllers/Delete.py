@@ -83,7 +83,7 @@ async def delete_file(
 ) -> SuccessResponse:
     if current_user is None:
         raise HTTPException(status_code=401, detail="Unauthorized")
-
+    print("Hello world")
     # Step 1: Retrieve the event details to verify ownership and get file metadata
     query = """
     SELECT * FROM c 
