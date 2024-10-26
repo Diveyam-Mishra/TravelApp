@@ -9,7 +9,7 @@ from Controllers.Auth import get_current_user, login_verify, update_user,\
 from Database.Connection import get_db, get_user_specific_container,\
     get_container, AsyncSessionLocal,get_bank_container
 from config import JWTBearer
-from Controllers.Auth import (create_user, register_user, login_user,delete_user,look_up_username,add_credit_card)
+from Controllers.Auth import (create_user, register_user, login_user,delete_user,look_up_username,add_credit_card,get_bookings)
 from Controllers.OtpGen import (verify_otp)
 from typing import List, Dict
 from Schemas.userSpecific import UserSpecific,CreditCard
@@ -102,9 +102,22 @@ async def addRecentSearch(searchItem:str=Body(...), user_specific_container=Depe
 async def get_user_specific_containers(user_specific_container=Depends(get_user_specific_container), current_user:User=Depends(get_current_user), eventContainer = Depends(get_container)):
     if current_user is None:
         raise HTTPException(status_code=401, detail="Not authenticated")
-    userId = "d1b14612-db03-4311-8176-cf504d222bfb"
+    # userId = "d1b14612-db03-4311-8176-cf504d222bfb"
+    userId = current_user.id
      
     resp = await get_user_specific_data(userId, user_specific_container, eventContainer)
+
+    # #print(resp)
+    return resp
+
+@router.get("/bookings/", dependencies=[Depends(JWTBearer())])
+async def get_only_bookings(user_specific_container=Depends(get_user_specific_container), current_user:User=Depends(get_current_user), eventContainer = Depends(get_container)):
+    if current_user is None:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    # userId = "d1b14612-db03-4311-8176-cf504d222bfb"
+    userId = current_user.id
+     
+    resp = await get_bookings(userId, user_specific_container, eventContainer)
 
     # #print(resp)
     return resp

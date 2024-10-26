@@ -482,6 +482,81 @@ async def get_user_specific_data(userId: str, user_specific_container, event_con
      
     return user_data
 
+async def get_bookings(userId: str, user_specific_container, event_container):
+    query = "SELECT * FROM c WHERE c.userId = @userId"
+    params = [{"name": "@userId", "value": userId}]
+    
+    search = list(user_specific_container.query_items(
+        query=query,
+        parameters=params,
+        enable_cross_partition_query=True
+    ))
+    
+    if not search:
+        user_specific=UserSpecific(
+            id=userId,
+            userId=userId,
+            booked_events=[],
+            recent_searches=[],
+            interest_areas=[],
+            credit_cards=[],
+            bank_details=None
+        )
+        user_specific_container.create_item(user_specific.to_dict())
+        return []
+    
+    user_data = search[0].get('booked_events', [])
+    event_map = {}
+
+    for event in user_data:
+        event_id = event.get('event_id')
+        if event_id:
+            if event_id in event_map:
+                # Use the cached event details
+                event.update(event_map[event_id])
+            else:
+                # Query the eventContainer for event details
+                event_query = "SELECT * FROM c WHERE c.id = @event_id"
+                event_params = [{"name": "@event_id", "value": event_id}]
+                
+                event_details = list(event_container.query_items(
+                    query=event_query,
+                    parameters=event_params,
+                    enable_cross_partition_query=True
+                ))
+                
+                if event_details:
+                    event_info = event_details[0]
+                    event_name = event_info.get('event_name')
+                    description = event_info.get('event_description')
+                    event_type = event_info.get('event_type')
+                    location = event_info.get('location', {})
+                    venue = location.get('venue')
+                    geo_tag = location.get('geo_tag', {})
+                    latitude = geo_tag.get('latitude')
+                    longitude = geo_tag.get('longitude')
+                    city = location.get('city')
+                    thumbnail = event_info.get('thumbnail', {})
+                    fileUrl = thumbnail.get('fileUrl')
+                    # Cache the event details in the map
+                    event_map[event_id] = {
+                        'eventName': event_name,
+                        'description': description,
+                        'type': event_type,
+                        'venue': venue,
+                        'latitude': latitude,
+                        'longitude': longitude,
+                        'city': city,
+                        'thumbnail': fileUrl
+                    }
+                    
+                    # Update the event with the fetched details
+                    event.update(event_map[event_id])
+    user_data.sort(key=lambda x: datetime.fromisoformat(x['payment_date']), reverse=True)
+
+    return user_data
+
+
 
 async def fetch_carousel_images_db(db: AsyncSessionLocal) -> List[Dict[str, str]]:
     # Fetch all carousel images from the database asynchronously
