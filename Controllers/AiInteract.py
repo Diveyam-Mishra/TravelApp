@@ -105,7 +105,12 @@ def suggest_events(input: str, events: list, current_user: User=Depends(get_curr
     # print(reply)
     # Parse the reply to ensure it's a valid array of strings
     try:
-        output_part = reply.split("Output:")[1].strip()
+        if "Output:" in reply:
+            # Extract the part after "Output:" and strip any extra whitespace
+            output_part = reply.split("Output:")[1].strip()
+        else:
+            # If "Output:" is not present, use the entire reply
+            output_part = reply.strip()
 
         # Parse the list from the output
         events_list = ast.literal_eval(output_part)
