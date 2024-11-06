@@ -62,6 +62,7 @@ VALID_IMAGE_EXTENSIONS = {
 }
 
 from sqlalchemy import select
+from azure.core.exceptions import ResourceNotFoundError
 
 async def avatar_upload(
     req: UserUpdate,
@@ -99,14 +100,18 @@ async def avatar_upload(
         existing_avatar = existing_avatar.scalar_one_or_none()
 
         if existing_avatar:
-            # Delete existing avatar blob from Azure Blob Storage
+            # Delete existing avatar blob from Azure Blob Storage if it exists
             existing_blob_client = blob_service_client.get_blob_client(container=avatar_container_name, blob=existing_avatar.filename)
             try:
-                await existing_blob_client.delete_blob()  # Remove the existing blob
-            except Exception:
-                raise HTTPException(status_code=500, detail="Error deleting existing avatar")
+                # Check if the blob exists before trying to delete it
+                blob_properties = existing_blob_client.get_blob_properties()
+                existing_blob_client.delete_blob()  # Remove the existing blob
+            except ResourceNotFoundError:
+                # If blob doesn't exist, log this or proceed without error
+                pass
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=f"Error deleting existing avatar: {e}")
 
-            # Toggle between 0 and 1 for the new filename
             last_digit = existing_avatar.filename.split('_')[-1][0]  # Get the last digit (either 0 or 1)
             new_digit = '1' if last_digit == '0' else '0'  # Switch between '0' and '1'
         else:
@@ -117,7 +122,7 @@ async def avatar_upload(
 
         # Upload the new file to Azure Blob Storage
         blob_client = blob_service_client.get_blob_client(container=avatar_container_name, blob=file_name)
-        await blob_client.upload_blob(file_data, overwrite=True)
+        blob_client.upload_blob(file_data, overwrite=True)
 
         # Generate the URL of the uploaded file
         file_url = blob_client.url
