@@ -28,7 +28,7 @@ def event_distance(lat1, lon1, lat2, lon2):
     distance = R * c  # Distance in kilometers
     return round(distance, 2)
 
-
+from Controllers.Events import category_map
 
 async def get_event_of_single_category(category: str, event_container, file_container):
     # Query to fetch events of a specific category
@@ -111,6 +111,9 @@ async def get_category_events(filters: List[str], coord: List[float], event_cont
     query = "SELECT * FROM c"
     
     events = []
+    for i, event_type in enumerate(filters):
+        filters[i] = category_map.get(event_type)
+
     for event in event_container.query_items(
             query=query,
             enable_cross_partition_query=True

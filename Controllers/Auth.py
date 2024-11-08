@@ -183,15 +183,19 @@ async def delete_user(current_user: User, db: AsyncSessionLocal) -> SuccessRespo
     )
     x = current_user.id
     db.add(deleted_user)
+    # print(current_user)
     
-    # Delete the current user
-    db.delete(current_user)
+    # Await the delete operation for the current user
+    user_result = await db.execute(select(User).where(User.id == x))
+    user_instance = user_result.scalars().first()
+    # print(userInTable)
+    await db.delete(user_instance)
 
     # Delete avatar if it exists
-    avatar = await db.execute(select(Avatar).where(Avatar.userID == x))
-    avatar_instance = avatar.scalars().first()
-    if avatar_instance:
-        db.delete(avatar_instance)
+    # avatar = await db.execute(select(Avatar).where(Avatar.userID == x))
+    # avatar_instance = avatar.scalars().first()
+    # if avatar_instance:
+    #     await db.delete(avatar_instance)  # Await the delete operation for the avatar
 
     await db.commit()  # Commit the changes
 
