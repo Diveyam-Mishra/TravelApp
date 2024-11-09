@@ -108,16 +108,19 @@ async def update_events_with_thumbnails(event_container, file_container):
 
 async def get_category_events(filters: List[str], coord: List[float], event_container, page: int):
     # Fetch all events
-    query = "SELECT * FROM c"
+    query = "SELECT * FROM c WHERE IS_STRING(c.start_date_and_time) AND c.start_date_and_time > @now"
     now = datetime.now().isoformat()
-    query += " AND IS_STRING(c.start_date_and_time) AND c.start_date_and_time > @now"
-    
+    params = [{"name": "@now", "value": now}]
+
+    # Map filters to their corresponding categories
     events = []
     for i, event_type in enumerate(filters):
         filters[i] = category_map.get(event_type)
 
+    # Execute the query with parameters
     for event in event_container.query_items(
             query=query,
+            parameters=params,
             enable_cross_partition_query=True
         ):
         # Count the number of matched types
