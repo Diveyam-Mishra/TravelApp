@@ -59,8 +59,19 @@ def generate_questions(input, current_user: User=Depends(get_current_user)):
     reply = completion.choices[0].message.content
     return reply
     
+import re
 
-def suggest_events(input: str, events: list, current_user: User=Depends(get_current_user)):
+def extract_unique_uuids(reply):
+    # Regular expression to match UUIDs
+    uuid_pattern = r"\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\b"
+    
+    # Find all UUIDs in the reply text
+    uuids = re.findall(uuid_pattern, reply)
+    
+    # Return a list of unique UUIDs
+    return list(set(uuids))
+
+async def suggest_events(input: str, events: list, current_user: User=Depends(get_current_user)):
     if current_user is None:
         raise HTTPException(status_code=400, detail="User Not Found")
     
@@ -101,19 +112,15 @@ def suggest_events(input: str, events: list, current_user: User=Depends(get_curr
     
     # Get the model's reply
     reply = completion.choices[0].text
-    # print(reply)
-    # print(reply)
+    # print("11",reply)
+    unique_uuids = extract_unique_uuids(reply)
+    # print(unique_uuids)
+
     # Parse the reply to ensure it's a valid array of strings
     try:
-        if "Output:" in reply:
-            # Extract the part after "Output:" and strip any extra whitespace
-            output_part = reply.split("Output:")[1].strip()
-        else:
-            # If "Output:" is not present, use the entire reply
-            output_part = reply.strip()
+        events_list = unique_uuids
 
-        # Parse the list from the output
-        events_list = ast.literal_eval(output_part)
+        # events_list = ast.literal_eval(unique_uuids)
         if not isinstance(events_list, list):
             raise ValueError("Reply is not a list.")
     except (SyntaxError, ValueError):
