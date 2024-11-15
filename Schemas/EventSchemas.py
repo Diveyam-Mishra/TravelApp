@@ -131,15 +131,16 @@ class EventFilter(BaseModel):
     @validator('date_preference')
     def validate_date_preference(cls, value):
         valid_strings = {"Today", "Tomorrow", "This week", "Anytime"}
-        if value.endswith('Z'):
-            value = value[:-1]
-        try:
-            # Try to parse as ISO 8601 date string
-            datetime.fromisoformat(value)
-        except ValueError:
-            # If it fails, check if it matches the allowed strings
-            if value not in valid_strings:
-                raise ValueError('date_preference must be "Today", "Tomorrow","This week", "Anytime" or a valid ISO 8601 date string')
+        if value:
+            if value.endswith('Z'):
+                value = value[:-1]
+            try:
+                # Try to parse as ISO 8601 date string
+                datetime.fromisoformat(value)
+            except ValueError:
+                # If it fails, check if it matches the allowed strings
+                if value not in valid_strings:
+                    raise ValueError('date_preference must be "Today", "Tomorrow","This week", "Anytime" or a valid ISO 8601 date string')
         return value
 
 class SearchEvent(BaseModel):

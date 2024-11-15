@@ -95,11 +95,11 @@ async def get_events(Preferences: Preferences, background_tasks: BackgroundTasks
     background_tasks.add_task(update_user_specific_data, user_specific_container, event_container, userId, Preferences)
     list_of_filtered_events = await get_filtered_events(event_container, filters, current_user)
     result = [{"id": event["id"], "name": event["event_name"], "description": event["event_description"]} for event in list_of_filtered_events]
-    # #print(result)
+    # print(result)
     if len(result) > 100:
         result = result[:100]
     # print(len(result))
-    events = suggest_events(input_str, result, current_user)
+    events = await suggest_events(input_str, result, current_user)
 
 
     return {"eventsSuggested":events}
