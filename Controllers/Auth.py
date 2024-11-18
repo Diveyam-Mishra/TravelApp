@@ -203,6 +203,7 @@ async def delete_user(current_user: User, db: AsyncSessionLocal) -> SuccessRespo
     return SuccessResponse(message="User deleted successfully", success=True)
 
 
+
 async def register_user(db: AsyncSessionLocal, email: str = None, username: str = None) -> SuccessResponse:
     if (not email) and (not username):
         raise HTTPException(status_code=400, detail="Both Email and Username are required")
@@ -433,7 +434,7 @@ async def get_user_specific_data(userId: str, user_specific_container, event_con
         )
         user_specific_container.create_item(user_specific.to_dict())
         return user_specific
-    print(search)
+    # print(search)
     user_data = search[0]
     event_map = {}
 
@@ -541,7 +542,7 @@ async def get_bookings(userId: str, user_specific_container, event_container):
                     longitude = geo_tag.get('longitude')
                     city = location.get('city')
                     thumbnail = event_info.get('thumbnail', {})
-                    fileUrl = thumbnail.get('fileUrl')
+                    fileUrl = thumbnail.get('file_url') or thumbnail.get('fileUrl')
                     # Cache the event details in the map
                     event_map[event_id] = {
                         'eventName': event_name,

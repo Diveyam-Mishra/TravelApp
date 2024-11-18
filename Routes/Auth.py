@@ -161,8 +161,11 @@ async def banking_details(banking_details: BankingDetail, bank_container=Depends
     if current_user is None:
         raise HTTPException(status_code=401, detail="Not authenticated")
      
+
+    # userId = "7395e1a6-9ffd-46ff-9ef9-1068305a0b50"
     userId = current_user.id
-    resp = await add_banking_details(userId, bank_container,banking_details)
+    resp = await add_banking_details(userId, user_specific_container,banking_details)
+
     return resp
 
 # @router.put("/toggle_global_state/", dependencies=[Depends(JWTBearer())])
@@ -189,4 +192,5 @@ async def get_banking_info(
     userId = current_user.id
 
     resp = await get_banking_details(userId, bank_container)
+
     return resp
