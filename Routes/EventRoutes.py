@@ -31,6 +31,7 @@ async def create_event(
     location_long: float=Form(...),
     location_city: str=Form(...),
     files: List[UploadFile]=File(...),
+    
     container=Depends(get_container),
     fileContainer=Depends(get_file_container),
     current_user: User=Depends(get_current_user),

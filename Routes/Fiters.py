@@ -183,9 +183,10 @@ async def search_events_by_creator1(
     creator_id: CreatorId,
     coord: List[float],
     event_container=Depends(get_container),
+    current_user=Depends(get_current_user),
     page: int=0
 ):
-    eventsRes = await search_events_by_creator(creator_id, coord, event_container, page)
+    eventsRes = await search_events_by_creator(coord, event_container, page,creator_id)
     total_count = eventsRes['cnt']
     events = eventsRes['results']
     result = [{"id": event["id"], "name": event["event_name"], "description": event["event_description"], "type":event.get("event_type"), "thumbnail":event.get("thumbnail"), "distance":str(event["distance"]) + "km"} for event in events]

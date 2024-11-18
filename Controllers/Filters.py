@@ -237,16 +237,15 @@ async def search_events_by_name(
 async def search_events_by_creator(
     coord:List[float],
     event_container,page,
-    creator_id: User = Depends(get_current_user)
+    creator_id
 ):
-    creator_id=User.id
     query = """
     SELECT * FROM eventcontainer e 
     WHERE e.creator_id = @creator_id
     """
 
     params = [
-        {"name": "@creator_id", "value": creator_id}
+        {"name": "@creator_id", "value": creator_id.creator}
     ]
 
     events = list(event_container.query_items(
