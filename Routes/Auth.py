@@ -160,6 +160,7 @@ async def banking_details(banking_details: BankingDetails, user_specific_contain
     if current_user is None:
         raise HTTPException(status_code=401, detail="Not authenticated")
      
-    userId = "7395e1a6-9ffd-46ff-9ef9-1068305a0b50"
+    # userId = "7395e1a6-9ffd-46ff-9ef9-1068305a0b50"
+    userId = current_user.id
     resp = await add_banking_details(userId, user_specific_container,banking_details)
     return resp

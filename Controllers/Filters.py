@@ -319,6 +319,7 @@ async def search_events_by_creator_past(
         "cnt": total_count,
         "results": paginated_events
     }
+from sqlalchemy import select
 
 async def search_events_by_creator_past_v1(
     time: str,
@@ -403,12 +404,13 @@ async def search_events_by_creator_past_v1(
         # #print(user_ids,'vv')
 
         if user_ids:
-            results = (
-                db.query(User, Avatar.fileurl)
+            results = await db.execute(
+                select(User, Avatar.fileurl)
                 .outerjoin(Avatar, User.id == Avatar.userID)
                 .filter(User.id.in_(user_ids))
-                .all()
             )
+
+            
 
             # #print(results)
 
