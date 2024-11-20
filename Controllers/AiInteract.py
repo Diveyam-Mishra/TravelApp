@@ -105,14 +105,17 @@ def suggest_events(input: str, events: list, current_user: User=Depends(get_curr
     # print(reply)
     # Parse the reply to ensure it's a valid array of strings
     try:
+        print (reply)
+        if "Output:" not in reply:
+            return []
         output_part = reply.split("Output:")[1].strip()
 
         # Parse the list from the output
         events_list = ast.literal_eval(output_part)
         if not isinstance(events_list, list):
             raise ValueError("Reply is not a list.")
-    except (SyntaxError, ValueError):
-        raise HTTPException(status_code=500, detail="Failed to parse the event IDs")
-
+    except (SyntaxError, ValueError, IndexError) as e:
+        print(f"Failed to parse the event IDs")
+        return []
     return events_list
     
