@@ -130,6 +130,8 @@ class EventFilter(BaseModel):
     user_city: Optional[str] = None
     @validator('date_preference')
     def validate_date_preference(cls, value):
+        if value is None:
+            return value
         valid_strings = {"Today", "Tomorrow", "This week", "Anytime"}
         if value:
             if value.endswith('Z'):
