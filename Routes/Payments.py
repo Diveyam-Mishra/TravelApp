@@ -29,7 +29,7 @@ eventContainer=Depends(get_container), current_user:User=Depends(get_current_use
 
 
 @router.post("/bookEvent/{eventId}/", dependencies=[Depends(JWTBearer())], response_model=SuccessResponse)
-async def newBooking(eventId: str, merchantTransactionId: str=Body(...), members:int=Body(...), bookingContainer=Depends(get_booking_container), eventContainer=Depends(get_container), current_user: User=Depends(get_current_user), userSpecificContainer=Depends(get_user_specific_container), transactionContainer=Depends(get_successful_transaction_container)):
+async def newBooking(eventId: str, id_no: int=Body(...), members:int=Body(...), bookingContainer=Depends(get_booking_container), eventContainer=Depends(get_container), current_user: User=Depends(get_current_user), userSpecificContainer=Depends(get_user_specific_container), transactionContainer=Depends(get_successful_transaction_container)):
 
     if current_user is None:
         raise HTTPException(status_code=401, detail="Unauthorized")
@@ -37,7 +37,7 @@ async def newBooking(eventId: str, merchantTransactionId: str=Body(...), members
     # if current_user.id != str(current_user.id):
     #     raise HTTPException(status_code=401, detail="You are not authorized to book an event for another user")
 
-    return await bookEventForUser(eventId, current_user.id, bookingContainer, eventContainer, merchantTransactionId, userSpecificContainer, transactionContainer, members)
+    return await bookEventForUser(eventId, current_user.id, bookingContainer, eventContainer, id_no, userSpecificContainer, transactionContainer, members)
 
 
 @router.put("/addAttendee/{ticketId}/", dependencies=[Depends(JWTBearer())], response_model=SuccessResponse, tags=["Will not work"])

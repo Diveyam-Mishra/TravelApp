@@ -9,7 +9,7 @@ class PaymentInformation(BaseModel):
     data: dict
     paymentDate: Optional[str] = datetime.now().isoformat()
     members: Optional[int] = None
-    addedInEventBooking: Optional[bool] = False
+    added_in_event_booking: Optional[bool] = False
     id:str
     ticketId: Optional[str] = None
     userId: Optional[str] = None
@@ -21,7 +21,7 @@ class PaymentInformation(BaseModel):
             "data": self.data,
             "payment_date": self.paymentDate,
             "members": self.members,
-            "added_in_event_booking": self.addedInEventBooking,
+            "added_in_event_booking": self.added_in_event_booking,
             "ticketId": self.ticketId,
             "userId": self.userId,
             "attended": self.attended

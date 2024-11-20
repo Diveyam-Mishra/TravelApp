@@ -233,6 +233,119 @@ async def get_event_by_id(event_id: str, event_container, file_container, lat:fl
 
     return event
 
+category_map = {
+    # Social Events
+    "Social Events": "Social Events",
+    "Parties": "Social Events",
+    "Meetups": "Social Events",
+    "Networking Events": "Social Events",
+    "Reunions": "Social Events",
+
+    # Recreational Activities
+    "Recreational Activities": "Recreational Activities",
+    "Outdoor Activities": "Recreational Activities",
+    "Water Activities": "Recreational Activities",
+    "Adventure Sports": "Recreational Activities",
+
+    # Weekend Getaways
+    "Weekend Getaways": "Weekend Getaways",
+    "Short Trips": "Weekend Getaways",
+    "Staycations": "Weekend Getaways",
+    "Road Trips": "Weekend Getaways",
+    "Nature Retreats": "Weekend Getaways",
+
+    # Workshops and Learning Events
+    "Workshops and Learning Events": "Workshops and Learning Events",
+    "Skill-building Workshops": "Workshops and Learning Events",
+    "Cooking Classes": "Workshops and Learning Events",
+    "Art and Craft Workshops": "Workshops and Learning Events",
+    "Professional Development Seminars": "Workshops and Learning Events",
+
+    # Cultural Events
+    "Cultural Events": "Cultural Events",
+    "Festivals": "Cultural Events",
+    "Music Concerts": "Cultural Events",
+    "Theater and Dance Performances": "Cultural Events",
+    "Movie Screenings": "Cultural Events",
+
+    # Health and Wellness
+    "Health and Wellness": "Health and Wellness",
+    "Yoga Retreats": "Health and Wellness",
+    "Meditation Sessions": "Health and Wellness",
+    "Wellness Workshops": "Health and Wellness",
+    "Spa and Relaxation Events": "Health and Wellness",
+
+    # Sports and Fitness
+    "Sports and Fitness": "Sports and Fitness",
+    "Marathons and Runs": "Sports and Fitness",
+    "Fitness Bootcamps": "Sports and Fitness",
+    "Sports Tournaments": "Sports and Fitness",
+    "Group Workouts": "Sports and Fitness",
+
+    # Food and Drink
+    "Food and Drink": "Food and Drink",
+    "Food Festivals": "Food and Drink",
+    "Tasting Events": "Food and Drink",
+    "Cooking Competitions": "Food and Drink",
+    "Restaurant Pop-ups": "Food and Drink",
+
+    # Community Events
+    "Community Events": "Community Events",
+    "Charity Events": "Community Events",
+    "Community Gatherings": "Community Events",
+    "Volunteering Opportunities": "Community Events",
+    "Farmers Markets": "Community Events",
+
+    # Family and Kids
+    "Family and Kids": "Family and Kids",
+    "Family Get-togethers": "Family and Kids",
+    "Kids' Playdates": "Family and Kids",
+    "Parenting Workshops": "Family and Kids",
+    "Family-friendly Outings": "Family and Kids",
+
+    # Business and Professional
+    "Business and Professional": "Business and Professional",
+    "Conferences": "Business and Professional",
+    "Trade Shows": "Business and Professional",
+    "Product Launches": "Business and Professional",
+    "Webinars": "Business and Professional",
+
+    # Hobbies and Special Interests
+    "Hobbies and Special Interests": "Hobbies and Special Interests",
+    "Book Clubs": "Hobbies and Special Interests",
+    "Hobbyist Meetups": "Hobbies and Special Interests",
+    "Collectors’ Fairs": "Hobbies and Special Interests",
+    "Travel Enthusiast Gatherings": "Hobbies and Special Interests",
+
+    # Holiday Celebrations
+    "Holiday Celebrations": "Holiday Celebrations",
+    "Christmas and New Year Parties": "Holiday Celebrations",
+    "Easter Events": "Holiday Celebrations",
+    "Halloween Parties": "Holiday Celebrations",
+    "National Holiday Celebrations": "Holiday Celebrations",
+
+    # Tech and Innovation
+    "Tech and Innovation": "Tech and Innovation",
+    "Hackathons": "Tech and Innovation",
+    "Product Demos": "Tech and Innovation",
+    "Tech Talks and Seminars": "Tech and Innovation",
+    "Startup Pitch Events": "Tech and Innovation",
+
+    # Spiritual and Religious
+    "Spiritual and Religious": "Spiritual and Religious",
+    "Religious Ceremonies": "Spiritual and Religious",
+    "Spiritual Retreats": "Spiritual and Religious",
+    "Meditation Gatherings": "Spiritual and Religious",
+    "Devotional Music Events": "Spiritual and Religious",
+
+    # Educational Events
+    "Educational Events": "Educational Events",
+    "Lectures and Talks": "Educational Events",
+    "Educational Seminars": "Educational Events",
+    "Study Groups": "Educational Events",
+    "Science Fairs": "Educational Events"
+}
+
 
 async def get_filtered_events(
     event_container,

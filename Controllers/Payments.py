@@ -25,6 +25,14 @@ import base64
 import hashlib
 from Helpers.calculateAge import calculate_age
 
+def generate_merchant_transaction_id(user_id: str, id_no: int) -> str:
+    # Create a unique base string from user_id and id_no
+    base_string = f"{user_id}_{id_no}"
+    
+    # Generate a hash of the base string
+    unique_hash = hashlib.sha256(base_string.encode()).hexdigest()[:12]  # 12 characters for example
+    
+    return unique_hash
 
 async def getUserBookingStatus(eventId: str, userId: str, bookingContainer, eventContainer):
     event_query = "SELECT * FROM c WHERE c.id = @eventId"
@@ -181,7 +189,7 @@ async def bookEventForUser(
     userId: str,
     bookingContainer,
     eventContainer,
-    transactionId: str,
+    id_no: int,
     userSpecificContainer,
     transactionContainer,
     members: int
@@ -201,6 +209,7 @@ async def bookEventForUser(
             return SuccessResponse(message="Not enough capacity available for this event", success=False)
         
         # Check if the transaction exists
+        transactionId = generate_merchant_transaction_id(userId, id_no)
         transaction_query = "SELECT * FROM c WHERE c.transactionId = @transactionId"
         params = [{"name": "@transactionId", "value": transactionId}]
         transactionsList = list(transactionContainer.query_items(query=transaction_query, parameters=params, enable_cross_partition_query=True))
@@ -269,8 +278,25 @@ async def bookEventForUser(
         # print(f"An error occurred: {str(e)}")
 
         # Return a generic error response
-        return SuccessResponse(message="An error occurred while booking the event", success=False)
-    
+        return SuccessResponse(message=f"An error occurred while booking the event, {e}", success=False)
+
+async def saveTransactionInitInDB(userId, finalMerchantId, paymentInitContainer):
+    try:
+        date = datetime.now()
+        newId = str(uuid4())
+
+        newPaymentInit = {
+            "id": newId,
+            "userId": userId,
+            "merchantId": finalMerchantId,
+            "initiated_at": date.isoformat()
+        }
+        paymentInitContainer.create_item(newPaymentInit)
+        return SuccessResponse(message="Transaction initiation data added successfully", success=True)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"{e}")
+
+from sqlalchemy import select
 
 async def addAttendee(ticketId: str, userId: str, bookingContainer, eventContainer, fileContainer, db):
     # Check if the user has booked the event
@@ -278,14 +304,22 @@ async def addAttendee(ticketId: str, userId: str, bookingContainer, eventContain
 
     if not booking_records:
         return SuccessResponse(message="User has not booked the event", success=False)
-    
+
     booking_record = booking_records[0]
-    # print(booking_record)
     creator = booking_record['event_details']['creator_id']
     eventId = booking_record['event_details']['id']
     transactionId = booking_record['Transaction']['booking']['transactionId']
-    members = (str)(booking_record['Transaction']['booking']['members'])
-    k = db.query(User).filter(User.id == booking_record['Transaction']['booking']['userId']).first()
+    members = str(booking_record['Transaction']['booking']['members'])
+    user_id = booking_record['Transaction']['booking']['userId']
+
+    # Asynchronous SQLAlchemy query for User
+    query = select(User).filter(User.id == user_id)
+    result = await db.execute(query)
+    k = result.scalars().first()
+    
+    if not k:
+        raise HTTPException(status_code=404, detail="User not found")
+    
     username = k.username
     start_date_and_time = booking_record['event_details']['start_date_and_time']
     end_date_and_time = booking_record['event_details']['end_date_and_time']
@@ -293,8 +327,9 @@ async def addAttendee(ticketId: str, userId: str, bookingContainer, eventContain
     location = booking_record['event_details']['location']
 
     if creator != userId:
-        raise HTTPException(status_code=401, detail=f"You are not the creator of the booked event")
+        raise HTTPException(status_code=401, detail="You are not the creator of the booked event")
 
+    # Asynchronous query for booking event
     booking_event_query = "SELECT * FROM c WHERE c.id = @eventId"
     params = [{"name": "@eventId", "value": eventId}]
 
@@ -302,7 +337,7 @@ async def addAttendee(ticketId: str, userId: str, bookingContainer, eventContain
 
     if not bookingLists:
         return SuccessResponse(message="Event Booking record not found", success=False)
-    
+
     booking_list_item = PaymentLists(**bookingLists[0])
 
     attendedStatus = booking_list_item.is_attended_by_ticket_id(ticketId)
@@ -314,10 +349,20 @@ async def addAttendee(ticketId: str, userId: str, bookingContainer, eventContain
 
     booking_list_item.add_attendee_information(newAttendeeInfo)
     booking_list_item.mark_attended_by_ticket_id(ticketId)
+    
+    # Replace item asynchronously
     bookingContainer.replace_item(item=booking_list_item.id, body=booking_list_item.to_dict())
 
-    return SuccessResponse(message="User successfully added to attended users ", event_name=event_name , username=username, location=location,
-                           start_date_and_time=start_date_and_time, end_date_and_time=end_date_and_time , members=members, success=True)
+    return SuccessResponse(
+        message="User successfully added to attended users",
+        event_name=event_name,
+        username=username,
+        location=location,
+        start_date_and_time=start_date_and_time,
+        end_date_and_time=end_date_and_time,
+        members=members,
+        success=True
+    )
 
 
 async def getBookedUsers(eventId: str, bookingContainer, current_user, db):
