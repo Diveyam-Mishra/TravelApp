@@ -335,7 +335,7 @@ async def look_up_username(username: str, db: AsyncSessionLocal, current_user: U
     return {"user": user_details, "avatar_url": avatar_url}
 
 async def add_interest_areas_to_user(userId:str, interestAreas:List[str], user_specific_container):
-    query = "SELECT interest_areas FROM c where c.userId = @userId"
+    query = "SELECT * FROM c where c.userId = @userId"
     params = [{"name":"@userId", "value":userId}]
 
     search = list(user_specific_container.query_items(query=query,
@@ -345,16 +345,12 @@ async def add_interest_areas_to_user(userId:str, interestAreas:List[str], user_s
     if not search:
         user_specific = UserSpecific(id=userId, userId=userId, booked_events=[], recent_searches=[], interest_areas=interestAreas)
         user_specific_container.create_item(user_specific.to_dict())
-        current_time = datetime.datetime.now()
-        print(current_time.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3])
         return SuccessResponse(message="User Interest areas updated successfully", success=True)
     else:
         # Update the interest_areas if the user already exists
         user_specific = search[0]
         user_specific["interest_areas"] = interestAreas
-        user_specific_container.replace_item(user_specific["id"], user_specific)
-        current_time = datetime.datetime.now()
-        print(current_time.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3])
+        user_specific_container.replace_item(user_specific["userId"], user_specific)
         return {"message": "User interest areas updated successfully", "success": True}
 
 
@@ -368,12 +364,10 @@ async def add_recent_search(userId, searchItem, user_specific_container):
     params = [{"name": "@userId", "value": userId}]
 
     # Track time taken for querying items
-    query_start = time.time()
     search = list(user_specific_container.query_items(query=query,
                                                      parameters=params,
                                                      enable_cross_partition_query=True))
-    query_time = time.time() - query_start
-    print(f"Time taken for querying items: {query_time:.6f} seconds")  # Log the time
+  # Log the time
 
     if search:
         user_specific_data = search[0]
