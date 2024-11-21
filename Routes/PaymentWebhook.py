@@ -4,13 +4,15 @@ from Schemas.PaymentSchemas import PaymentConfirmationRedirectBody,\
 import base64
 import json
 from Schemas.EventSchemas import SuccessResponse
-from Database.Connection import get_booking_container,\
-    get_successful_transaction_container
+from Database.Connection import get_successful_transaction_container, get_payment_init_container
 from Controllers.PaymentWebhook import CreateTransactionInDB
+from Controllers.Payments import saveTransactionInitInDB,generate_merchant_transaction_id
 from Controllers.Auth import get_current_user
 from fastapi.exceptions import HTTPException
 from config import JWTBearer
 
+import secrets
+import hashlib
 
 router = APIRouter()
 
@@ -40,7 +42,21 @@ async def payment_redirect(
 
     return res
 
-from cryptography.hazmat.primitives.asymmetric import rsa, padding
+
+
+@router.get("/getMerchantId", dependencies=[Depends(JWTBearer())])
+async def getMerchantId(id_no: int, current_user=Depends(get_current_user), payment_init_container = Depends(get_payment_init_container)):
+    if current_user is None:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    userId = current_user.id
+    
+    finalMerchantId = generate_merchant_transaction_id(userId, id_no)
+
+    await saveTransactionInitInDB(userId, finalMerchantId, payment_init_container)
+
+    return finalMerchantId
+
+from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.backends import default_backend
 
@@ -61,10 +77,17 @@ async def fetch_encoded_data(
         raise HTTPException(status_code=401, detail="Unauthorized")
     
     # The data to be encrypted
-    data = "abc"
+    data = {
+        "paymentInfo": {
+            "merchantId": "PGTESTPAYUAT86",
+            "packageName": "com.example.phone_pe_demo",
+            "appId": "",
+            "environment": "SANDBOX"
+        }
+    }
     
-    # Convert data to bytes
-    data_bytes = data.encode('utf-8')
+    # Convert data to JSON and then to bytes
+    data_bytes = json.dumps(data).encode('utf-8')
     
     # Load the public key
     public_key = load_public_key("./Secure/public_key.pem")

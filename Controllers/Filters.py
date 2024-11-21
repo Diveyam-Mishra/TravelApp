@@ -28,7 +28,7 @@ def event_distance(lat1, lon1, lat2, lon2):
     distance = R * c  # Distance in kilometers
     return round(distance, 2)
 
-
+from Controllers.Events import category_map
 
 async def get_event_of_single_category(category: str, event_container, file_container):
     # Query to fetch events of a specific category
@@ -108,11 +108,19 @@ async def update_events_with_thumbnails(event_container, file_container):
 
 async def get_category_events(filters: List[str], coord: List[float], event_container, page: int):
     # Fetch all events
-    query = "SELECT * FROM c"
-    
+    query = "SELECT * FROM c WHERE IS_STRING(c.start_date_and_time) AND c.start_date_and_time > @now"
+    now = datetime.now().isoformat()
+    params = [{"name": "@now", "value": now}]
+
+    # Map filters to their corresponding categories
     events = []
+    for i, event_type in enumerate(filters):
+        filters[i] = category_map.get(event_type)
+
+    # Execute the query with parameters
     for event in event_container.query_items(
             query=query,
+            parameters=params,
             enable_cross_partition_query=True
         ):
         # Count the number of matched types
@@ -310,6 +318,7 @@ async def search_events_by_creator_past(
         "cnt": total_count,
         "results": paginated_events
     }
+from sqlalchemy import select
 
 async def search_events_by_creator_past_v1(
     time: str,
@@ -394,12 +403,13 @@ async def search_events_by_creator_past_v1(
         # #print(user_ids,'vv')
 
         if user_ids:
-            results = (
-                db.query(User, Avatar.fileurl)
+            results = await db.execute(
+                select(User, Avatar.fileurl)
                 .outerjoin(Avatar, User.id == Avatar.userID)
                 .filter(User.id.in_(user_ids))
-                .all()
             )
+
+            
 
             # #print(results)
 

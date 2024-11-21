@@ -14,7 +14,7 @@ from Schemas.EventSchemas import EventFilter
 from Database.Connection import get_container,get_user_specific_container
 from sqlalchemy.orm import Session
 from config import JWTBearer
-
+import random
 class Params(BaseModel):
     userName: str
     age: int
@@ -95,14 +95,23 @@ async def get_events(Preferences: Preferences, background_tasks: BackgroundTasks
     background_tasks.add_task(update_user_specific_data, user_specific_container, event_container, userId, Preferences)
     list_of_filtered_events = await get_filtered_events(event_container, filters, current_user)
     result = [{"id": event["id"], "name": event["event_name"], "description": event["event_description"]} for event in list_of_filtered_events]
-    # #print(result)
+    # print(result)
     if len(result) > 100:
         result = result[:100]
     # print(len(result))
-    events = suggest_events(input_str, result, current_user)
+    events = await suggest_events(input_str, result, current_user)
+    if len(events) > 0:
+        return {"eventsSuggested":events}
+    else:
+        query = "SELECT e.event_ID FROM event_container e WHERE IS_STRING(e.start_date_and_time) AND e.start_date_and_time > @now OFFSET @random_offset LIMIT 6"
+        now = datetime.now().isoformat()
+        random_offset = random.randint(0, 30)
+        params = [{"name": "@random_offset", "value": random_offset},{"name": "@now", "value": now}]
+        items = list(event_container.query_items(query=query, parameters=params, enable_cross_partition_query=True,max_item_count=6))
+        event_ids = [item["event_ID"] for item in items]
+        return {"eventsSuggested":event_ids}
 
-
-    return {"eventsSuggested":events}
+    
 
 async def update_user_specific_data(user_specific_container, event_container, userId,Preferences: Preferences):
     resp = await get_user_specific_data(userId, user_specific_container, event_container)
