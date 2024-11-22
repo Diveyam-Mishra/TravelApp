@@ -118,6 +118,7 @@ async def suggest_events(input: str, events: list, current_user: User=Depends(ge
 
     # Parse the reply to ensure it's a valid array of strings
     try:
+        print(reply)
         if "Output:" not in reply:
             return []
         output_part = reply.split("Output:")[1].strip()

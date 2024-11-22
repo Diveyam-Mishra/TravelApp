@@ -364,18 +364,18 @@ async def get_filtered_events(
 
     if filters.date_preference:
         today = datetime.today().date()
-        if filters.date_preference == "Today":
+        if filters.date_preference == "Today" or filters.date_preference=="today":
             query += (
                 " AND STARTSWITH(e.start_date_and_time, @date)"
             )
             params.append({"name": "@date", "value": today.isoformat()})
-        elif filters.date_preference == "Tomorrow":
+        elif filters.date_preference == "Tomorrow" or filters.date_preference=="tomorrow":
             tomorrow = today + timedelta(days=1)
             query += (
                 " AND STARTSWITH(e.start_date_and_time, @date)"
             )
             params.append({"name": "@date", "value": tomorrow.isoformat()})
-        elif filters.date_preference == "This week":
+        elif filters.date_preference == "This week"or filters.date_preference=="this week":
             start_of_week = today
             end_of_week = today + timedelta(days=(6 - today.weekday()))
             query += (

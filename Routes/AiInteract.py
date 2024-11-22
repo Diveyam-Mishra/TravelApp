@@ -68,9 +68,9 @@ async def get_events(Preferences: Preferences, background_tasks: BackgroundTasks
         user_longitude=Preferences.user_longitude,
         user_city=Preferences.user_city_O
     )
-    if Preferences.date_preference_O == "Today" or Preferences.date_preference_O == "Tomorrow" or Preferences.date_preference_O == "This week":
+    if Preferences.date_preference_O == "Today" or Preferences.date_preference_O == "Tomorrow" or Preferences.date_preference_O == "This week" or  Preferences.date_preference_O == "today" or Preferences.date_preference_O == "tomorrow" or Preferences.date_preference_O == "this week":
         filters.specific_date = None
-    elif Preferences.date_preference_O=="Anytime":
+    elif Preferences.date_preference_O=="Anytime"or Preferences.date_preference_O=="anytime":
         filters.specific_date = None
         filters.date_preference = None
     else:
