@@ -4,12 +4,12 @@ from config import JWTBearer
 from Schemas.EventSchemas import SuccessResponse
 from Database.Connection import get_booking_container, get_container, get_db, \
     get_user_specific_container, get_successful_transaction_container,get_file_container,\
-    AsyncSessionLocal
+    get_payment_init_container, AsyncSessionLocal
 from Models.user_models import User
 from Controllers.Auth import get_current_user
 from Controllers.Payments import getUserBookingStatus, bookEventForUser, addAttendee, getBookedUsers, \
     getAttendedUsers, create_ticket_pdf, \
-    send_email_with_attachment, send_ticket,ticket_information
+    send_email_with_attachment, send_ticket,ticket_information, create_razorpay_order
 from Schemas.PaymentSchemas import PaymentInformation, ticketData
 from sqlalchemy.orm import Session
 import os
@@ -149,3 +149,22 @@ async def Ticket_Information(ticketId:str, booking_container=Depends(get_booking
         return k
     else:
         return ("You are not the Creator of this Event. Information is only For the Creator ")
+
+
+@router.post("/initPayment", dependencies=[Depends(JWTBearer())])
+async def initRazorpayOrder(eventId: str = Body(...), randomNumber: int = Body(...), amount: float = Body(...), current_user=Depends(get_current_user), paymentInitContainer = Depends(get_payment_init_container)):
+    if current_user is None:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    try:
+        res = await create_razorpay_order(
+            userID=current_user.id,
+            amount=amount,
+            eventId=eventId,
+            randomNumber=randomNumber,
+            paymentInitContainer=paymentInitContainer,
+        )
+        return res
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    

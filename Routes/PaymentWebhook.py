@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Body
 from Schemas.PaymentSchemas import PaymentConfirmationRedirectBody,\
     PaymentInformation
 import base64
@@ -6,7 +6,7 @@ import json
 from Schemas.EventSchemas import SuccessResponse
 from Database.Connection import get_successful_transaction_container, get_payment_init_container
 from Controllers.PaymentWebhook import CreateTransactionInDB
-from Controllers.Payments import saveTransactionInitInDB,generate_merchant_transaction_id
+from Controllers.Payments import saveTransactionInitInDB,generate_merchant_transaction_id, updateTransactionInitInDB
 from Controllers.Auth import get_current_user
 from fastapi.exceptions import HTTPException
 from config import JWTBearer
@@ -42,6 +42,49 @@ async def payment_redirect(
 
     return res
 
+
+@router.post("/payment/razorpayHook")
+async def payment_razorpay_hook(
+    body: dict = Body(...),  # Accepts a JSON object
+    paymentInitContainer=Depends(get_payment_init_container)
+):
+    # Extract relevant fields from the webhook payload
+    event_type = body.get("event")
+    account_id = body.get("account_id")
+    payment_entity = body.get("payload", {}).get("payment", {}).get("entity", {})
+    order_entity = body.get("payload", {}).get("order", {}).get("entity", {})
+
+    if not event_type or not order_entity:
+        raise HTTPException(
+            status_code=400, 
+            detail="Invalid webhook payload: Missing event type or order details"
+        )
+
+    try:
+        # Extract order details
+        order_id = order_entity.get("id")
+        status = order_entity.get("status")
+        created_at = order_entity.get("created_at", int(time.time()))  # Fallback to current UNIX time
+
+        # Log received data (useful for debugging)
+        print(f"Webhook received: Event Type - {event_type}, Order ID - {order_id}, Status - {status}")
+
+        # Call the update function to update the transaction in the database
+        update_result = await updateTransactionInitInDB(
+            merchantId=order_id,  # Assuming `order_id` corresponds to the merchant ID
+            paymentInitContainer=paymentInitContainer,
+            status=status,
+            created_at=created_at
+        )
+
+        return {"status": "success", "message": "Transaction updated successfully", "update_result": update_result}
+
+    except Exception as e:
+        print(f"Error handling Razorpay webhook: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error processing webhook: {str(e)}"
+        )
 
 
 @router.get("/getMerchantId", dependencies=[Depends(JWTBearer())])

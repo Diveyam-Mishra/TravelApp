@@ -296,6 +296,49 @@ async def saveTransactionInitInDB(userId, finalMerchantId, paymentInitContainer)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"{e}")
 
+async def updateTransactionInitInDB(merchantId, paymentInitContainer, status):
+    try:
+        # Query to find the transaction by merchantId
+        paymentInitQuery = "SELECT * FROM c WHERE c.merchantId = @merchantId"
+        params = [{"name": "@merchantId", "value": merchantId}]
+
+        # Fetch the matching transaction(s)
+        paymentLists = list(paymentInitContainer.query_items(
+            query=paymentInitQuery,
+            parameters=params,
+            enable_cross_partition_query=True
+        ))
+
+        # If no records are found, raise an exception or handle accordingly
+        if not paymentLists:
+            raise Exception(f"No transaction found for merchantId: {merchantId}")
+
+        # Update the first matched record (assuming only one record for merchantId)
+        for payment in paymentLists:
+            payment_id = payment.get("id")  # Retrieve the document ID
+            partition_key = payment.get("merchantId")  # Assuming merchantId is the partition key
+
+            # Update fields
+            payment["status"] = status
+            payment["updated_at"] = int(time.time())  # Current time in UNIX format
+            # payment["created_at"] = created_at  # Preserving original created_at
+
+            # Replace the updated document in the database
+            paymentInitContainer.replace_item(
+                item=payment_id,
+                body=payment,
+                partition_key=partition_key
+            )
+
+        print(f"Transaction for merchantId: {merchantId} updated successfully.")
+        return {"status": "success", "message": "Transaction updated successfully."}
+
+    except Exception as e:
+        print(f"Error updating transaction: {e}")
+        return {"status": "error", "message": str(e)}
+
+
+
 from sqlalchemy import select
 
 async def addAttendee(ticketId: str, userId: str, bookingContainer, eventContainer, fileContainer, db):
@@ -706,3 +749,56 @@ async def ticket_information(ticketId: str, eventBooking, event_container, file_
 
     except exceptions.CosmosHttpResponseError as e:
         return (f"Wait while we update the Ticket {str(e)}")
+
+
+import httpx
+
+async def create_razorpay_order(
+    userID: str, amount: float, eventId: str, randomNumber: int, paymentInitContainer
+):
+    key_id = "rzp_live_cYB32Z66jVvWm8"
+    key_secret = "T7wyhhGzVKHeZzlrf6K9AJb3"
+
+    # Prepare the API URL and headers
+    url = "https://api.razorpay.com/v1/orders"
+    headers = {
+        "content-type": "application/json"
+    }
+
+    # Prepare the payload
+    print(userID)
+    payload = {
+        "amount": int(amount * 100),  # Convert amount to paise (smallest currency unit)
+        "currency": "INR",
+        "receipt": f"receipt#{randomNumber}",  # Unique receipt using userID
+        "notes": {
+            "event": eventId,
+            "user": userID
+        },
+    }
+
+    try:
+        # Perform the API call
+        async with httpx.AsyncClient(auth=(key_id, key_secret)) as client:
+            response = await client.post(url, json=payload, headers=headers)
+
+        # Handle the response
+        if response.status_code in {200, 201}:
+            res_json = response.json()
+
+            # Save the transaction to the database
+            await saveTransactionInitInDB(
+                userId=userID, finalMerchantId=res_json.get("id"), paymentInitContainer=paymentInitContainer
+            )
+
+            return res_json
+        else:
+            raise Exception(f"Razorpay API Error: {response.status_code} - {response.text}")
+
+    except httpx.RequestError as e:
+        # Handle network-related errors
+        raise Exception(f"Network error occurred: {e}")
+    except Exception as e:
+        # Handle other errors
+        raise Exception(f"An error occurred: {e}")
+
