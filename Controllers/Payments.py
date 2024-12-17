@@ -756,7 +756,7 @@ import httpx
 async def create_razorpay_order(
     userID: str, amount: float, eventId: str, randomNumber: int, paymentInitContainer
 ):
-    key_id = "rzp_live_cYB32Z66jVvWm8"
+    key_id = "rzp_test_gQ9s0JYn7a2X5S" #"rzp_live_cYB32Z66jVvWm8"
     key_secret = "T7wyhhGzVKHeZzlrf6K9AJb3"
 
     # Prepare the API URL and headers
