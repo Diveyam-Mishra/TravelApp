@@ -9,7 +9,7 @@ from Controllers.PaymentWebhook import CreateTransactionInDB
 from Controllers.Payments import saveTransactionInitInDB,generate_merchant_transaction_id, updateTransactionInitInDB
 from Controllers.Auth import get_current_user
 from fastapi.exceptions import HTTPException
-from config import JWTBearer
+from config import JWTBearer, settings
 import secrets
 import hashlib
 import time
@@ -130,10 +130,11 @@ async def fetch_encoded_data(
     # The data to be encrypted
     data = {
         "paymentInfo": {
-            "merchantId": "PGTESTPAYUAT86",
-            "packageName": "com.example.phone_pe_demo",
-            "appId": "",
-            "environment": "SANDBOX"
+            # "merchantId": "PGTESTPAYUAT86",
+            # "packageName": "com.example.phone_pe_demo",
+            # "appId": "",
+            # "environment": "SANDBOX"
+            "razorpay_key":settings.RAZORPAY_KEY
         }
     }
     

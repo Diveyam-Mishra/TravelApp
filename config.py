@@ -40,6 +40,8 @@ class Settings(BaseSettings):
     AZURE_OPENAI_DEVNAME: str
     RABBIT_MQ_URI:str
     BANKING_CONTAINER_NAME:str
+    RAZORPAY_KEY:str
+    RAZORPAY_SECRET:str
     
     class Config:
         env_file = ".env"
