@@ -10,10 +10,9 @@ from Controllers.Payments import saveTransactionInitInDB,generate_merchant_trans
 from Controllers.Auth import get_current_user
 from fastapi.exceptions import HTTPException
 from config import JWTBearer
-
 import secrets
 import hashlib
-
+import time
 router = APIRouter()
 
 
@@ -48,11 +47,21 @@ async def payment_razorpay_hook(
     body: dict = Body(...),  # Accepts a JSON object
     paymentInitContainer=Depends(get_payment_init_container)
 ):
-    # Extract relevant fields from the webhook payload
+    try:
+        with open("webhook_payload.txt", "w") as file:
+            json.dump(body, file, indent=4)
+        print("Webhook payload saved to 'webhook_payload.txt'")
+    except Exception as e:
+        print(f"Error saving webhook payload: {e}")
+        raise HTTPException(
+            status_code=500, 
+            detail="Failed to save webhook payload"
+        )
     event_type = body.get("event")
     account_id = body.get("account_id")
     payment_entity = body.get("payload", {}).get("payment", {}).get("entity", {})
     order_entity = body.get("payload", {}).get("order", {}).get("entity", {})
+    print(order_entity)
 
     if not event_type or not order_entity:
         raise HTTPException(
@@ -64,8 +73,8 @@ async def payment_razorpay_hook(
         # Extract order details
         order_id = order_entity.get("id")
         status = order_entity.get("status")
-        created_at = order_entity.get("created_at", int(time.time()))  # Fallback to current UNIX time
-
+        created_at = order_entity.get("created_at")  # Fallback to current UNIX time
+        print(created_at)
         # Log received data (useful for debugging)
         print(f"Webhook received: Event Type - {event_type}, Order ID - {order_id}, Status - {status}")
 
@@ -73,8 +82,7 @@ async def payment_razorpay_hook(
         update_result = await updateTransactionInitInDB(
             merchantId=order_id,  # Assuming `order_id` corresponds to the merchant ID
             paymentInitContainer=paymentInitContainer,
-            status=status,
-            created_at=created_at
+            status=status
         )
 
         return {"status": "success", "message": "Transaction updated successfully", "update_result": update_result}

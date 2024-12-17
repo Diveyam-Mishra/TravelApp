@@ -6,11 +6,12 @@ from datetime import datetime
 
 class PaymentInformation(BaseModel):
     transactionId: str
-    data: dict
+    # merchantId: str
     paymentDate: Optional[str] = datetime.now().isoformat()
     members: Optional[int] = None
-    added_in_event_booking: Optional[bool] = False
+    already_booked: Optional[bool] = False
     id:str
+    status: Optional[str] = None
     ticketId: Optional[str] = None
     userId: Optional[str] = None
     attended: Optional[bool] = False
@@ -18,10 +19,11 @@ class PaymentInformation(BaseModel):
         return {
             "id":self.id,
             "transactionId": self.transactionId,
-            "data": self.data,
+            # "merchantId": self.merchantId,
             "payment_date": self.paymentDate,
             "members": self.members,
-            "added_in_event_booking": self.added_in_event_booking,
+            "already_booked": self.already_booked,
+            "status": self.status,
             "ticketId": self.ticketId,
             "userId": self.userId,
             "attended": self.attended

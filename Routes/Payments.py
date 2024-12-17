@@ -29,7 +29,7 @@ eventContainer=Depends(get_container), current_user:User=Depends(get_current_use
 
 
 @router.post("/bookEvent/{eventId}/", dependencies=[Depends(JWTBearer())], response_model=SuccessResponse)
-async def newBooking(eventId: str, id_no: int=Body(...), members:int=Body(...), bookingContainer=Depends(get_booking_container), eventContainer=Depends(get_container), current_user: User=Depends(get_current_user), userSpecificContainer=Depends(get_user_specific_container), transactionContainer=Depends(get_successful_transaction_container)):
+async def newBooking(eventId: str, id_no: int=Body(...), members:int=Body(...), bookingContainer=Depends(get_booking_container), eventContainer=Depends(get_container), current_user: User=Depends(get_current_user), userSpecificContainer=Depends(get_user_specific_container), transactionContainer=Depends(get_payment_init_container)):
 
     if current_user is None:
         raise HTTPException(status_code=401, detail="Unauthorized")

@@ -18,7 +18,7 @@ class CreditCard(BaseModel):
 class EventData(BaseModel):
     event_id: str
     payment_id: str
-    paid_amount: float
+    # paid_amount: float
     payment_date: datetime
     event_date: str  # Storing event_date as an ISO string
     ticket_id: Optional[str] = None
@@ -30,7 +30,7 @@ class EventData(BaseModel):
         return {
             "event_id": self.event_id,
             "payment_id": self.payment_id,
-            "paid_amount": self.paid_amount,
+            # "paid_amount": self.paid_amount,
             "payment_date": self.payment_date.isoformat(),
             "event_date": self.event_date,
             "ticket_id": self.ticket_id
