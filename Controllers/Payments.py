@@ -133,6 +133,7 @@ async def addBookingDataInUserSpecific(
     paymentDetails: PaymentInformation,
     userSpecificContainer
 ):
+    print("here")
     event_query = "SELECT * from c WHERE c.id = @eventId"
     params = [{"name": "@eventId", "value": eventId}]
     event = list(eventContainer.query_items(query=event_query, parameters=params, enable_cross_partition_query=True))
@@ -142,19 +143,20 @@ async def addBookingDataInUserSpecific(
     query = "SELECT * FROM c where c.userId = @userId"
     params = [{"name": "@userId", "value": userId}]
     search = list(userSpecificContainer.query_items(query=query, parameters=params, enable_cross_partition_query=True))
-
+    print(search)
     if not search:
         user_specific = UserSpecific(id=userId, userId=userId, booked_events=[], recent_searches=[], interest_areas=[])
     else:
         user_specific = UserSpecific(**search[0])
 
     event_time = event[0]['start_date_and_time']  # Assuming you want to use the first event found
-    # #print(paymentDetails)
+    print("0")
+    print(paymentDetails)
 
     newUserBookingData = EventData(
         event_id=eventId,
         payment_id=paymentDetails.transactionId,
-        # paid_amount=paymentDetails.data['amount'],
+        paid_amount=paymentDetails.amount,
         payment_date=paymentDetails.paymentDate,
         event_date=event_time,
         ticket_id=paymentDetails.ticketId
@@ -223,6 +225,7 @@ async def bookEventForUser(
         # print(transaction_dict)
         # print("2")
         # print(transaction_dict.get('status', "False"))
+        # print(transactionsList)
         if transaction_dict.get('status', "False") !="paid":
             return SuccessResponse(message="Payment Failure", success=False)
         if transaction_dict.get('already_booked', False) ==True:
@@ -265,18 +268,18 @@ async def bookEventForUser(
         # print("ok")
         # Update booking list with user details
         booking_list_item.add_booking_by_user_id(userId, PaymentInformation(**transaction_dict))
-
+        print(transaction_dict)
         transacationUpd = PaymentInformation(**transaction_dict)
-
+        print(transacationUpd)
         # print('ok2')
         # print(booking_list_item.id)
         bookingContainer.replace_item(item=booking_list_item.id, body=booking_list_item.to_dict())
         event['capacity'] -= members 
         eventContainer.replace_item(item=event['id'], body=event)
-        
+        # print('ok3')
         # Add booking data in user-specific container
         await addBookingDataInUserSpecific(userId, eventId, eventContainer, transacationUpd, userSpecificContainer)
-        # #print('ok4')
+        print('ok4')
         return SuccessResponse(message="User booked the event", success=True, ticketId=ticketId)
     
     except Exception as e:
@@ -303,7 +306,7 @@ async def saveTransactionInitInDB(transactionId, userId, finalMerchantId, paymen
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"{e}")
 
-async def updateTransactionInitInDB(merchantId, paymentInitContainer, status):
+async def updateTransactionInitInDB(merchantId, paymentInitContainer, status,amount,method):
     try:
         print("here")
         # Query to find the transaction by merchantId
@@ -324,11 +327,13 @@ async def updateTransactionInitInDB(merchantId, paymentInitContainer, status):
         # Update the first matched record (assuming only one record for merchantId)
         for payment in paymentLists:
             payment_id = payment.get("id")  # Retrieve the document ID
-            partition_key = payment.get("id")  # Assuming merchantId is the partition key
+            # partition_key = payment.get("id")  # Assuming merchantId is the partition key
             
             # Update fields
             payment["status"] = status
             payment["updated_at"] = int(time.time())  # Current time in UNIX format
+            payment["amount"] = amount
+            payment["method"]=method
             # payment["created_at"] = created_at  # Preserving original created_at
 
             # Replace the updated document in the database

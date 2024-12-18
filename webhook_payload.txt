@@ -1,55 +1,57 @@
 {
-    "entity": "event",
-    "account_id": "acc_PT7Rpdng5Qn9Ns",
-    "event": "payment.captured",
-    "contains": [
-        "payment"
-    ],
-    "payload": {
-        "payment": {
-            "entity": {
-                "id": "pay_PYK95KYlaMTjV6",
-                "entity": "payment",
-                "amount": 8514100,
-                "currency": "INR",
-                "status": "captured",
-                "order_id": "order_PYK8a4zROh02Rg",
-                "invoice_id": null,
-                "international": false,
-                "method": "upi",
-                "amount_refunded": 0,
-                "refund_status": null,
-                "captured": true,
-                "description": "Lakeside Camping Adventure",
-                "card_id": null,
-                "bank": null,
-                "wallet": null,
-                "vpa": "shiv@okicici",
-                "email": "shivrajvaru4191@gmail.com",
-                "contact": "+917600747300",
-                "notes": {
-                    "user": "909d4f4e-59fd-438f-82ed-7124a6aeb043",
-                    "event": "0b2dd21a-ecdc-4835-9c89-53367b9ad33d"
-                },
-                "fee": 200932,
-                "tax": 30650,
-                "error_code": null,
-                "error_description": null,
-                "error_source": null,
-                "error_step": null,
-                "error_reason": null,
-                "acquirer_data": {
-                    "rrn": "338290772680",
-                    "upi_transaction_id": "0BEDEF3F9A9E2235ACFD342F3578DEB9"
-                },
-                "created_at": 1734456076,
-                "reward": null,
-                "upi": {
-                    "vpa": "shiv@okicici"
-                },
-                "base_amount": 8514100
-            }
-        }
+  "entity": "event",
+  "account_id": "acc_BFQ7uQEaa7j2z7",
+  "event": "order.paid",
+  "contains": [
+    "payment",
+    "order"
+  ],
+  "payload": {
+    "payment": {
+      "entity": {
+        "id": "pay_DESyzxuld02Zul",
+        "entity": "payment",
+        "amount": 100,
+        "currency": "INR",
+        "status": "captured",
+        "order_id": "order_DESxiijbl9xjDB",
+        "invoice_id": null,
+        "international": false,
+        "method": "upi",
+        "amount_refunded": 0,
+        "refund_status": null,
+        "captured": true,
+        "description": null,
+        "card_id": null,
+        "bank": null,
+        "wallet": null,
+        "vpa": "gaurav.kumar@upi",
+        "email": "gaurav.kumar@example.com",
+        "contact": "+919876543210",
+        "notes": [],
+        "fee": 2,
+        "tax": 0,
+        "error_code": null,
+        "error_description": null,
+        "created_at": 1567675356
+      }
     },
-    "created_at": 1734456076
+    "order": {
+      "entity": {
+        "id": "order_DESxiijbl9xjDB",
+        "entity": "order",
+        "amount": 100,
+        "amount_paid": 100,
+        "amount_due": 0,
+        "currency": "INR",
+        "receipt": "rcptid #1",
+        "offer_id": null,
+        "status": "paid",
+        "attempts": 1,
+        "notes": [],
+        "created_at": 1567675283
+      }
+    }
+  },
+  "created_at": 1567675356
 }

@@ -12,6 +12,8 @@ class PaymentInformation(BaseModel):
     already_booked: Optional[bool] = False
     id:str
     status: Optional[str] = None
+    amount: Optional[int]=None
+    # method: Optional[str] = None
     ticketId: Optional[str] = None
     userId: Optional[str] = None
     attended: Optional[bool] = False
@@ -20,6 +22,8 @@ class PaymentInformation(BaseModel):
             "id":self.id,
             "transactionId": self.transactionId,
             # "merchantId": self.merchantId,
+            "amount": self.amount,
+            # "method": self.method,
             "payment_date": self.paymentDate,
             "members": self.members,
             "already_booked": self.already_booked,
@@ -28,7 +32,9 @@ class PaymentInformation(BaseModel):
             "userId": self.userId,
             "attended": self.attended
         }
-
+    # class Config:
+    #     allow_population_by_field_name = True  # Use field names during population
+    #     case_insensitive = True  # Allow case-insensitive matching
 
 class UserBookings(BaseModel):
     user_id: str
