@@ -207,7 +207,45 @@ async def bookEventForUser(
             return SuccessResponse(message="Event does not exist", success=False)
         
         event = eventList[0]
-        
+
+        if 'price_fees' not in event or event['price_fees'] == 0:
+            transactionId = generate_merchant_transaction_id(userId, id_no)
+            ticketId = generate_unique_ticket_id(userId, eventId, transactionId)
+
+            transaction_dict = {
+                "id": transactionId,
+                "transactionId": transactionId,
+                "status": "paid",
+                "amount": 0,
+                "already_booked": True,
+                "members": members,
+                "ticketId": ticketId,
+                "userId": userId
+            }
+            booking_event_query = "SELECT * FROM c WHERE c.id = @eventId"
+            params = [{"name": "@eventId", "value": eventId}]
+            bookingLists = list(bookingContainer.query_items(query=booking_event_query, parameters=params, enable_cross_partition_query=True))
+
+            if not bookingLists:
+                booking_list_item = PaymentLists(
+                    id=eventId,
+                    event_id=eventId,
+                    booked_users=[],
+                    attended_users=[]
+                )
+                bookingContainer.create_item(booking_list_item.to_dict())
+            else:
+                booking_list_item = PaymentLists(**bookingLists[0])
+
+            booking_list_item.add_booking_by_user_id(userId, PaymentInformation(**transaction_dict))
+            bookingContainer.replace_item(item=booking_list_item.id, body=booking_list_item.to_dict())
+            event['capacity'] -= members
+            eventContainer.replace_item(item=event['id'], body=event)
+
+            await addBookingDataInUserSpecific(userId, eventId, eventContainer, PaymentInformation(**transaction_dict), userSpecificContainer)
+            return SuccessResponse(message="User booked the free event", success=True, ticketId=ticketId)
+
+
         if 'capacity' not in event or event['capacity'] < members:
             return SuccessResponse(message="Not enough capacity available for this event", success=False)
         

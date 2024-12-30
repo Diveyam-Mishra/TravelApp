@@ -23,7 +23,7 @@ class UserResponse(BaseModel):
     id: str
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class UserCreate(BaseModel):
@@ -65,7 +65,7 @@ class SuccessResponse(BaseModel):
     success: bool
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class DeleteUserAfterCheckingPass(BaseModel):

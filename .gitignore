@@ -4,6 +4,7 @@ __pycache__/
 *.pyo
 
 # Environment files
+.venvw
 .env
 .dockerignore
 # Virtual environment directories
