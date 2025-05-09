@@ -1,0 +1,40 @@
+ARG PYTHON_VERSION=3.9
+FROM python:${PYTHON_VERSION}-slim AS python-base
+
+WORKDIR /app
+
+# # Install necessary packages and Python dependencies in a single RUN statement to reduce layers
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    build-essential \
+    curl \
+    gnupg2 \
+    libpq-dev \
+    gcc \
+    wkhtmltopdf && \
+    # Install msodbcsql18
+    curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add - && \
+    curl https://packages.microsoft.com/config/debian/11/prod.list > /etc/apt/sources.list.d/mssql-release.list && \
+    apt-get update && \
+    env ACCEPT_EULA=Y apt-get install -y msodbcsql18 && \
+    # Clean up unnecessary files to reduce image size
+    rm -rf /var/lib/apt/lists/* && \
+    pip install --upgrade pip && \
+    pip install psycopg2
+
+# Copy application files and requirements
+COPY . /app
+COPY requirements.txt ./
+COPY .env /app/.env
+COPY /odbc.ini / 
+
+# Configure ODBC driver
+RUN odbcinst -i -s -f /odbc.ini -l && \
+    cat /etc/odbc.ini
+
+# Install Python dependencies
+RUN pip install -r requirements.txt
+
+EXPOSE 5672
+
+CMD ["python", "send_ticket_worker.py"]

@@ -28,7 +28,7 @@ def event_distance(lat1, lon1, lat2, lon2):
     distance = R * c  # Distance in kilometers
     return round(distance, 2)
 
-
+from Controllers.Events import category_map
 
 async def get_event_of_single_category(category: str, event_container, file_container):
     # Query to fetch events of a specific category
@@ -108,11 +108,19 @@ async def update_events_with_thumbnails(event_container, file_container):
 
 async def get_category_events(filters: List[str], coord: List[float], event_container, page: int):
     # Fetch all events
-    query = "SELECT * FROM c"
-    
+    query = "SELECT * FROM c WHERE IS_STRING(c.start_date_and_time) AND c.start_date_and_time > @now"
+    now = datetime.now().isoformat()
+    params = [{"name": "@now", "value": now}]
+
+    # Map filters to their corresponding categories
     events = []
+    for i, event_type in enumerate(filters):
+        filters[i] = category_map.get(event_type)
+
+    # Execute the query with parameters
     for event in event_container.query_items(
             query=query,
+            parameters=params,
             enable_cross_partition_query=True
         ):
         # Count the number of matched types
@@ -167,40 +175,59 @@ async def get_sponsered_events(
 
     return events
 
+import time
 
 async def search_events_by_name(
     partialname: PartialName,
-    coord:List[float], 
+    coord: List[float], 
     event_container,
-    file_container , page
+    page: int
 ):
+    start_time = time.time()  # Start timing the entire function
+
     query = """
     SELECT * FROM c 
-    WHERE CONTAINS(LOWER(c.event_name), @partial_name)
+    WHERE CONTAINS(c.event_name, @partial_name)
     """
+    
     now = datetime.now().isoformat()
-    query += "AND IS_STRING(c.start_date_and_time) AND c.start_date_and_time > @now"
+    query += " AND IS_STRING(c.start_date_and_time) AND c.start_date_and_time > @now"
 
     params = [
         {"name": "@partial_name", "value": partialname.partial_name.lower()}  # Convert the search term to lowercase
     ]
     params.append({"name": "@now", "value": now})
+
+    # Timing the query execution
+    query_start = time.time()
     events = list(event_container.query_items(
         query=query,
         parameters=params,
         enable_cross_partition_query=True
     ))
+    query_time = time.time() - query_start
+    print(f"Time taken for querying events: {query_time:.6f} seconds")
 
-    # Fetch and attach the thumbnail (first image file) for each event
+    # Fetch and attach the distance for each event
+    distance_start = time.time()
     for event in events:
-        event['distance']=event_distance(event['location']['geo_tag']['latitude'],event['location']['geo_tag']['longitude'],coord[0],coord[1])
-    
-    #print(events)
+        event['distance'] = event_distance(event['location']['geo_tag']['latitude'],
+                                           event['location']['geo_tag']['longitude'],
+                                           coord[0], coord[1])
+    distance_time = time.time() - distance_start
+    print(f"Time taken for calculating distances: {distance_time:.6f} seconds")
+
     total_count = len(events)
+
+    # Implement pagination
     items_per_page = 15
     start_index = page * items_per_page
     end_index = start_index + items_per_page
     paginated_events = events[start_index:end_index]
+
+    # Total time taken for the function
+    total_time = time.time() - start_time
+    print(f"Total time taken for search_events_by_name: {total_time:.6f} seconds")
 
     return {
         "cnt": total_count,
@@ -210,16 +237,15 @@ async def search_events_by_name(
 async def search_events_by_creator(
     coord:List[float],
     event_container,page,
-    creator_id: User = Depends(get_current_user)
+    creator_id
 ):
-    creator_id=User.id
     query = """
     SELECT * FROM eventcontainer e 
     WHERE e.creator_id = @creator_id
     """
 
     params = [
-        {"name": "@creator_id", "value": creator_id}
+        {"name": "@creator_id", "value": creator_id.creator}
     ]
 
     events = list(event_container.query_items(
@@ -292,6 +318,7 @@ async def search_events_by_creator_past(
         "cnt": total_count,
         "results": paginated_events
     }
+from sqlalchemy import select
 
 async def search_events_by_creator_past_v1(
     time: str,
@@ -376,12 +403,13 @@ async def search_events_by_creator_past_v1(
         # #print(user_ids,'vv')
 
         if user_ids:
-            results = (
-                db.query(User, Avatar.fileurl)
+            results = await db.execute(
+                select(User, Avatar.fileurl)
                 .outerjoin(Avatar, User.id == Avatar.userID)
                 .filter(User.id.in_(user_ids))
-                .all()
             )
+
+            
 
             # #print(results)
 

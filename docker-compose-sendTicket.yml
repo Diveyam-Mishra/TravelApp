@@ -1,0 +1,15 @@
+
+services:
+  worker:
+    image: trickstercell/backend-worker:latest
+    build: 
+      context: .
+      dockerfile: dockerfile.send_ticket
+    deploy:
+      replicas: 5
+    environment:
+      - PYTHONUNBUFFERED=1
+    env_file:
+      - .env
+    restart:
+      always

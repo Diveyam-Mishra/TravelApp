@@ -9,58 +9,61 @@ from jwt.exceptions import ExpiredSignatureError
 from fastapi.security import OAuth2PasswordBearer
 from config import settings
 from passlib.context import CryptContext
-from Database.Connection import get_db
+from Database.Connection import get_db, AsyncSessionLocal
 from Controllers.OtpGen import create_otp
 from datetime import timedelta
 import uuid
 from typing import List, Dict
 from Schemas.userSpecific import UserSpecific,CreditCard
+from Schemas.bankingDetails import BankingDetail
 from Models.Files import Carousel_image
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
+from sqlalchemy import select
 
-def get_user(db: Session, user_id: str):
-    return db.query(User).filter(User.id == user_id).first()
+async def get_user(db: AsyncSessionLocal, user_id: str):
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalars().first()  # Get the first matching user or None
+    return user
 
 
-def get_user_by_email(db: Session, email: str):
-    return db.query(User).filter(User.email == email).first()
+async def get_user_by_email(db: AsyncSessionLocal, email: str):
+    result = await db.execute(select(User).where(User.email == email))
+    return result.scalars().first()  # Get the first matching user or None
 
 
-def get_user_by_username(db: Session, username: str):
-    return db.query(User).filter(User.username == username).first()
-
+async def get_user_by_username(db: AsyncSessionLocal, username: str):
+    result = await db.execute(select(User).where(User.username == username))
+    return result.scalars().first()  # Get the first matching user or None
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 JWT_SECRET = settings.JWT_SECRET
 ALGORITHM = settings.ALGORITHM
 
 
-def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)) -> UserWithAvatar:
+async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSessionLocal = Depends(get_db)) -> UserWithAvatar:
     try:
-        # Decode the token and verify its signature and expiration
         payload = jwt.decode(token, JWT_SECRET, algorithms=[ALGORITHM])
-        user_id = payload.get("user_id")
 
+        user_id = payload.get("user_id")
 
         if user_id is None:
             raise HTTPException(status_code=401, detail="Invalid token")
-        
-        # Query the user from the database
-        db_user = (
-            db.query(User, Avatar.fileurl)
-            .outerjoin(Avatar, User.id == Avatar.userID)  # Use outerjoin for a left join
-            .filter(User.id == user_id)  # Filter by user ID
-            .first()
+
+        # Query the user asynchronously
+        result = await db.execute(
+            select(User, Avatar.fileurl)
+            .outerjoin(Avatar, User.id == Avatar.userID)
+            .filter(User.id == user_id)
         )
-        
+        db_user = result.first()
+        # print(db_user)
         if not db_user:
             raise HTTPException(status_code=400, detail="User not found")
-        
-        user_details, avatar_url = db_user  # Unpack the result tuple
-        
-        # Create a UserWithAvatar object to return
+
+        user_details, avatar_url = db_user
+
         user_with_avatar = UserWithAvatar(
             id=user_details.id,
             email=user_details.email,
@@ -71,19 +74,19 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
             dob=user_details.dob,
             gender=user_details.gender,
             created_at=user_details.created_at,
-            avatar_url=avatar_url  # Include avatar URL
+            avatar_url=avatar_url
         )
-    
+
     except ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token has expired")
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
     except Exception as e:
         raise HTTPException(status_code=401, detail=f"Token error: {str(e)}")
-     
+    
     return user_with_avatar
 
-async def get_current_user_optional(token: str=Depends(oauth2_scheme), db: Session=Depends(get_db)):
+async def get_current_user_optional(token: str, db: AsyncSessionLocal = Depends(get_db)):
     try:
         # Decode the token and verify its signature and expiration
         payload = jwt.decode(token, JWT_SECRET, algorithms=[ALGORITHM])
@@ -91,8 +94,10 @@ async def get_current_user_optional(token: str=Depends(oauth2_scheme), db: Sessi
         if user_id is None:
             raise HTTPException(status_code=401, detail="Invalid token")
         
-        # Query the user from the database
-        user = db.query(User).filter(User.id == user_id).first()
+        # Query the user from the database using async select
+        result = await db.execute(select(User).where(User.id == user_id))
+        user = result.scalars().first()  # Get the first result
+        
         if user is None:
             raise HTTPException(status_code=404, detail="User not found")
     
@@ -108,19 +113,20 @@ async def get_current_user_optional(token: str=Depends(oauth2_scheme), db: Sessi
      
     return user
 
-async def update_user(req: UserUpdate, db: Session, userId:str, current_user:User, user_specific_container):
-    user = db.query(User).filter(User.id == userId).first()
+async def update_user(req: UserUpdate, db: AsyncSessionLocal, userId: str, current_user: User, user_specific_container):
+    # Fetch the user asynchronously
+    result = await db.execute(select(User).where(User.id == userId))
+    user = result.scalars().first()
 
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    # #print(userId, current_user.id)
     if str(current_user.id) != str(userId):
         raise HTTPException(status_code=403, detail="You are not authorized to update this user")
 
     # Update the user's details with the data from req
     if req.username is not None:
-        await check_unique_username(req.username,db)
+        await check_unique_username(req.username, db)
         user.username = req.username
     if req.works_at is not None:
         user.works_at = req.works_at
@@ -134,26 +140,27 @@ async def update_user(req: UserUpdate, db: Session, userId:str, current_user:Use
         await add_interest_areas_to_user(userId, req.interestAreas, user_specific_container)
 
     # Commit the changes to the database
-    db.commit()
+    await db.commit()  # Use await for the commit operation
 
-    # Optionally, you might want to refresh the instance to reflect changes
-    db.refresh(user)
-     
+    # Optionally, refresh the instance to reflect changes
+    await db.refresh(user)
+
     return {"message": "User updated successfully", "success": True}
 
 
-async def check_unique_username(username: str, db: Session) -> SuccessResponse:
-    # Query to check if the username already exists
-    query = db.query(User).filter(User.username == username).first()
-    
+async def check_unique_username(username: str, db: AsyncSessionLocal) -> SuccessResponse:
+    # Query to check if the username already exists asynchronously
+    result = await db.execute(select(User).where(User.username == username))
+    query = result.scalars().first()
+
     if query:
         raise HTTPException(status_code=400, detail="Username already taken")
-    
+
     return SuccessResponse(message="Username Available", success=True)
 
 
-def create_user(db: Session, user: UserCreate) -> UserResponse:
-    # hashed_password = pwd_context.hash(user.password)
+async def create_user(db: AsyncSessionLocal, user: UserCreate) -> UserResponse:
+    # hashed_password = pwd_context.hash(user.password)  # Uncomment if you plan to hash passwords
     db_user = User(
         email=user.email,
         username=user.username,
@@ -162,53 +169,67 @@ def create_user(db: Session, user: UserCreate) -> UserResponse:
         works_at=user.works_at
     )
     db.add(db_user)
-    db.commit()
-    db.refresh(db_user)
-     
+    await db.commit()  # Use await for the commit operation
+    await db.refresh(db_user)  # Refresh the instance to reflect the changes
+
     return db_user
 
 
-def delete_user( current_user: User, db: Session) -> SuccessResponse:
-    deleted_user = deletedUser(email=current_user.email,
-                                username=current_user.username,
-                                works_at=current_user.works_at,
-                                contact_no=current_user.contact_no)
-    x=current_user.id
+async def delete_user(current_user: User, db: AsyncSessionLocal) -> SuccessResponse:
+    deleted_user = deletedUser(
+        email=current_user.email,
+        username=current_user.username,
+        works_at=current_user.works_at,
+        contact_no=current_user.contact_no
+    )
+    x = current_user.id
     db.add(deleted_user)
-    db.delete(current_user)
-    avatar = db.query(Avatar).filter(Avatar.userID ==x).first()
-    if avatar:
-        db.delete(avatar)
-    db.commit()
-     
+    # print(current_user)
+    
+    # Await the delete operation for the current user
+    user_result = await db.execute(select(User).where(User.id == x))
+    user_instance = user_result.scalars().first()
+    # print(userInTable)
+    await db.delete(user_instance)
+
+    # Delete avatar if it exists
+    # avatar = await db.execute(select(Avatar).where(Avatar.userID == x))
+    # avatar_instance = avatar.scalars().first()
+    # if avatar_instance:
+    #     await db.delete(avatar_instance)  # Await the delete operation for the avatar
+
+    await db.commit()  # Commit the changes
+
     return SuccessResponse(message="User deleted successfully", success=True)
 
-    
-def register_user(db: Session, email: str=None, username: str=None) -> SuccessResponse:
+
+
+async def register_user(db: AsyncSessionLocal, email: str = None, username: str = None) -> SuccessResponse:
     if (not email) and (not username):
         raise HTTPException(status_code=400, detail="Both Email and Username are required")
     
     if email:
-        db_user = db.query(User).filter(User.email == email).first()
-        if db_user:
+        db_user = await db.execute(select(User).where(User.email == email))
+        db_user_instance = db_user.scalars().first()
+        if db_user_instance:
             raise HTTPException(status_code=400, detail="Email already registered")
     
     if username:
-        db_user = db.query(User).filter(User.username == username).first()
-        if db_user:
+        db_user = await db.execute(select(User).where(User.username == username))
+        db_user_instance = db_user.scalars().first()
+        if db_user_instance:
             raise HTTPException(status_code=400, detail="Username already registered")
     
-    if email == "trabiitestaccount1781@trabii.com":
+    if email == "Tickstertestaccount1781@tickster.com":
         return SuccessResponse(message="OTP sent to your email", success=True)
 
-
     if email:  # Assuming create_otp only needs email
-        create_otp(db, email)
+        await create_otp(db, email)
      
     return SuccessResponse(message="OTP sent to your email", success=True)
 
 
-def login_user(login_data: UserLogin, db: Session) -> SuccessResponse:
+async def login_user(login_data: UserLogin, db: AsyncSessionLocal) -> SuccessResponse:
     if not login_data.email and not login_data.username:
         raise HTTPException(status_code=400, detail="Either email or username is required")
     
@@ -216,26 +237,28 @@ def login_user(login_data: UserLogin, db: Session) -> SuccessResponse:
     user_email = None
 
     if login_data.email:
-        db_user = db.query(User).filter(User.email == login_data.email).first()
+        db_user = await db.execute(select(User).where(User.email == login_data.email))
+        db_user_instance = db_user.scalars().first()
         user_email = login_data.email
 
-    if login_data.username and not db_user:
-        db_user = db.query(User).filter(User.username == login_data.username).first()
-        if db_user:
-            user_email = db_user.email
+    if login_data.username and not db_user_instance:
+        db_user = await db.execute(select(User).where(User.username == login_data.username))
+        db_user_instance = db_user.scalars().first()
+        if db_user_instance:
+            user_email = db_user_instance.email
 
-    if not db_user:
+    if not db_user_instance:
         raise HTTPException(status_code=400, detail="User not found")
     
-    if user_email == "trabiitestaccount1781@trabii.com":
+    if user_email == "Tickstertestaccount1781@Tickster.com":
         return SuccessResponse(message="OTP sent to your email", success=True)
     
-    create_otp(db, user_email)
+    await create_otp(db, user_email)  # Call create_otp as an async function
      
     return SuccessResponse(message="OTP sent to your email", success=True)
 
 
-def login_verify(login_data: UserLoginVerify, db: Session) -> SuccessResponse:
+async def login_verify(login_data: UserLoginVerify, db: AsyncSessionLocal) -> SuccessResponse:
     if not login_data.email and not login_data.username:
         raise HTTPException(status_code=400, detail="Either email or username is required")
     
@@ -246,17 +269,19 @@ def login_verify(login_data: UserLoginVerify, db: Session) -> SuccessResponse:
     user_email = None
 
     if login_data.username and not login_data.email:
-        db_user = db.query(User).filter(User.username == login_data.username).first()
+        db_user_result = await db.execute(select(User).where(User.username == login_data.username))
+        db_user = db_user_result.scalars().first()
         if not db_user:
             raise HTTPException(status_code=400, detail="User not found")
         user_email = db_user.email
     else:
         user_email = login_data.email
-        db_user = db.query(User).filter(User.email == user_email).first()
+        db_user_result = await db.execute(select(User).where(User.email == user_email))
+        db_user = db_user_result.scalars().first()
         if not db_user:
             raise HTTPException(status_code=400, detail="User not found")
         
-    if user_email == "trabiitestaccount1781@trabii.com":
+    if user_email == "Tickstertestaccount1781@Tickster.com":
         if login_data.otp == "111111":
             expiry_time = datetime.utcnow() + timedelta(days=30)
 
@@ -272,12 +297,11 @@ def login_verify(login_data: UserLoginVerify, db: Session) -> SuccessResponse:
         else:
             raise HTTPException(status_code=400, detail="Invalid or expired OTP")
 
-   
-    db_otp = db.query(OTP).filter(OTP.email == user_email, OTP.otp == login_data.otp).first()
+    db_otp_result = await db.execute(select(OTP).where(OTP.email == user_email, OTP.otp == login_data.otp))
+    db_otp = db_otp_result.scalars().first()
     if not db_otp or db_otp.expires_at < datetime.utcnow():
         raise HTTPException(status_code=400, detail="Invalid or expired OTP")
 
-    # token_data = {"user_id": db_user.id}
     expiry_time = datetime.utcnow() + timedelta(days=30)
 
     # Create token data with the expiration time
@@ -287,33 +311,36 @@ def login_verify(login_data: UserLoginVerify, db: Session) -> SuccessResponse:
     }
 
     token = jwt.encode(token_data, JWT_SECRET, algorithm="HS256")
+    
+    # Delete the OTP after successful login
     db.delete(db_otp)
-    db.commit()
+    await db.commit()  # Commit the changes asynchronously
      
     return SuccessResponse(message="User logged in successfully", token=token, success=True)
 
-def look_up_username(username: str, db: Session, current_user: User = Depends(get_current_user)):
+async def look_up_username(username: str, db: AsyncSessionLocal, current_user: User = Depends(get_current_user)):
     if current_user is None:
         raise HTTPException(status_code=400, detail="User Not Found")
 
     # Query to get user details along with their avatar URL
-    db_user = (
-        db.query(User, Avatar.fileurl)
+    db_user_result = await db.execute(
+        select(User, Avatar.fileurl)
         .outerjoin(Avatar, User.id == Avatar.userID)  # Join with Avatar table
-        .filter(User.username == username.username)  # Use the username to filter
-        .first()
+        .where(User.username == username)  # Use the username to filter
     )
+
+    db_user = db_user_result.first()  # Get the first result
     
     if not db_user:
         raise HTTPException(status_code=400, detail="User not found")
     
     user_details, avatar_url = db_user  # Unpack the result tuple
-     
-    # You can return both user details and avatar URL here
+
+    # Return both user details and avatar URL here
     return {"user": user_details, "avatar_url": avatar_url}
 
 async def add_interest_areas_to_user(userId:str, interestAreas:List[str], user_specific_container):
-    query = "SELECT interest_areas FROM c where c.userId = @userId"
+    query = "SELECT * FROM c where c.userId = @userId"
     params = [{"name":"@userId", "value":userId}]
 
     search = list(user_specific_container.query_items(query=query,
@@ -323,27 +350,30 @@ async def add_interest_areas_to_user(userId:str, interestAreas:List[str], user_s
     if not search:
         user_specific = UserSpecific(id=userId, userId=userId, booked_events=[], recent_searches=[], interest_areas=interestAreas)
         user_specific_container.create_item(user_specific.to_dict())
-        current_time = datetime.datetime.now()
-        print(current_time.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3])
         return SuccessResponse(message="User Interest areas updated successfully", success=True)
     else:
         # Update the interest_areas if the user already exists
         user_specific = search[0]
         user_specific["interest_areas"] = interestAreas
-        user_specific_container.replace_item(user_specific["id"], user_specific)
-        current_time = datetime.datetime.now()
-        print(current_time.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3])
+        user_specific_container.replace_item(user_specific["userId"], user_specific)
         return {"message": "User interest areas updated successfully", "success": True}
 
 
-async def add_recent_search(userId, searchItem, user_specific_container):
-    query = "SELECT * FROM c WHERE c.userId = @userId"
-    params = [{"name":"@userId", "value":userId}]
+import time  # Import the time module for tracking execution time
 
+async def add_recent_search(userId, searchItem, user_specific_container):
+    start_time = time.time()  # Start the timer
+
+    # Query to retrieve user-specific data
+    query = "SELECT * FROM c WHERE c.id = @userId"
+    params = [{"name": "@userId", "value": userId}]
+
+    # Track time taken for querying items
     search = list(user_specific_container.query_items(query=query,
-        parameters=params,
-        enable_cross_partition_query=True))
-    
+                                                     parameters=params,
+                                                     enable_cross_partition_query=True))
+  # Log the time
+
     if search:
         user_specific_data = search[0]
         user_specific = UserSpecific(**user_specific_data)
@@ -354,16 +384,27 @@ async def add_recent_search(userId, searchItem, user_specific_container):
             booked_events=[],
             recent_searches=[],  # Start with the new searchItem
             interest_areas=[],
+            question_1=None,
+            question_2=None,
             credit_cards=[]
         )
-    # Update recent searches
+
+    # Track time taken for adding the search item
+    add_search_start = time.time()
     user_specific.add_search(searchItem)
-    
-    # Update the user document in the container
+    add_search_time = time.time() - add_search_start
+    print(f"Time taken for adding search item: {add_search_time:.6f} seconds")  # Log the time
+
+    # Track time taken for upserting the item
+    upsert_start = time.time()
     user_specific_container.upsert_item(user_specific.to_dict())
-     
+    upsert_time = time.time() - upsert_start
+    print(f"Time taken for upserting item: {upsert_time:.6f} seconds")  # Log the time
+
+    total_time = time.time() - start_time  # Total execution time
+    print(f"Total time taken for add_recent_search: {total_time:.6f} seconds")  # Log the time
+
     return SuccessResponse(message="Added search in recent items", success=True)
-    
 
 async def get_user_specific_data(userId: str, user_specific_container, event_container):
     # Query to get user-specific data
@@ -387,7 +428,7 @@ async def get_user_specific_data(userId: str, user_specific_container, event_con
         )
         user_specific_container.create_item(user_specific.to_dict())
         return user_specific
-    
+    # print(search)
     user_data = search[0]
     event_map = {}
 
@@ -440,11 +481,87 @@ async def get_user_specific_data(userId: str, user_specific_container, event_con
      
     return user_data
 
-
-def fetch_carousel_images_db(db: Session) -> List[Dict[str, str]]:
-    # Fetch all carousel images from the database
-    db_images = db.query(Carousel_image).all()
+async def get_bookings(userId: str, user_specific_container, event_container):
+    query = "SELECT * FROM c WHERE c.userId = @userId"
+    params = [{"name": "@userId", "value": userId}]
     
+    search = list(user_specific_container.query_items(
+        query=query,
+        parameters=params,
+        enable_cross_partition_query=True
+    ))
+    
+    if not search:
+        user_specific=UserSpecific(
+            id=userId,
+            userId=userId,
+            booked_events=[],
+            recent_searches=[],
+            interest_areas=[],
+            credit_cards=[],
+            bank_details=None
+        )
+        user_specific_container.create_item(user_specific.to_dict())
+        return []
+    
+    user_data = search[0].get('booked_events', [])
+    event_map = {}
+
+    for event in user_data:
+        event_id = event.get('event_id')
+        if event_id:
+            if event_id in event_map:
+                # Use the cached event details
+                event.update(event_map[event_id])
+            else:
+                # Query the eventContainer for event details
+                event_query = "SELECT * FROM c WHERE c.id = @event_id"
+                event_params = [{"name": "@event_id", "value": event_id}]
+                
+                event_details = list(event_container.query_items(
+                    query=event_query,
+                    parameters=event_params,
+                    enable_cross_partition_query=True
+                ))
+                
+                if event_details:
+                    event_info = event_details[0]
+                    event_name = event_info.get('event_name')
+                    description = event_info.get('event_description')
+                    event_type = event_info.get('event_type')
+                    location = event_info.get('location', {})
+                    venue = location.get('venue')
+                    geo_tag = location.get('geo_tag', {})
+                    latitude = geo_tag.get('latitude')
+                    longitude = geo_tag.get('longitude')
+                    city = location.get('city')
+                    thumbnail = event_info.get('thumbnail', {})
+                    fileUrl = thumbnail.get('file_url') or thumbnail.get('fileUrl')
+                    # Cache the event details in the map
+                    event_map[event_id] = {
+                        'eventName': event_name,
+                        'description': description,
+                        'type': event_type,
+                        'venue': venue,
+                        'latitude': latitude,
+                        'longitude': longitude,
+                        'city': city,
+                        'thumbnail': fileUrl
+                    }
+                    
+                    # Update the event with the fetched details
+                    event.update(event_map[event_id])
+    user_data.sort(key=lambda x: datetime.fromisoformat(x['payment_date']), reverse=True)
+
+    return user_data
+
+
+
+async def fetch_carousel_images_db(db: AsyncSessionLocal) -> List[Dict[str, str]]:
+    # Fetch all carousel images from the database asynchronously
+    result = await db.execute(select(Carousel_image))
+    db_images = result.scalars().all()  # Get all Carousel_image instances
+
     # Convert each Carousel_image instance to a dictionary
     images_as_dicts = [
         {
@@ -455,7 +572,7 @@ def fetch_carousel_images_db(db: Session) -> List[Dict[str, str]]:
         }
         for image in db_images
     ]
-     
+    
     return images_as_dicts
 
 async def get_recent_search_data(userId: str, user_specific_container):
@@ -488,7 +605,7 @@ async def get_recent_search_data(userId: str, user_specific_container):
 async def add_credit_card(userId: str, card_details: dict, user_specific_container):
     query = "SELECT * FROM c WHERE c.userId = @userId"
     params = [{"name": "@userId", "value": userId}]
-    print (card_details)
+
     search = list(user_specific_container.query_items(
         query=query,
         parameters=params,
@@ -517,3 +634,127 @@ async def add_credit_card(userId: str, card_details: dict, user_specific_contain
     user_specific_container.upsert_item(user_specific.to_dict())
      
     return {"message": "Credit card added successfully", "success": True}
+
+
+async def add_banking_details(userId, bank_container, banking_details_data: BankingDetail):
+    query = "SELECT * FROM c WHERE c.userId=@userId"
+    params = [{"name": "@userId", "value": userId}]
+    
+    search = list(bank_container.query_items(
+        query=query,
+        parameters=params,
+        enable_cross_partition_query=True
+    ))
+
+    if search:
+        existing_record = search[0]
+        
+        existing_record['Is_business'] = banking_details_data.Is_business
+        
+        if banking_details_data.Is_business:
+            if banking_details_data.business:
+                existing_record['business'] = banking_details_data.business.dict()  # Update business details
+            
+        else:
+            if banking_details_data.personal:
+                existing_record['personal'] = banking_details_data.personal.dict()  # Update personal details
+            
+        
+        bank_container.replace_item(
+            item=existing_record['id'],
+            body=existing_record
+        )
+        return {"message": "Banking details updated successfully."}
+
+    else:
+    
+        new_record = {
+            "id": userId,
+            "userId": userId,
+            "personal": banking_details_data.personal.dict() if not banking_details_data.Is_business and banking_details_data.personal else None,
+            "business": banking_details_data.business.dict() if banking_details_data.Is_business and banking_details_data.business else None,
+            "Is_business": banking_details_data.Is_business  # Save the Is_business from input
+        }
+
+        bank_container.create_item(body=new_record)
+        return {"message": "Banking details added successfully."}
+
+        
+
+# async def toggle_Is_business_controller(userId, bank_container):
+#     query = "SELECT * FROM c WHERE c.userId=@userId"
+#     params = [{"name": "@userId", "value": userId}]
+
+#     # Search for existing records
+#     search = list(bank_container.query_items(
+#         query=query,
+#         parameters=params,
+#         enable_cross_partition_query=True
+#     ))
+
+#     if not search:
+#         raise HTTPException(status_code=404, detail="User banking details not found")
+
+#     existing_record = search[0]
+
+#     current_state = existing_record.get("global_state", False)
+#     new_state = not current_state
+#     existing_record["global_state"] = new_state
+
+#     updated_item = bank_container.replace_item(
+#         item=existing_record['id'],
+#         body=existing_record
+#     )
+#     return {"message": "Global state toggled successfully"}
+
+
+async def get_banking_details(userId,bank_container):
+    query = "SELECT * FROM c WHERE c.userId=@userId"
+    params = [{"name": "@userId", "value": userId}]
+
+    # Search for existing records
+    search = list(bank_container.query_items(
+        query=query,
+        parameters=params,
+        enable_cross_partition_query=True
+    ))
+
+    if not search:
+        raise HTTPException(status_code=404, detail="User banking details not found")
+
+    existing_record = search[0]
+    return existing_record
+# if isinstance(banking_details_data, dict):
+#     banking_details = BankingDetails(**banking_details_data)
+# elif isinstance(banking_details_data, BankingDetails):
+#     banking_details = banking_details_data
+
+# if search:
+#     # Existing user found, update their banking details
+#     user_specific_data = search[0]
+#     user_specific = UserSpecific(**user_specific_data)
+#     print(f"this is {search[0]}")
+#     # Add or update the banking details
+#     user_specific.add_banking_details(banking_details)
+#     print(user_specific)
+#     # Replace the existing document with updated details
+#     user_specific_container.upsert_item( user_specific.to_dict())
+
+#     return {"message": "Banking details updated successfully", "success": True}
+# else:
+#     # No existing user found, create a new user-specific document
+#     user_specific = UserSpecific(
+#         id=userId,
+#         userId=userId,
+#         booked_events=[],
+#         recent_searches=[],
+#         interest_areas=[],
+#         question_1=None,
+#         question_2=None,
+#         credit_cards=[],
+#         bank_details=banking_details  # Set the new banking details
+#     )
+
+#     # Insert a new document into the container
+#     user_specific_container.create_item(user_specific.to_dict())
+#     return {"message": "Banking details added successfully", "success": True}

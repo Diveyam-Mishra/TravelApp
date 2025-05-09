@@ -12,6 +12,7 @@ from passlib.context import CryptContext
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from uuid import uuid4
+from Database.Connection import AsyncSessionLocal
 JWT_SECRET = settings.JWT_SECRET
 email_client = EmailClient.from_connection_string(connectionString)
 
@@ -22,11 +23,13 @@ SMTP_PORT = 587  # Port for TLS
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
+from sqlalchemy import select
 
-def generate_otp(length=6):
+
+async def generate_otp(length=6) -> str:
     return ''.join(random.choices(string.digits, k=length))
 
-def send_otp(email, otp):
+def send_otp(email: str, otp: str):
     subject = "Your OTP Code"
     
     message = {
@@ -40,27 +43,28 @@ def send_otp(email, otp):
         }
     }
 
-    poller = email_client.begin_send(message)
-    result = poller.result()
+    poller = email_client.begin_send(message)  # Adjust based on your email client
+    result = poller.result()  # Ensure to await the result
     return result
 
-
-
-def create_otp(db, email):
-    otp = generate_otp()
+async def create_otp(db: AsyncSessionLocal, email: str):
+    otp = await generate_otp()
     expires_at = datetime.utcnow() + timedelta(minutes=5)
     db_otp = OTP(email=email, otp=otp, expires_at=expires_at)
+    
     db.add(db_otp)
-    db.commit()
+    await db.commit()
+    
     send_otp(email, otp)
 
-
-def verify_otp(user: OTPVerification, db: Session) -> SuccessResponse:
-    if user.email == "trabiitestaccount1781@trabii.com":
+async def verify_otp(user: OTPVerification, db: AsyncSessionLocal) -> SuccessResponse:
+    if user.email == "Tickstertestaccount1781@tickster.com":
         if user.otp == "111111":
-            new_user = User(id=str(uuid4()),email=user.email, username=user.username, contact_no=user.contact_no, works_at=user.works_at,dob=user.dob, gender=user.gender)
+            new_user = User(id=str(uuid4()), email=user.email, username=user.username,
+                            contact_no=user.contact_no, works_at=user.works_at,
+                            dob=user.dob, gender=user.gender)
             db.add(new_user)
-            db.commit()
+            await db.commit()
             
             expiry_time = datetime.utcnow() + timedelta(days=30)
 
@@ -75,17 +79,20 @@ def verify_otp(user: OTPVerification, db: Session) -> SuccessResponse:
         else:
             raise HTTPException(status_code=400, detail="Invalid or expired OTP")
 
-    db_otp = db.query(OTP).filter(OTP.email == user.email, OTP.otp == user.otp).first()
+    result = await db.execute(select(OTP).filter(OTP.email == user.email, OTP.otp == user.otp))
+    db_otp = result.scalar_one_or_none()
+    
     if not db_otp or db_otp.expires_at < datetime.utcnow():
         raise HTTPException(status_code=400, detail="Invalid or expired OTP")
     
-    db.delete(db_otp)
-    db.commit()
+    await db.delete(db_otp)
+    await db.commit()
 
-    # hashed_password = pwd_context.hash(user.password)
-    new_user = User(id=str(uuid4()),email=user.email, username=user.username, contact_no=user.contact_no, works_at=user.works_at,dob=user.dob, gender=user.gender)
+    new_user = User(id=str(uuid4()), email=user.email, username=user.username,
+                    contact_no=user.contact_no, works_at=user.works_at,
+                    dob=user.dob, gender=user.gender)
     db.add(new_user)
-    db.commit()
+    await db.commit()
     
     expiry_time = datetime.utcnow() + timedelta(days=30)
 
@@ -98,10 +105,13 @@ def verify_otp(user: OTPVerification, db: Session) -> SuccessResponse:
 
     return SuccessResponse(message="User Created Successfully", token=token, success=True)
 
-def verify_forgot_password_otp(reset_password_data: ResetPasswordRequest, db: Session) -> bool:
-    db_otp = db.query(OTP).filter(OTP.email == reset_password_data.email, OTP.otp == reset_password_data.otp).first()
+async def verify_forgot_password_otp(reset_password_data: ResetPasswordRequest, db: AsyncSessionLocal) -> bool:
+    result = await db.execute(select(OTP).filter(OTP.email == reset_password_data.email, OTP.otp == reset_password_data.otp))
+    db_otp = result.scalar_one_or_none()
+    
     if not db_otp or db_otp.expires_at < datetime.utcnow():
         return False
-    db.delete(db_otp)
-    db.commit()
+    
+    await db.delete(db_otp)
+    await db.commit()
     return True

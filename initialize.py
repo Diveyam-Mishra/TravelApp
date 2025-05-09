@@ -18,8 +18,11 @@ from Routes.Payments import router as PaymentRouter
 from Routes.admin.promotionImages import router as adminImageRouter
 from Routes.Delete import router as DeleteRouter
 from Routes.PaymentWebhook import router as Webhook
+from Routes.Bugs import router as BugRouter
+from Routes.admin.bugs import router as AdminBugRouter
 from sqlalchemy import MetaData
 from  datetime import datetime
+
 # print(settings.sqlURI)
 
 app = FastAPI(title="Backend with MongoDB and SQL")
@@ -34,6 +37,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.include_router(adminImageRouter, tags=["Admin - File Management"])
+app.include_router(AdminBugRouter, tags=["Admin-Bugs"])
 app.include_router(auth_router, tags=["Authentication"])
 app.include_router(organization_router, tags=["Organizations"])
 app.include_router(forgot_password, tags=["Forgot Password"])
@@ -44,19 +48,23 @@ app.include_router(FileRouter, tags=["File Management"])
 app.include_router(FilterRouter, tags=["Filters"])
 app.include_router(PaymentRouter, tags=["Payments"])
 app.include_router(Webhook, tags=["Webhook"])
+app.include_router(BugRouter, tags=["Bugs"])
 
 
 @app.on_event("startup")
 async def startup_event():
-    Base.metadata.create_all(bind=engine)
-
-    metadata = MetaData()
-    metadata.reflect(bind=engine)
+    async with engine.begin() as conn:
+        # Create tables in an async context using run_sync
+        await conn.run_sync(Base.metadata.create_all)
+        
+        # Reflect existing tables in an async context
+        metadata = MetaData()
+        await conn.run_sync(metadata.reflect)
 
 
 @app.get("/")
 async def read_root():
-    return {"Trabii Server!!"}
+    return {"Tickster Server!!"}
 
 
 @app.middleware("http")
@@ -79,6 +87,11 @@ async def log_time_middleware(request: Request, call_next):
     print(f"Time taken to process the request: {time_diff:.2f} ms")
 
     return response
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    from Queues.RabbitMq import close_rabbitmq_connection
+    await close_rabbitmq_connection()
 
 if __name__ == "__main__":
     import uvicorn

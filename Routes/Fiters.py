@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, Query
 from Database.Connection import get_container, get_file_container, \
-    get_db, user_specific_container, get_user_specific_container, get_booking_container
+    get_db, get_user_specific_container, get_booking_container,\
+    AsyncSessionLocal
 from typing import List
 from Schemas.EventSchemas import*
 from Controllers.Filters import *
@@ -18,18 +19,12 @@ router = APIRouter()
 
 
 async def get_optional_current_user(
-    token: Optional[str]=Depends(JWTBearer(auto_error=False)), db: Session=Depends(get_db)
+    token: Optional[str] = Depends(JWTBearer(auto_error=False)), db: AsyncSessionLocal = Depends(get_db)
 ) -> Optional[User]:
     if token is None:
         return None
 
-    # Handle the token as bytes if necessary
-    # if isinstance(token, str):
-    #     token = token.encode('utf-8')
-    
-    # Use the same logic as get_current_user
     user = await get_current_user_optional(token.credentials, db)
-    # #print(user)
     return user
 
 
@@ -125,26 +120,37 @@ async def filter_events(
 #     result = [{"id": event["id"], "name": event["event_name"], "description": event["event_description"]} for event in events]
 #     return result
 
+import time
 
 @router.post("/events/search_by_name/", response_model=SearchEventResultWithCnt)
 async def search_events_by_name1(
     partial_name: PartialName,
-    coord:List[float],
+    coord: List[float],
     event_container=Depends(get_container),
-    current_user: Optional[User]=Depends(get_optional_current_user),
-    file_container=Depends(get_file_container),
+    current_user: Optional[User] = Depends(get_optional_current_user),
     user_specific_container=Depends(get_user_specific_container),
-    page: int=0
+    page: int = 0
 ):
-    if current_user is not None:
-        # #print(current_user)
-        await add_recent_search(current_user.id, partial_name.partial_name, user_specific_container)    
+    start_time = time.time()  # Start the timer
 
-    eventsRes = await search_events_by_name(partial_name, coord, event_container, file_container, page)
-    
+    if current_user is not None:
+        # Track time taken for adding recent search
+        recent_search_start = time.time()
+        await add_recent_search(current_user.id, partial_name.partial_name, user_specific_container)
+        recent_search_time = time.time() - recent_search_start
+        print(f"Time taken for add_recent_search: {recent_search_time:.6f} seconds")  # Log the time
+
+    # Track time taken for searching events
+    search_events_start = time.time()
+    eventsRes = await search_events_by_name(partial_name, coord, event_container, page)
+    search_events_time = time.time() - search_events_start
+    print(f"Time taken for search_events_by_name: {search_events_time:.6f} seconds")  # Log the time
+
     total_count = eventsRes['cnt']
     events = eventsRes['results']
-    # Create the result list with the required fields
+
+    # Track time taken for processing results
+    processing_start = time.time()
     result = [
         {
             "id": event["id"],
@@ -152,15 +158,20 @@ async def search_events_by_name1(
             "description": event["event_description"],
             "type": event.get("event_type"),
             "thumbnail": {
-                    "file_name": event.get("thumbnail", {}).get("fileName") or event.get("thumbnail", {}).get("file_name"),
-                    "file_url": event.get("thumbnail", {}).get("fileUrl") or event.get("thumbnail", {}).get("file_url"),
-                    "file_type": event.get("thumbnail", {}).get("fileType") or event.get("thumbnail", {}).get("file_type"),
-                } if event.get("thumbnail") else None,
-            "distance":str(event["distance"]) + "km"
+                "file_name": event.get("thumbnail", {}).get("fileName") or event.get("thumbnail", {}).get("file_name"),
+                "file_url": event.get("thumbnail", {}).get("fileUrl") or event.get("thumbnail", {}).get("file_url"),
+                "file_type": event.get("thumbnail", {}).get("fileType") or event.get("thumbnail", {}).get("file_type"),
+            } if event.get("thumbnail") else None,
+            "distance": str(event["distance"]) + "km"
         } 
         for event in events
     ]
-    # #print(len(result))
+    processing_time = time.time() - processing_start
+    print(f"Time taken for processing results: {processing_time:.6f} seconds")  # Log the time
+
+    total_time = time.time() - start_time  # Total execution time
+    print(f"Total time taken for search_events_by_name1: {total_time:.6f} seconds")  # Log the time
+
     return {
         "cnt": total_count,
         "results": result
@@ -172,9 +183,10 @@ async def search_events_by_creator1(
     creator_id: CreatorId,
     coord: List[float],
     event_container=Depends(get_container),
+    current_user=Depends(get_current_user),
     page: int=0
 ):
-    eventsRes = await search_events_by_creator(creator_id, coord, event_container, page)
+    eventsRes = await search_events_by_creator(coord, event_container, page,creator_id)
     total_count = eventsRes['cnt']
     events = eventsRes['results']
     result = [{"id": event["id"], "name": event["event_name"], "description": event["event_description"], "type":event.get("event_type"), "thumbnail":event.get("thumbnail"), "distance":str(event["distance"]) + "km"} for event in events]

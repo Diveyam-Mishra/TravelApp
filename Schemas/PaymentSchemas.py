@@ -6,11 +6,14 @@ from datetime import datetime
 
 class PaymentInformation(BaseModel):
     transactionId: str
-    data: dict
+    # merchantId: str
     paymentDate: Optional[str] = datetime.now().isoformat()
     members: Optional[int] = None
-    addedInEventBooking: Optional[bool] = False
+    already_booked: Optional[bool] = False
     id:str
+    status: Optional[str] = None
+    amount: Optional[int]=None
+    # method: Optional[str] = None
     ticketId: Optional[str] = None
     userId: Optional[str] = None
     attended: Optional[bool] = False
@@ -18,15 +21,20 @@ class PaymentInformation(BaseModel):
         return {
             "id":self.id,
             "transactionId": self.transactionId,
-            "data": self.data,
+            # "merchantId": self.merchantId,
+            "amount": self.amount,
+            # "method": self.method,
             "payment_date": self.paymentDate,
             "members": self.members,
-            "added_in_event_booking": self.addedInEventBooking,
+            "already_booked": self.already_booked,
+            "status": self.status,
             "ticketId": self.ticketId,
             "userId": self.userId,
             "attended": self.attended
         }
-
+    # class Config:
+    #     allow_population_by_field_name = True  # Use field names during population
+    #     case_insensitive = True  # Allow case-insensitive matching
 
 class UserBookings(BaseModel):
     user_id: str

@@ -1,6 +1,7 @@
 from fastapi import UploadFile, HTTPException
 from sqlalchemy.orm import Session
-from Database.Connection import get_db, avatar_container_name, event_files_blob_container_name
+from Database.Connection import get_db, avatar_container_name, event_files_blob_container_name,\
+    AsyncSessionLocal
 from Models.user_models import User
 from Models.Files import Avatar
 import pybase64  # type: ignore
@@ -60,18 +61,22 @@ VALID_IMAGE_EXTENSIONS = {
     "psd",  # Photoshop
 }
 
+from sqlalchemy import select
+from azure.core.exceptions import ResourceNotFoundError
 
 async def avatar_upload(
     req: UserUpdate,
-    db: Session,
+    db: AsyncSessionLocal,
     current_user: User,
     file: UploadFile,
     blob_service_client
-):
+) -> Dict[str, bool]:
     # Check if file is provided
     if file:
-        # Check file size
+        # Read the file data asynchronously
         file_data = await file.read()
+        
+        # Check file size
         if len(file_data) > MAX_FILE_SIZE_BYTES:
             raise HTTPException(status_code=400, detail="File size exceeds 5MB limit")
 
@@ -89,17 +94,24 @@ async def avatar_upload(
             raise HTTPException(status_code=400, detail="Invalid file extension. Only image files are allowed")
 
         # Process file details
-        existing_avatar = db.query(Avatar).filter(Avatar.userID == current_user.id).first()
+        existing_avatar = await db.execute(
+            select(Avatar).filter(Avatar.userID == current_user.id)
+        )
+        existing_avatar = existing_avatar.scalar_one_or_none()
 
         if existing_avatar:
-            # Delete existing avatar blob from Azure Blob Storage
+            # Delete existing avatar blob from Azure Blob Storage if it exists
             existing_blob_client = blob_service_client.get_blob_client(container=avatar_container_name, blob=existing_avatar.filename)
             try:
+                # Check if the blob exists before trying to delete it
+                blob_properties = existing_blob_client.get_blob_properties()
                 existing_blob_client.delete_blob()  # Remove the existing blob
+            except ResourceNotFoundError:
+                # If blob doesn't exist, log this or proceed without error
+                pass
             except Exception as e:
-                raise HTTPException(status_code=500, detail="Error deleting existing avatar")
+                raise HTTPException(status_code=500, detail=f"Error deleting existing avatar: {e}")
 
-            # Toggle between 0 and 1 for the new filename
             last_digit = existing_avatar.filename.split('_')[-1][0]  # Get the last digit (either 0 or 1)
             new_digit = '1' if last_digit == '0' else '0'  # Switch between '0' and '1'
         else:
@@ -130,11 +142,15 @@ async def avatar_upload(
             existing_avatar.fileurl = file_url  # Update URL
             existing_avatar.filetype = file_type
 
-        db.commit()
-        db.refresh(existing_avatar if existing_avatar else avatar)
+        await db.commit()
+        await db.refresh(existing_avatar if existing_avatar else avatar)
 
     # Update the user's details with the data from req
-    user = db.query(User).filter(User.id == current_user.id).first()
+    user = await db.execute(
+        select(User).filter(User.id == current_user.id)
+    )
+    user = user.scalar_one_or_none()
+    
     if user:
         if req.username is not None:
             user.username = req.username
@@ -148,8 +164,8 @@ async def avatar_upload(
             user.dob = req.dob
         
         # Commit the changes to the database
-        db.commit()
-        db.refresh(user)
+        await db.commit()
+        await db.refresh(user)
 
     return {"message": "Avatar Updated", "success": True}
 
@@ -277,11 +293,12 @@ async def create_event_and_upload_files(
 
 async def get_avatar(
     userID: str,
-    db: Session
+    db: AsyncSessionLocal
 ) -> Dict[str, str]:
-    # Fetch the avatar record from the database
-    avatar = db.query(Avatar).filter(Avatar.userID == userID).first()
-    
+    # Fetch the avatar record from the database asynchronously
+    result = await db.execute(select(Avatar).filter(Avatar.userID == userID))
+    avatar = result.scalar_one_or_none()
+
     # Handle case where no avatar is found
     if not avatar:
         raise HTTPException(status_code=404, detail="Avatar Not Found")

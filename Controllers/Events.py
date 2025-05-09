@@ -4,7 +4,8 @@ from Schemas.UserSchemas import SuccessResponse
 from Controllers.Auth import get_current_user
 from Models.user_models import User
 from fastapi import HTTPException, Depends, UploadFile
-from Database.Connection import get_container, event_files_blob_container_name
+from Database.Connection import get_container, event_files_blob_container_name,\
+    AsyncSessionLocal
 from uuid import uuid4
 from datetime import datetime,timedelta
 from Helpers.Haversine import haversine
@@ -147,17 +148,18 @@ async def update_event(
 
     return SuccessResponse(message="Event Updated Successfully", success=True)
 
+from sqlalchemy import select
 
 async def give_editor_access(
-    db: Session,
+    db: AsyncSessionLocal,
     userId: str,
     event_id: str,
     current_user,
     container
 ) -> SuccessResponse:
     try:
-        # Check if event exists in event container
-        query = "SELECT e.id,e.editor_access,e.creator_id FROM eventcontainer e WHERE e.id = @id"
+        # Check if the event exists in the event container
+        query = "SELECT e.id, e.editor_access, e.creator_id FROM eventcontainer e WHERE e.id = @id"
         params = [{"name": "@id", "value": event_id}]
         items = list(container.query_items(query=query, parameters=params, enable_cross_partition_query=True))
 
@@ -166,8 +168,9 @@ async def give_editor_access(
         
         existing_event = items[0]
 
-        # Check if user exists
-        db_user = db.query(User).filter(User.id == userId).first()
+        # Check if the user exists in the database asynchronously
+        db_user = await db.execute(select(User).filter(User.id == userId))
+        db_user = db_user.scalars().first()
         if not db_user:
             raise HTTPException(status_code=400, detail="User not found")
 
@@ -175,7 +178,7 @@ async def give_editor_access(
         if current_user.id != existing_event.get('creator_id'):
             raise HTTPException(status_code=401, detail="Not Authorized")
 
-        # Check if user already has editor access
+        # Check if the user already has editor access
         editor_access_list = existing_event.get('editor_access', [])
         if str(userId) in map(str, editor_access_list):
             raise HTTPException(status_code=400, detail="User already has editor access")
@@ -187,8 +190,9 @@ async def give_editor_access(
         # Replace the item in the container with the updated data
         container.replace_item(item=existing_event['id'], body=existing_event)
 
-        # Commit the transaction to the database
-        db.commit()
+        # Commit the transaction to the database asynchronously
+        await db.commit()
+        
         return SuccessResponse(message=f"Editor Access Granted to user ID: {userId}", success=True)
     
     except CosmosHttpResponseError as e:
@@ -229,6 +233,119 @@ async def get_event_by_id(event_id: str, event_container, file_container, lat:fl
 
     return event
 
+category_map = {
+    # Social Events
+    "Social Events": "Social Events",
+    "Parties": "Social Events",
+    "Meetups": "Social Events",
+    "Networking Events": "Social Events",
+    "Reunions": "Social Events",
+
+    # Recreational Activities
+    "Recreational Activities": "Recreational Activities",
+    "Outdoor Activities": "Recreational Activities",
+    "Water Activities": "Recreational Activities",
+    "Adventure Sports": "Recreational Activities",
+
+    # Weekend Getaways
+    "Weekend Getaways": "Weekend Getaways",
+    "Short Trips": "Weekend Getaways",
+    "Staycations": "Weekend Getaways",
+    "Road Trips": "Weekend Getaways",
+    "Nature Retreats": "Weekend Getaways",
+
+    # Workshops and Learning Events
+    "Workshops and Learning Events": "Workshops and Learning Events",
+    "Skill-building Workshops": "Workshops and Learning Events",
+    "Cooking Classes": "Workshops and Learning Events",
+    "Art and Craft Workshops": "Workshops and Learning Events",
+    "Professional Development Seminars": "Workshops and Learning Events",
+
+    # Cultural Events
+    "Cultural Events": "Cultural Events",
+    "Festivals": "Cultural Events",
+    "Music Concerts": "Cultural Events",
+    "Theater and Dance Performances": "Cultural Events",
+    "Movie Screenings": "Cultural Events",
+
+    # Health and Wellness
+    "Health and Wellness": "Health and Wellness",
+    "Yoga Retreats": "Health and Wellness",
+    "Meditation Sessions": "Health and Wellness",
+    "Wellness Workshops": "Health and Wellness",
+    "Spa and Relaxation Events": "Health and Wellness",
+
+    # Sports and Fitness
+    "Sports and Fitness": "Sports and Fitness",
+    "Marathons and Runs": "Sports and Fitness",
+    "Fitness Bootcamps": "Sports and Fitness",
+    "Sports Tournaments": "Sports and Fitness",
+    "Group Workouts": "Sports and Fitness",
+
+    # Food and Drink
+    "Food and Drink": "Food and Drink",
+    "Food Festivals": "Food and Drink",
+    "Tasting Events": "Food and Drink",
+    "Cooking Competitions": "Food and Drink",
+    "Restaurant Pop-ups": "Food and Drink",
+
+    # Community Events
+    "Community Events": "Community Events",
+    "Charity Events": "Community Events",
+    "Community Gatherings": "Community Events",
+    "Volunteering Opportunities": "Community Events",
+    "Farmers Markets": "Community Events",
+
+    # Family and Kids
+    "Family and Kids": "Family and Kids",
+    "Family Get-togethers": "Family and Kids",
+    "Kids' Playdates": "Family and Kids",
+    "Parenting Workshops": "Family and Kids",
+    "Family-friendly Outings": "Family and Kids",
+
+    # Business and Professional
+    "Business and Professional": "Business and Professional",
+    "Conferences": "Business and Professional",
+    "Trade Shows": "Business and Professional",
+    "Product Launches": "Business and Professional",
+    "Webinars": "Business and Professional",
+
+    # Hobbies and Special Interests
+    "Hobbies and Special Interests": "Hobbies and Special Interests",
+    "Book Clubs": "Hobbies and Special Interests",
+    "Hobbyist Meetups": "Hobbies and Special Interests",
+    "Collectors’ Fairs": "Hobbies and Special Interests",
+    "Travel Enthusiast Gatherings": "Hobbies and Special Interests",
+
+    # Holiday Celebrations
+    "Holiday Celebrations": "Holiday Celebrations",
+    "Christmas and New Year Parties": "Holiday Celebrations",
+    "Easter Events": "Holiday Celebrations",
+    "Halloween Parties": "Holiday Celebrations",
+    "National Holiday Celebrations": "Holiday Celebrations",
+
+    # Tech and Innovation
+    "Tech and Innovation": "Tech and Innovation",
+    "Hackathons": "Tech and Innovation",
+    "Product Demos": "Tech and Innovation",
+    "Tech Talks and Seminars": "Tech and Innovation",
+    "Startup Pitch Events": "Tech and Innovation",
+
+    # Spiritual and Religious
+    "Spiritual and Religious": "Spiritual and Religious",
+    "Religious Ceremonies": "Spiritual and Religious",
+    "Spiritual Retreats": "Spiritual and Religious",
+    "Meditation Gatherings": "Spiritual and Religious",
+    "Devotional Music Events": "Spiritual and Religious",
+
+    # Educational Events
+    "Educational Events": "Educational Events",
+    "Lectures and Talks": "Educational Events",
+    "Educational Seminars": "Educational Events",
+    "Study Groups": "Educational Events",
+    "Science Fairs": "Educational Events"
+}
+
 
 async def get_filtered_events(
     event_container,
@@ -247,18 +364,18 @@ async def get_filtered_events(
 
     if filters.date_preference:
         today = datetime.today().date()
-        if filters.date_preference == "Today":
+        if filters.date_preference == "Today" or filters.date_preference=="today":
             query += (
                 " AND STARTSWITH(e.start_date_and_time, @date)"
             )
             params.append({"name": "@date", "value": today.isoformat()})
-        elif filters.date_preference == "Tomorrow":
+        elif filters.date_preference == "Tomorrow" or filters.date_preference=="tomorrow":
             tomorrow = today + timedelta(days=1)
             query += (
                 " AND STARTSWITH(e.start_date_and_time, @date)"
             )
             params.append({"name": "@date", "value": tomorrow.isoformat()})
-        elif filters.date_preference == "This week":
+        elif filters.date_preference == "This week"or filters.date_preference=="this week":
             start_of_week = today
             end_of_week = today + timedelta(days=(6 - today.weekday()))
             query += (
