@@ -64,7 +64,7 @@ async def startup_event():
 
 @app.get("/")
 async def read_root():
-    return {"Trabii Server!!"}
+    return {"Tickster Server!!"}
 
 
 @app.middleware("http")

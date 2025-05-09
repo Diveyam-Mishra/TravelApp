@@ -573,7 +573,7 @@ async def create_ticket_pdf(ticket_data: ticketData, output_path: str, eventCont
     
     # Prepare QR code data
     qr_data = {
-        "id": "trabii.com",
+        "id": "Tickster.com",
         "ticket_id": ticketId
        }
     

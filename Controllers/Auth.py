@@ -220,7 +220,7 @@ async def register_user(db: AsyncSessionLocal, email: str = None, username: str 
         if db_user_instance:
             raise HTTPException(status_code=400, detail="Username already registered")
     
-    if email == "trabiitestaccount1781@trabii.com":
+    if email == "Tickstertestaccount1781@tickster.com":
         return SuccessResponse(message="OTP sent to your email", success=True)
 
     if email:  # Assuming create_otp only needs email
@@ -250,7 +250,7 @@ async def login_user(login_data: UserLogin, db: AsyncSessionLocal) -> SuccessRes
     if not db_user_instance:
         raise HTTPException(status_code=400, detail="User not found")
     
-    if user_email == "trabiitestaccount1781@trabii.com":
+    if user_email == "Tickstertestaccount1781@Tickster.com":
         return SuccessResponse(message="OTP sent to your email", success=True)
     
     await create_otp(db, user_email)  # Call create_otp as an async function
@@ -281,7 +281,7 @@ async def login_verify(login_data: UserLoginVerify, db: AsyncSessionLocal) -> Su
         if not db_user:
             raise HTTPException(status_code=400, detail="User not found")
         
-    if user_email == "trabiitestaccount1781@trabii.com":
+    if user_email == "Tickstertestaccount1781@Tickster.com":
         if login_data.otp == "111111":
             expiry_time = datetime.utcnow() + timedelta(days=30)
 

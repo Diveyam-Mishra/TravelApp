@@ -58,7 +58,7 @@ async def create_otp(db: AsyncSessionLocal, email: str):
     send_otp(email, otp)
 
 async def verify_otp(user: OTPVerification, db: AsyncSessionLocal) -> SuccessResponse:
-    if user.email == "trabiitestaccount1781@trabii.com":
+    if user.email == "Tickstertestaccount1781@tickster.com":
         if user.otp == "111111":
             new_user = User(id=str(uuid4()), email=user.email, username=user.username,
                             contact_no=user.contact_no, works_at=user.works_at,
